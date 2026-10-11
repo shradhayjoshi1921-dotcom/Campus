@@ -1,0 +1,8 @@
+{
+  "name": "campus/placement-intelligence-portal",
+  "description": "Secure PHP/MySQL campus placement and career intelligence portal",
+  "type": "project",
+  "require": {"php": ">=8.2", "ext-pdo": "*", "ext-pdo_mysql": "*", "ext-json": "*"},
+  "autoload": {"psr-4": {"App\": "app/"}},
+  "scripts": {"test": "php tests/run.php"}
+}
