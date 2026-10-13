@@ -19,8 +19,11 @@ $schema=file_get_contents(dirname(__DIR__).'/database/schema.sql');$front=file_g
 $test('Schema seeds no fake records',function()use($assert,$schema){$assert(!preg_match('/INSERT\s+INTO\s+(users|companies|jobs|applications)\b/i',$schema));});
 $test('Registration and sign-in forms include CSRF',function()use($assert,$front){$assert(substr_count($front,'name="_csrf"')>=2);$assert(str_contains($front,'password_hash('));$assert(str_contains($front,'password_verify('));});
 $test('Student profile route includes guarded profile and skill updates',function()use($assert,$front){$assert(str_contains($front,'save_profile'));$assert(str_contains($front,'save_skills'));$assert(str_contains($front,"Security::requireRole(['student'])"));$assert(str_contains($front,'INSERT INTO student_profiles'));});
+<<<<<<< HEAD
 $test('Job listing only exposes published jobs from approved companies',function()use($assert,$front){$assert(str_contains($front,"j.status='published' AND c.approval_status='approved'"));$assert(str_contains($front,"j.closes_at IS NULL OR j.closes_at>=NOW()"));});
 $test('Applications require student role and CSRF validation',function()use($assert,$front){$assert(str_contains($front,"Security::requireRole(['student'])"));$assert(str_contains($front,'elseif ($action===\'apply_job\')'));$assert(str_contains($front,'name="_csrf"'));});
 $test('Database prevents duplicate applications',function()use($assert,$schema){$assert(str_contains($schema,'UNIQUE KEY uq_job_student(job_id,student_id)'));});
 $test('Application submission records status history',function()use($assert,$front){$assert(str_contains($front,'application_status_history'));$assert(str_contains($front,"'submitted','Application submitted by student'"));});
+=======
+>>>>>>> origin/main
 echo "\nResults: {$passed} passed, {$failed} failed\n";exit($failed?1:0);

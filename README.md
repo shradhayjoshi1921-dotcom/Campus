@@ -24,10 +24,14 @@ Run `php tests/run.php` from the project directory. This test suite covers the p
 - [x] Phase 1 foundation: environment loader, PDO, session/security helpers, schema, dark responsive landing page, intro controls, student/recruiter registration, login/logout, one-time CLI admin bootstrap.
 - [x] Initial career rule services: eligibility, fit score, skill gaps, recommendation filtering, roadmap generation (unit-level only).
 - [ ] Full cinematic camera assets are remote licensed/hosted image URLs and require network access; this is layered image parallax, not navigable 3D.
+<<<<<<< HEAD
 - [x] Student profile and skills editing.
 - [x] Student job browsing for published opportunities from approved companies, academic eligibility checks, duplicate-application prevention, application status list, and submission history.
 - [ ] Student certifications/projects CRUD and resume upload/download.
 - [ ] Recruiter job CRUD and applicant review/status management (student applications currently depend on jobs created through a controlled database/admin workflow).
+=======
+- [ ] Full student profile editing, resume upload/download, job CRUD and application workflows.
+>>>>>>> origin/main
 - [ ] Recruiter approval, ownership enforcement and interview workflows.
 - [ ] TPO and admin management/reporting interfaces.
 - [ ] Assessment authoring/taking and full notification center.
@@ -47,6 +51,7 @@ Implemented in this build:
 
 Tests executed locally with PHP CLI: `php tests/run.php` — **10 passed, 0 failed**. `php -l public/index.php` and `php -l tests/run.php` also passed. These are PHP syntax and pure/static rule tests; no live MySQL or browser end-to-end test was run in this environment.
 
+<<<<<<< HEAD
 Still not implemented in this slice: resume upload/download, certification/project CRUD, recruiter job CRUD and applicant management, recruiter approval and interview workflow, TPO/admin reporting, assessments/notifications, and browser end-to-end tests.
 
 
@@ -60,3 +65,6 @@ Implemented in this update:
 - Empty states when no real jobs/applications exist; no sample jobs or applicants are inserted.
 
 Verification run in this environment: `php -l public/index.php`, `php -l tests/run.php`, and `php tests/run.php` — **14 passed, 0 failed**. These are syntax and pure/static tests. No live MySQL or browser end-to-end test was available, so database runtime behavior still needs validation in the user's XAMPP setup.
+=======
+Still not implemented in this slice: resume upload/download, certification/project CRUD, job CRUD and applications, recruiter approval and interview workflow, TPO/admin reporting, assessments/notifications, and browser end-to-end tests.
+>>>>>>> origin/main
