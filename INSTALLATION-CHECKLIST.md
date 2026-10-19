@@ -1,19 +1,17 @@
-# Campus local verification checklist
+# Campus XAMPP setup checklist
 
-Use this after merging the package into `C:\xampp\htdocs\Campus`.
+1. Back up the current `Campus` folder and any existing `ai_campus_portal` database.
+2. Extract the versioned ZIP so the project is at `C:\xampp\htdocs\Campus`.
+3. Confirm `.env` exists locally and is ignored by Git. Never include it in the ZIP.
+4. Start Apache and MySQL in XAMPP.
+5. Import `database/schema.sql` through phpMyAdmin; confirm `.env` points to the same database.
+6. Confirm PHP 8.2+, PDO MySQL, `mbstring`, and JSON are enabled.
+7. Run the `php -l` checks and `php tests/run.php` listed in `README.md`.
+8. Create the first admin only when one does not already exist.
+9. Sign in as admin and check the portal using an empty database first.
+10. Register a test recruiter, approve the account/company, then publish a test job.
+11. Register a test student, complete the profile, browse the job, and test application submission and duplicate prevention.
+12. Test interview scheduling, application-status updates, CSRF rejection, and role restrictions.
+13. Review `git status`, `.gitignore`, and the final ZIP contents. Exclude `.env`, credentials, uploads, logs, and personal data.
 
-1. Back up the existing project and database.
-2. Confirm `.env` exists locally and is ignored by Git. Never place it in the ZIP or repository.
-3. Start Apache and MySQL in XAMPP.
-4. Confirm `.env` database values match the database imported from `database/schema.sql`.
-5. From the project root, run `php -l` on `public/index.php`, `public/recruiter.php`, `public/admin.php`, and `scripts/create-admin.php`.
-6. Run `php tests/run.php` and record the result.
-7. Create the first admin only if one does not already exist.
-8. Sign in as admin and test the admin portal with an empty database first.
-9. Register a test recruiter. Approve the pending account and company in the admin portal. Sign out and verify the recruiter can sign in after approval.
-10. As the approved recruiter, create a test job and publish it. As a student test account, confirm the job appears and submit one application. Verify duplicate submission is blocked.
-11. Test interview scheduling and application status updates with test records only.
-12. Before pushing, review `git status`, `git diff --cached`, and `.gitignore`. Do not commit `.env`, passwords, real resumes, uploads, or personal data.
-
-## Important
-A successful PHP syntax check and pure/static test suite do not prove that a configured MySQL database and browser workflows work on every machine. Complete steps 8–11 locally before describing the system as end-to-end verified.
+The source-only test suite is not a substitute for live MySQL and browser testing. Use test records only until deployment security has been reviewed.
