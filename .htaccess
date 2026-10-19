@@ -1,0 +1,10 @@
+Options -Indexes
+
+<FilesMatch "^(\.env|composer\.(json|lock)|README\.md|CHANGELOG\.md|.*\.sql)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(app|bootstrap|database|docs|scripts|storage|tests)(/|$) - [F,L,NC]
+</IfModule>

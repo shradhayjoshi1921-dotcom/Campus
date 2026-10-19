@@ -6,3 +6,4 @@
 !/storage/uploads/.gitkeep
 /public/uploads/
 .DS_Store
+*.zip

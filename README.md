@@ -1,140 +1,75 @@
-<<<<<<< HEAD
-# Campus — AI Placement & Career Intelligence Portal
+# Campus — Placement & Career Intelligence
 
-PHP 8.2+, MySQL/MariaDB, Apache, PDO, Bootstrap 5 and vanilla JavaScript. This package combines the currently implemented student placement workflow, recruiter workspace, and TPO/admin portal in one project directory. The database starts empty; no fake users, jobs, applications, or placement metrics are seeded.
+**Version 2.0.0** · PHP 8.2+ · MySQL/MariaDB · Apache/XAMPP
 
-## Requirements
-- XAMPP with PHP 8.2+ and MySQL/MariaDB
-- PHP PDO MySQL extension enabled
-- Git (optional, for version control)
+Campus is a server-rendered placement portal for students, recruiters, and placement teams. This update refreshes the interface with a locally bundled campus hero image, responsive navigation, a consistent design system, and smooth, reduced-motion-aware transitions. The website does not depend on remote font, Bootstrap, icon, or hero-image CDNs.
 
-## Install in Windows/XAMPP
-1. Back up any existing `C:\xampp\htdocs\Campus` folder before merging these files. Extract this package as `C:\xampp\htdocs\Campus` or merge its contents into your existing project carefully.
-2. Start Apache and MySQL in XAMPP Control Panel.
-3. Open `http://localhost/phpmyadmin/`. Back up any existing Campus database first. Import `database/schema.sql` into the configured database. The schema creates `ai_campus_portal` and uses `CREATE TABLE IF NOT EXISTS`; that does not migrate existing columns. Review `database/schema.sql` before applying it to a database with existing data.
-4. Copy `.env.example` to `.env` and set `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`, `APP_URL`, and a unique random `APP_KEY`. Do not commit `.env`.
-5. Open `http://localhost/Campus/public/`.
-6. If no admin exists, create the first one from the project root using `php scripts/create-admin.php "Portal Admin" admin@example.com "Use-A-Unique-Strong-Password"`. This is a local CLI setup step. Do not share or commit the password. If PHP isn't on PATH, run `C:\xampp\php\php.exe scripts\create-admin.php ...` from Command Prompt.
-7. Sign in at `http://localhost/Campus/public/index.php?page=login`. Admin/TPO routes require an active account with the corresponding role.
+The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
 
-Recommended production setup: configure Apache's document root to the project's `public/` directory. Do not expose `app/`, `storage/`, `.env`, or `scripts/` publicly.
+## Run on Windows with XAMPP
 
-## Main routes
-- Main portal: `http://localhost/Campus/public/`
-- Student jobs: `http://localhost/Campus/public/index.php?page=jobs` (student sign-in required)
-- Student applications: `http://localhost/Campus/public/index.php?page=applications` (student sign-in required)
-- Recruiter workspace: `http://localhost/Campus/public/recruiter.php` (active recruiter sign-in required)
-- TPO/Admin workspace: `http://localhost/Campus/public/admin.php` (active TPO/admin sign-in required)
+1. Download and extract `Campus-XAMPP-v2.0.0.zip` into `C:\xampp\htdocs\Campus`. The archive includes a top-level `Campus` folder.
+2. Start **Apache** and **MySQL** in the XAMPP Control Panel.
+3. Open `http://localhost/phpmyadmin/` and import `Campus\database\schema.sql`. It creates the `ai_campus_portal` database and its tables. It does not migrate existing columns; back up an existing database before importing or changing the schema.
+4. Copy `Campus\.env.example` to `Campus\.env`. Check the database settings and set a unique `APP_KEY`. The `.env` file is intentionally not included in the ZIP or Git.
+5. Open Command Prompt in `C:\xampp\htdocs\Campus` and create the first administrator, if one does not already exist:
 
-## Current implemented scope
-- Phase 1 foundation: environment loader, PDO connection, session/security helpers, database schema, responsive dark landing page, student/recruiter registration and login/logout, CLI first-admin bootstrap.
-- Career rule services: eligibility, fit score, skill gaps, recommendation filtering and learning-roadmap generation at service level.
-- Student profile and skills: profile editing, academic details and skill updates with validation, CSRF checks, role checks, prepared statements and transactions.
-- Student placement flow: browse published, non-expired jobs from approved companies; academic eligibility checks; application submission; duplicate prevention; application status listing and submission history.
-- Career Intelligence page (`public/career.php`): student-only fit estimates, required/preferred skill gaps, learning roadmap suggestions and a what-if skill simulation. Simulations do not modify saved profile data.
-- Recruiter workspace: company profile submission, company-owned job create/edit/status operations, applicant status updates, interview scheduling, and audit entries. Publishing requires company approval.
-- TPO/Admin workspace: pending account review, company approval/rejection, job moderation, student/application overview, department-wise selection report, announcements/notifications and recent audit activity. TPO/admin actions use role checks, CSRF validation, prepared statements, transactions and audit records.
+   ```bat
+   C:\xampp\php\php.exe scripts\create-admin.php "Portal Admin" admin@example.com "Use-A-Unique-Strong-Password"
+   ```
 
-## Known limitations — not yet complete
-- Certification/project CRUD and secure resume upload/download.
-- Complete end-to-end browser tests and live MySQL integration verification in every supported XAMPP setup.
-- Dedicated TPO account creation UI, CSV exports, a migration runner, full JSON API, rate limiting, assessment workflows, and a complete notification center.
-- Career insights are now available as a student page, but fit scores are rule-based heuristics, not trained AI or probabilities of hiring. Recommendations are based on the skills and academic fields currently represented in the schema.
-- Cinematic imagery may rely on remotely hosted assets and network access.
+   Use your own unique password of at least 14 characters. The bootstrap command works only when no admin exists. Avoid running it on a shared machine with a real password in command history.
+6. Visit **http://localhost/Campus/public/**.
 
-Do not treat these limitations as implemented. Do not enter real student or company personal data until you've tested and reviewed the deployment.
+XAMPP must have PHP 8.2+, PDO MySQL, `mbstring`, and JSON enabled. Composer is not required to run the current application.
 
-## Phase 7 acceptance testing
+### Safer Apache configuration
 
-Use [`PHASE-7-TEST-CHECKLIST.md`](PHASE-7-TEST-CHECKLIST.md) to verify the integrated workflows on your own XAMPP/MySQL setup. This package has not been live-tested against your local database.
+For deployment, set the Apache document root to `Campus/public/`. If using the local `/Campus/public/` URL above, the included root `.htaccess` blocks direct web access to `.env` and internal project folders when Apache `AllowOverride` is enabled. Do not expose development credentials or personal student data to the public internet. Use HTTPS, a least-privilege database account, secure session cookies, and `APP_DEBUG=false` outside a local development environment.
 
-## Tests
-From the project root run:
+## Main pages
 
-```bash
-php -l public/index.php
-php -l public/recruiter.php
-php -l public/admin.php
-php -l public/career.php
-php -l scripts/create-admin.php
-php tests/run.php
+- Portal home: `http://localhost/Campus/public/`
+- Sign in / register: `http://localhost/Campus/public/index.php?page=login` / `?page=register`
+- Student profile, jobs, and applications: available after student sign-in
+- Career insights: `http://localhost/Campus/public/career.php` (student sign-in required)
+- Recruiter workspace: `http://localhost/Campus/public/recruiter.php` (approved recruiter sign-in required)
+- TPO/Admin workspace: `http://localhost/Campus/public/admin.php` (TPO or admin sign-in required)
+
+## Current scope
+
+- Student and recruiter registration/sign-in, session security, and CLI-only first-admin setup.
+- Student profile and skills editing; published job browsing, eligibility checks, applications, and application tracking.
+- Recruiter company review, company-owned job management, applicant status updates, and interview scheduling.
+- TPO/Admin account and company decisions, job moderation, summaries, reports, announcements, notifications, and audit activity.
+- Rule-based career-fit estimates, skill-gap views, roadmap suggestions, and what-if skill simulation. These are explainable heuristics, **not trained AI or hiring probabilities**.
+- Empty states are used instead of fabricated portal data.
+
+## UI update in 2.0.0
+
+- Replaced the scroll-locked cinematic intro with a standard, accessible landing page that never traps scrolling.
+- Added a locally bundled campus-at-dusk hero background so the main visual works offline in XAMPP.
+- Added a responsive navigation menu, clearer calls to action, refreshed workspace forms/cards/tables, and subtle scroll-reveal/hover motion.
+- Honors the device's `prefers-reduced-motion` setting and avoids external style/font/icon CDNs.
+- Added an XAMPP-ready ZIP package and resolved the leftover merge-conflict text in the setup script, tests, and previous README.
+
+## Known limitations
+
+- Recruiters cannot yet enter required/preferred job skills in the job editor; the career-insights service reads skills from `job_skills`, so skill matching is limited until that workflow is added.
+- Resume upload/download, certification and project management, assessment workflows, a complete notification inbox, CSV export, a migration runner, rate limiting, and full browser/database integration tests are not complete.
+- Do not use this project with real personal data until you have tested and reviewed the deployment configuration.
+
+## Verify locally
+
+From the project root, using PHP 8.2+:
+
+```bat
+C:\xampp\php\php.exe -l public\index.php
+C:\xampp\php\php.exe -l public\recruiter.php
+C:\xampp\php\php.exe -l public\admin.php
+C:\xampp\php\php.exe -l public\career.php
+C:\xampp\php\php.exe -l scripts\create-admin.php
+C:\xampp\php\php.exe tests\run.php
 ```
 
-The included test suite checks career rules and static security/route invariants. It is not a substitute for live MySQL integration or browser testing.
-
-## GitHub
-Repository: https://github.com/shradhayjoshi1921-dotcom/Campus
-
-Before committing, review `git status` and `git diff --cached`, and ensure `.env`, credentials, private resumes, uploaded documents and logs are excluded.
-=======
-# AI Campus Placement & Career Intelligence Portal
-
-A PHP 8.2+, MySQL/MariaDB, Apache, PDO, Bootstrap 5 and vanilla JavaScript application foundation for Windows/XAMPP. The interface uses a premium jet-black visual system and a campus/building/classroom cinematic introduction. The database starts empty; no fabricated placement metrics are included.
-
-## Requirements
-- XAMPP with PHP 8.2+ and MySQL/MariaDB
-- PDO MySQL extension enabled
-- Optional Composer for autoloading later modules
-
-## Install on Windows/XAMPP
-1. Extract this folder to `C:\xampp\htdocs\ai-campus-placement-portal`.
-2. Start Apache and MySQL in XAMPP Control Panel.
-3. Open `http://localhost/phpmyadmin`, import `database/schema.sql` (it creates `ai_campus_portal`). The schema uses `CREATE TABLE IF NOT EXISTS` and does not seed sample data. Back up any existing database before schema changes.
-4. Copy `.env.example` to `.env` and set DB host, database, username, password, APP_URL, and a random APP_KEY. Local XAMPP commonly uses `root` with an empty password; change this for any non-disposable environment.
-5. Open `http://localhost/ai-campus-placement-portal/public/`.
-6. Create the first administrator from a terminal in the project directory: `php scripts/create-admin.php "Portal Admin" admin@example.com "A-Long-Unique-Password-Here"`. This command only works while no admin exists. Do not put the password in shell history on a shared machine.
-
-Recommended Apache VirtualHost document root is the project's `public/` directory. If using the simple URL above, the project is under htdocs but only `public/` is intended as the web entry point; do not expose `app/`, `storage/`, `.env`, or scripts.
-
-## Tests
-Run `php tests/run.php` from the project directory. This test suite covers the pure PHP career rules and basic static security invariants. Database integration tests require a configured MySQL server and are not claimed by the pure test suite.
-
-## Current implementation status
-- [x] Phase 1 foundation: environment loader, PDO, session/security helpers, schema, dark responsive landing page, intro controls, student/recruiter registration, login/logout, one-time CLI admin bootstrap.
-- [x] Initial career rule services: eligibility, fit score, skill gaps, recommendation filtering, roadmap generation (unit-level only).
-- [ ] Full cinematic camera assets are remote licensed/hosted image URLs and require network access; this is layered image parallax, not navigable 3D.
-<<<<<<< HEAD
-- [x] Student profile and skills editing.
-- [x] Student job browsing for published opportunities from approved companies, academic eligibility checks, duplicate-application prevention, application status list, and submission history.
-- [ ] Student certifications/projects CRUD and resume upload/download.
-- [ ] Recruiter job CRUD and applicant review/status management (student applications currently depend on jobs created through a controlled database/admin workflow).
-=======
-- [ ] Full student profile editing, resume upload/download, job CRUD and application workflows.
->>>>>>> origin/main
-- [ ] Recruiter approval, ownership enforcement and interview workflows.
-- [ ] TPO and admin management/reporting interfaces.
-- [ ] Assessment authoring/taking and full notification center.
-- [ ] JSON API routes, migration runner, rate limiting, full audit trail, end-to-end browser testing.
-
-Do not treat unchecked items as implemented. See `docs/SECURITY.md`, `docs/ARCHITECTURE.md`, and `docs/API.md`.
-
-## Latest implementation update — Student profile slice
-
-Implemented in this build:
-- Student-only profile page (`index.php?page=profile`) linked from the signed-in navigation.
-- Profile editing for name, phone, degree, branch, semester, CGPA, graduation year, and bio.
-- Student skill editing using a comma-separated skill list, stored through the `skills` and `student_skills` tables.
-- Server-side validation for lengths, CGPA (0–10), semester, and graduation year.
-- CSRF validation on profile/skill writes, role checks, prepared SQL statements, and escaped form output.
-- Profile/skill updates run in database transactions; profile changes do not create sample records.
-
-Tests executed locally with PHP CLI: `php tests/run.php` — **10 passed, 0 failed**. `php -l public/index.php` and `php -l tests/run.php` also passed. These are PHP syntax and pure/static rule tests; no live MySQL or browser end-to-end test was run in this environment.
-
-<<<<<<< HEAD
-Still not implemented in this slice: resume upload/download, certification/project CRUD, recruiter job CRUD and applicant management, recruiter approval and interview workflow, TPO/admin reporting, assessments/notifications, and browser end-to-end tests.
-
-
-## Phase 2 update — Student jobs and applications
-
-Implemented in this update:
-- Student-only job listing showing published, non-expired jobs from approved companies.
-- Application submission with a bounded optional cover note, CSRF verification, student-role authorization, and mandatory academic checks for CGPA, branch, and graduation year when configured.
-- Duplicate application prevention using the existing unique database constraint; duplicate submissions return a friendly message.
-- Application status history row created on submission and a student application-tracking page.
-- Empty states when no real jobs/applications exist; no sample jobs or applicants are inserted.
-
-Verification run in this environment: `php -l public/index.php`, `php -l tests/run.php`, and `php tests/run.php` — **14 passed, 0 failed**. These are syntax and pure/static tests. No live MySQL or browser end-to-end test was available, so database runtime behavior still needs validation in the user's XAMPP setup.
-=======
-Still not implemented in this slice: resume upload/download, certification/project CRUD, job CRUD and applications, recruiter approval and interview workflow, TPO/admin reporting, assessments/notifications, and browser end-to-end tests.
->>>>>>> origin/main
->>>>>>> 23cc9fe26f47d37e38e13aab15b19be44757a25b
+The included automated suite covers pure service rules and static security/workflow checks. Complete `PHASE-7-TEST-CHECKLIST.md` on the target XAMPP/MySQL installation for live workflow acceptance; passing static tests alone does not verify a production deployment.

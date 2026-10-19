@@ -1,47 +1,39 @@
-# Phase 7 — Integration and Acceptance Checklist
+# Integration and acceptance checklist
 
-This checklist is for local acceptance testing in XAMPP. Automated tests currently cover service rules and static route/security invariants; a live database/browser test is still required on the target machine.
+Use this checklist for live verification in XAMPP. The automated suite covers service rules and static route/security invariants; it does not replace database/browser acceptance.
 
 ## Install and bootstrap
-- [ ] Back up the current `Campus` folder and any existing `ai_campus_portal` database.
-- [ ] Start Apache and MySQL in XAMPP.
-- [ ] Import `database/schema.sql` into the database named in `.env`.
-- [ ] Copy `.env.example` to `.env`; set DB values and a unique `APP_KEY`.
-- [ ] Run `C:\xampp\php\php.exe -l public\index.php`, and repeat for `career.php`, `recruiter.php`, `admin.php`, and `scripts\create-admin.php`.
-- [ ] Run `C:\xampp\php\php.exe tests\run.php` from the project root.
-- [ ] Create the first admin with `C:\xampp\php\php.exe scripts\create-admin.php "Portal Admin" admin@example.com "Use-A-Unique-Password-14+"`.
-- [ ] Verify a second admin bootstrap attempt is refused and public registration offers only Student and Recruiter.
+- [ ] Back up any existing `Campus` folder and `ai_campus_portal` database.
+- [ ] Start Apache and MySQL.
+- [ ] Import `database/schema.sql` and configure `.env`.
+- [ ] Confirm PHP 8.2+, PDO MySQL, `mbstring`, and JSON are enabled.
+- [ ] Run PHP syntax checks and `php tests/run.php` from the project root.
+- [ ] Create the first admin only if one does not already exist.
+- [ ] Verify public registration offers only Student and Recruiter and refuses a second admin bootstrap.
 
-## Student workflow
-- [ ] Register a student, sign in, and complete profile (branch, CGPA, graduation year).
-- [ ] Add comma-separated skills and verify they persist after reload.
-- [ ] Open Jobs; verify only published jobs from approved companies are visible.
-- [ ] Apply to an eligible job; verify it appears in Applications and cannot be applied to twice.
-- [ ] Open `public/career.php` via the Career insights navigation; check fit score, missing skills, roadmap and what-if skill simulation.
-- [ ] Confirm the what-if simulation does not alter saved profile skills.
+## Student flow
+- [ ] Register and sign in as a student; complete branch, CGPA, and graduation year.
+- [ ] Add skills and verify they persist after reload.
+- [ ] Confirm only published jobs from approved companies are visible.
+- [ ] Apply to an eligible job; verify the application appears and duplicate application is blocked.
+- [ ] Open Career insights and check fit, eligibility, skill gaps, roadmap, and the what-if simulation.
+- [ ] Confirm the simulation does not alter saved skills.
 
-## Recruiter workflow
-- [ ] Register a recruiter; verify login is blocked while pending.
-- [ ] Approve the recruiter account and approve its company through Admin/TPO.
-- [ ] Sign in to Recruiter workspace; create a job as draft, then publish it.
-- [ ] Verify a recruiter cannot edit another company's job or publish before company approval.
-- [ ] Review an applicant, update status, and schedule a future interview for a shortlisted applicant.
+## Recruiter and TPO/Admin flows
+- [ ] Register a recruiter and confirm sign-in is blocked while pending.
+- [ ] Approve the recruiter and company from the TPO/Admin workspace.
+- [ ] Create and publish a test job; verify company ownership restrictions.
+- [ ] Review an applicant, update status, and schedule a future interview.
+- [ ] Verify students/recruiters receive 403 responses on routes outside their role.
 
-## Admin/TPO workflow
-- [ ] Sign in as admin and open `public/admin.php`.
-- [ ] Approve/reject pending users and companies.
-- [ ] Publish/pause/close jobs; verify company approval restrictions.
-- [ ] Publish an announcement; review department report and audit log.
-- [ ] Verify Student/Recruiter accounts receive 403 on Admin/TPO route and Student-only routes.
+## Responsive UI, security, and deployment
+- [ ] Check the homepage, login/register, student workspace, recruiter workspace, and admin workspace on desktop and mobile widths.
+- [ ] Verify keyboard operation of the mobile navigation and honor `prefers-reduced-motion`.
+- [ ] Submit forms with missing/invalid CSRF tokens and verify no state changes.
+- [ ] Verify `.env`, `app/`, `database/`, `scripts/`, and `storage/` are not accessible over HTTP.
+- [ ] In production, set Apache document root to `public/`, require HTTPS, set `SESSION_SECURE=true`, set `APP_DEBUG=false`, and use least-privilege database credentials.
 
-## Security and deployment
-- [ ] Submit a form with a missing/invalid CSRF token and verify state is not changed.
-- [ ] Test invalid email/password, duplicate email, invalid profile ranges and malformed job fields.
-- [ ] Review uploads and personal data handling before adding resume upload/download; that workflow is not implemented in this build.
-- [ ] In production, set Apache document root to `public/`; do not expose `.env`, `app/`, `storage/`, `database/`, or `scripts/`.
-- [ ] Disable verbose errors, use least-privilege database credentials, configure HTTPS, and take database backups.
+## Scope boundaries
 
-## Known scope boundaries
-- Fit and recommendation scores are explainable rule-based heuristics, not trained AI and not probabilities of employment.
-- This build does not yet include resume upload/download, certification/project CRUD, assessment-taking UI, CSV exports, a migration runner, rate limiting, or complete automated browser tests.
-- Live MySQL integration and browser acceptance cannot be certified by the source-only test suite; complete the checklist on your XAMPP installation.
+- Career-fit scores are transparent heuristics, not trained AI and not probabilities of employment.
+- Recruiter job-skill entry, secure resumes, certification/project CRUD, assessment UI, a full notification inbox, CSV exports, migrations, rate limiting, and complete automated browser tests remain outside the implemented scope.
