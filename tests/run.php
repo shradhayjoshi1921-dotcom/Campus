@@ -710,6 +710,8 @@ $test('One shared liquid-glass capsule drives every dock and option group', stat
     }
     $index = file_get_contents($root . '/public/index.php');
     $assert(str_contains($index, 'data-glass-dock'));
+    $adminNav = file_get_contents($root . '/public/assets/js/admin-nav.js');
+    $assert(str_contains($adminNav, 'LiquidGlass.refresh(content)'), 'filter groups are remounted after an in-place section swap');
     $assert(str_contains($index, 'assets/js/liquid-glass.js'));
 
     // Segmented option groups use the same material.

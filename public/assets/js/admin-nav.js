@@ -127,6 +127,9 @@
       if (!incomingContent || !incomingDock) throw new Error('The admin section response was incomplete.');
 
       content.innerHTML = incomingContent.innerHTML;
+      // Filter chips inside the new section are fresh nodes: mount them on the
+      // shared material before the content animation starts.
+      if (window.LiquidGlass) window.LiquidGlass.refresh(content);
       syncBadge(parsedDocument);
       document.title = parsedDocument.title || document.title;
       const heading = content.querySelector('.admin-page-heading h1');
