@@ -91,6 +91,8 @@
                                 </select>
                                 <label class="sr-only" for="application-note-<?= (int) $application['id'] ?>">Optional note for this stage update</label>
                                 <input id="application-note-<?= (int) $application['id'] ?>" name="note" maxlength="500" placeholder="Optional private note">
+                                <label class="sr-only" for="application-ctc-<?= (int) $application['id'] ?>">Offered CTC in LPA when selecting this candidate</label>
+                                <input id="application-ctc-<?= (int) $application['id'] ?>" name="ctc_lpa" type="number" min="0" max="500" step="0.01" inputmode="decimal" placeholder="CTC in LPA (on selection)">
                                 <button class="rec-button rec-button--secondary rec-button--compact" type="submit">Update stage</button>
                             </form>
                         <?php else: ?>

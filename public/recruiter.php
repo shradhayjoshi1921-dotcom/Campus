@@ -82,6 +82,17 @@ function recruiter_flash_redirect(string $section, string $kind, string $message
     exit;
 }
 
+function recruiter_table_exists(PDO $db, string $table): bool
+{
+    try {
+        $statement = $db->prepare('SHOW TABLES LIKE ?');
+        $statement->execute([$table]);
+        return (bool) $statement->fetchColumn();
+    } catch (Throwable $exception) {
+        return false;
+    }
+}
+
 function recruiter_parse_datetime(string $value): ?DateTimeImmutable
 {
     if ($value === '') {
@@ -412,6 +423,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new InvalidArgumentException('Choose a valid next step for this application. Completed or withdrawn applications cannot be changed.');
                 }
 
+                $ctcRaw = recruiter_post('ctc_lpa');
+                $ctc = null;
+                if ($ctcRaw !== '') {
+                    if (!is_numeric($ctcRaw) || (float) $ctcRaw < 0 || (float) $ctcRaw > 500) {
+                        throw new InvalidArgumentException('Enter the offered CTC in LPA, between 0 and 500.');
+                    }
+                    $ctc = number_format((float) $ctcRaw, 2, '.', '');
+                }
+
                 $db->prepare('UPDATE applications SET status = ? WHERE id = ?')->execute([$nextStatus, $applicationId]);
                 $history = $db->prepare(
                     'INSERT INTO application_status_history (application_id, changed_by, old_status, new_status, note) VALUES (?, ?, ?, ?, ?)',
@@ -424,15 +444,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $note !== '' ? $note : 'Updated by recruiter',
                 ]);
                 $label = recruiter_status_label($nextStatus);
+                $offerSentence = '';
+                if ($nextStatus === 'selected' && recruiter_table_exists($db, 'offers')) {
+                    $existing = $db->prepare('SELECT id FROM offers WHERE application_id = ? LIMIT 1 FOR UPDATE');
+                    $existing->execute([$applicationId]);
+                    $offerId = (int) ($existing->fetchColumn() ?: 0);
+                    if ($offerId > 0) {
+                        $db->prepare(
+                            "UPDATE offers SET ctc_lpa = COALESCE(?, ctc_lpa), offer_date = COALESCE(offer_date, CURDATE()), status = IF(status IN ('declined', 'revoked'), 'offered', status) WHERE id = ?",
+                        )->execute([$ctc, $offerId]);
+                        recruiter_audit($db, (int) $user['id'], 'offer.updated', 'offer', $offerId, ['ctc_lpa' => $ctc]);
+                    } else {
+                        $db->prepare(
+                            "INSERT INTO offers (application_id, ctc_lpa, offer_date, status, created_by) VALUES (?, ?, CURDATE(), 'offered', ?)",
+                        )->execute([$applicationId, $ctc, (int) $user['id']]);
+                        $offerId = (int) $db->lastInsertId();
+                        recruiter_audit($db, (int) $user['id'], 'offer.created', 'offer', $offerId, ['ctc_lpa' => $ctc]);
+                    }
+                    if ($ctc !== null) {
+                        $offerSentence = ' The recorded CTC is ' . rtrim(rtrim($ctc, '0'), '.') . ' LPA.';
+                    }
+                }
                 recruiter_notify(
                     $db,
                     (int) $application['student_id'],
-                    'Application status updated',
-                    'Your application for ' . $application['title'] . ' is now ' . $label . '.',
+                    $nextStatus === 'selected' ? 'You have been selected' : 'Application status updated',
+                    'Your application for ' . $application['title'] . ' is now ' . $label . '.' . $offerSentence,
                 );
                 recruiter_audit($db, (int) $user['id'], 'application.status_changed', 'application', $applicationId, [
                     'from' => $currentStatus,
                     'to' => $nextStatus,
+                    'ctc_lpa' => $ctc,
                 ]);
                 $db->commit();
                 recruiter_flash_redirect('applicants', 'success', 'Application moved to ' . strtolower($label) . '.');

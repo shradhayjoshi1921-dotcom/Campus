@@ -306,3 +306,222 @@ body.homepage ::selection { color: #102c20; background: #b8ebce; }
   .homepage .section-heading h2 { font-size: 39px; }
   .homepage .site-footer { flex-direction: column; }
 }
+
+/* ======================================================================
+ * SVIET water-light homepage — warm orange paper by default, deep water
+ * after dark. The hero is a single sheet of orange water with white light.
+ * ==================================================================== */
+
+html[data-theme="light"] body.homepage {
+  --surface: rgba(255, 255, 255, .9);
+  --surface-raised: #fffdfa;
+  --surface-glass: rgba(255, 255, 255, .74);
+  --line: rgba(154, 88, 44, .16);
+  --line-strong: rgba(154, 88, 44, .28);
+  --text: #2c1a10;
+  --muted: #7c6353;
+  --dim: #9c8272;
+  --mint: #ef6a1c;
+  --mint-strong: #c4510f;
+  --shadow: 0 22px 54px rgba(170, 90, 40, .14);
+  color: #2c1a10;
+  color-scheme: light;
+  background:
+    radial-gradient(ellipse at 10% 0%, rgba(255, 176, 120, .3), transparent 32rem),
+    radial-gradient(ellipse at 95% 10%, rgba(255, 214, 176, .34), transparent 35rem),
+    linear-gradient(180deg, #fff9f3 0%, #ffefe1 100%);
+}
+html[data-theme="dark"] body.homepage {
+  --surface: rgba(10, 33, 37, .82);
+  --surface-raised: #0c262b;
+  --surface-glass: rgba(9, 29, 33, .74);
+  --line: rgba(190, 232, 228, .14);
+  --line-strong: rgba(190, 232, 228, .26);
+  --text: #eef8f6;
+  --muted: #9fbdb8;
+  --dim: #7b9a97;
+  --mint: #ff9d63;
+  --mint-strong: #ff7a35;
+  --shadow: 0 26px 60px rgba(0, 0, 0, .46);
+  color: #eef8f6;
+  color-scheme: dark;
+  background:
+    radial-gradient(ellipse at 10% 0%, rgba(46, 156, 150, .2), transparent 32rem),
+    radial-gradient(ellipse at 95% 10%, rgba(214, 122, 52, .14), transparent 35rem),
+    linear-gradient(180deg, #06191d 0%, #041316 100%);
+}
+html[data-theme="light"] body.homepage ::selection { color: #fff8f1; background: #ef6a1c; }
+html[data-theme="light"] .homepage :focus-visible { outline-color: #c4510f; }
+
+/* Watery navigation bar */
+html[data-theme="light"] .homepage .site-nav {
+  border-bottom-color: rgba(196, 118, 62, .18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .94), rgba(255, 240, 228, .8));
+  box-shadow: 0 12px 34px rgba(180, 100, 48, .1), inset 0 1px rgba(255, 255, 255, .92);
+}
+html[data-theme="dark"] .homepage .site-nav {
+  border-bottom-color: rgba(168, 226, 220, .16);
+  background: linear-gradient(180deg, rgba(12, 40, 44, .92), rgba(6, 24, 28, .86));
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .4), inset 0 1px rgba(220, 250, 246, .12);
+}
+html[data-theme="light"] .homepage .brand-copy small { color: #8a6b58; }
+html[data-theme="light"] .homepage .nav-links > a,
+html[data-theme="light"] .homepage .site-nav nav > a { color: #6a4c3a; }
+html[data-theme="light"] .homepage .nav-links > a:hover,
+html[data-theme="light"] .homepage .site-nav nav > a:hover { color: #b0440c; }
+html[data-theme="light"] .homepage .nav-cta {
+  color: #fff8f1;
+  border-color: rgba(202, 86, 20, .4);
+  background: linear-gradient(150deg, #ff9350, #df540f);
+  box-shadow: 0 10px 22px rgba(214, 96, 32, .24);
+}
+html[data-theme="dark"] .homepage .nav-cta {
+  color: #08181b;
+  border-color: rgba(255, 157, 99, .34);
+  background: linear-gradient(150deg, #ffb98a, #ff8a4b);
+}
+html[data-theme="light"] .homepage .nav-toggle span:not(.sr-only) { background: #6a4c3a; }
+html[data-theme="light"] .homepage .nav-toggle { border-color: rgba(154, 88, 44, .24); background: rgba(255, 255, 255, .8); }
+
+/* Hero water */
+html[data-theme="light"] .homepage .home-hero {
+  border-color: rgba(255, 255, 255, .5);
+  background:
+    radial-gradient(58% 88% at 84% 2%, rgba(255, 255, 255, .6), rgba(255, 255, 255, 0) 62%),
+    radial-gradient(46% 68% at 8% 98%, rgba(255, 224, 192, .55), rgba(255, 224, 192, 0) 72%),
+    linear-gradient(132deg, #ff9c55 0%, #ef6a1c 48%, #ffb27a 100%);
+  box-shadow: 0 34px 90px rgba(196, 92, 28, .26), inset 0 1px rgba(255, 255, 255, .55);
+}
+html[data-theme="dark"] .homepage .home-hero {
+  border-color: rgba(168, 226, 220, .18);
+  background:
+    radial-gradient(56% 86% at 84% 2%, rgba(126, 224, 214, .2), rgba(126, 224, 214, 0) 62%),
+    radial-gradient(44% 66% at 8% 98%, rgba(255, 138, 75, .18), rgba(255, 138, 75, 0) 72%),
+    linear-gradient(132deg, #07232a 0%, #0b343a 52%, #124348 100%);
+  box-shadow: 0 34px 90px rgba(0, 0, 0, .48), inset 0 1px rgba(220, 250, 246, .14);
+}
+html[data-theme="light"] .homepage .home-hero h1 { color: #fffaf5; }
+html[data-theme="light"] .homepage .home-hero h1 span {
+  background: linear-gradient(100deg, #fff5e9 0%, #ffe2c2 54%, #ffffff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+html[data-theme="light"] .homepage .hero-sub,
+html[data-theme="light"] .homepage .eyebrow,
+html[data-theme="light"] .homepage .hero-audience-label { color: rgba(255, 249, 243, .94); }
+html[data-theme="light"] .homepage .eyebrow-dot { background: #fff3e6; box-shadow: 0 0 0 6px rgba(255, 255, 255, .22); }
+html[data-theme="light"] .homepage .audience-pill {
+  color: #fff9f3;
+  border-color: rgba(255, 255, 255, .44);
+  background: rgba(255, 255, 255, .18);
+}
+html[data-theme="light"] .homepage .primary-btn {
+  color: #fff8f1;
+  border-color: rgba(202, 86, 20, .4);
+  background: linear-gradient(150deg, #ff9350, #df540f);
+  box-shadow: 0 14px 30px rgba(140, 54, 6, .28);
+}
+html[data-theme="light"] .homepage .secondary-btn {
+  color: #8a3d0d;
+  border-color: rgba(255, 255, 255, .6);
+  background: rgba(255, 255, 255, .86);
+}
+html[data-theme="dark"] .homepage .secondary-btn {
+  color: #ffd9c0;
+  border-color: rgba(255, 157, 99, .34);
+  background: rgba(255, 255, 255, .06);
+}
+
+/* Feature cards on warm paper */
+html[data-theme="light"] .homepage .feature-card {
+  border-color: rgba(196, 118, 62, .2);
+  background: linear-gradient(158deg, rgba(255, 255, 255, .97), rgba(255, 246, 238, .92));
+  box-shadow: 0 18px 44px rgba(180, 100, 48, .1), inset 0 1px rgba(255, 255, 255, .96);
+}
+html[data-theme="light"] .homepage .feature-card:hover { box-shadow: 0 26px 58px rgba(180, 100, 48, .18); }
+html[data-theme="light"] .homepage .feature-card h3 { color: #2c1a10; }
+html[data-theme="light"] .homepage .feature-card p { color: #7c6353; }
+html[data-theme="light"] .homepage .feature-icon {
+  color: #b0440c;
+  border-color: rgba(196, 118, 62, .24);
+  background: linear-gradient(150deg, rgba(255, 224, 200, .92), rgba(255, 255, 255, .82));
+}
+html[data-theme="light"] .homepage .feature-link { color: #b0440c; }
+html[data-theme="light"] .homepage .section-heading h2 { color: #2c1a10; }
+html[data-theme="light"] .homepage .section-heading h2 span {
+  background: linear-gradient(100deg, #ef6a1c, #c4510f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+html[data-theme="dark"] .homepage .section-heading h2 { color: #eef8f6; }
+html[data-theme="dark"] .homepage .section-heading h2 span { color: #ff9d63; }
+html[data-theme="light"] .homepage .section-heading > p,
+html[data-theme="light"] .homepage .site-footer { color: #7c6353; }
+html[data-theme="light"] .homepage .site-footer strong { color: #2c1a10; }
+html[data-theme="dark"] .homepage .site-footer { border-color: rgba(190, 232, 228, .14); }
+html[data-theme="light"] .homepage .feature-card { color: #2c1a10; }
+html[data-theme="light"] .homepage .hero-feature-card {
+  border-color: rgba(255, 255, 255, .62);
+  background: linear-gradient(150deg, rgba(255, 255, 255, .95), rgba(255, 238, 224, .84));
+  box-shadow: 0 28px 66px rgba(150, 74, 24, .22), inset 0 1px rgba(255, 255, 255, .96);
+}
+html[data-theme="light"] .homepage .hero-feature-card h2 { color: #2c1a10; }
+html[data-theme="light"] .homepage .hero-card-head,
+html[data-theme="light"] .homepage .hero-card-foot,
+html[data-theme="light"] .homepage .flow-copy small { color: #8a6b58; }
+html[data-theme="light"] .homepage .hero-flow li { border-color: rgba(196, 118, 62, .16); }
+html[data-theme="light"] .homepage .flow-index {
+  color: #b0440c;
+  background: rgba(255, 214, 180, .62);
+}
+
+/* Floating water in the hero: three slow droplets behind the copy. */
+.homepage .home-hero .water-veil { z-index: 0; }
+.homepage .home-hero .water-blob {
+  width: clamp(120px, 16vw, 260px);
+  height: clamp(120px, 16vw, 260px);
+  opacity: .55;
+}
+.homepage .home-hero .water-blob--hero-one {
+  top: -8%;
+  right: 6%;
+  width: clamp(180px, 24vw, 380px);
+  height: clamp(180px, 24vw, 380px);
+  opacity: .5;
+  animation-delay: -2s;
+}
+.homepage .home-hero .water-blob--hero-two {
+  right: 26%;
+  bottom: -18%;
+  width: clamp(150px, 19vw, 300px);
+  height: clamp(150px, 19vw, 300px);
+  opacity: .38;
+  animation-delay: -6s;
+}
+.homepage .home-hero .water-blob--hero-three {
+  top: 24%;
+  left: -7%;
+  width: clamp(110px, 13vw, 200px);
+  height: clamp(110px, 13vw, 200px);
+  opacity: .32;
+  animation-delay: -10s;
+}
+.homepage .home-hero-grid { position: relative; z-index: 2; }
+.homepage .home-hero .hero-scroll-cue { position: relative; z-index: 2; }
+@media (prefers-reduced-motion: reduce) {
+  .homepage .home-hero .water-blob { animation: none; }
+}
+
+/* Auth pages sit on a shallow pool of water. */
+html[data-theme="light"] .auth-wrap {
+  background:
+    radial-gradient(48% 40% at 18% 12%, rgba(255, 186, 136, .38), rgba(255, 186, 136, 0) 70%),
+    radial-gradient(42% 38% at 86% 82%, rgba(255, 214, 176, .42), rgba(255, 214, 176, 0) 72%);
+}
+html[data-theme="dark"] .auth-wrap {
+  background:
+    radial-gradient(48% 40% at 18% 12%, rgba(30, 116, 118, .32), rgba(30, 116, 118, 0) 70%),
+    radial-gradient(42% 38% at 86% 82%, rgba(255, 138, 75, .12), rgba(255, 138, 75, 0) 72%);
+}

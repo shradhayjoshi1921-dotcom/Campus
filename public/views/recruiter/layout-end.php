@@ -35,6 +35,7 @@
     <span>Swami Vivekanand Institute of Engineering and Technology</span>
     <span>SVIET Training &amp; Placement Portal</span>
 </footer>
+<script src="assets/js/theme.js?v=<?= recruiter_h($recruiterNavJsVersion) ?>" defer></script>
 <script src="assets/js/recruiter-nav.js?v=<?= recruiter_h($recruiterNavJsVersion) ?>" defer></script>
 </body>
 </html>

@@ -100,7 +100,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 session_regenerate_id(true);
                 unset($row['password_hash']);
                 $_SESSION['user'] = $row;
-                header('Location: index.php?page=dashboard');
+                // One sign-in for every role: route people to their own workspace.
+                $landing = match ((string) $row['role']) {
+                    'recruiter' => 'recruiter.php',
+                    'tpo', 'admin' => 'admin.php',
+                    default => 'index.php?page=dashboard',
+                };
+                header('Location: ' . $landing, true, 303);
                 exit();
             }
             $error =
@@ -109,6 +115,117 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error_log('Portal sign-in failure: ' . $e->getMessage());
             $error =
                 'Sign-in is temporarily unavailable. Please try again later.';
+        }
+    } elseif ($action === 'upload_resume') {
+        Security::requireRole(['student']);
+        $file = $_FILES['resume'] ?? null;
+        $maxBytes = 5 * 1024 * 1024;
+        $failure = '';
+        if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            $failure = 'Choose a PDF file to upload.';
+        } elseif ((int) ($file['size'] ?? 0) > $maxBytes) {
+            $failure = 'Resume PDFs must be 5 MB or smaller.';
+        } else {
+            $tmp = (string) ($file['tmp_name'] ?? '');
+            $original = trim(basename((string) ($file['name'] ?? 'resume.pdf')));
+            $handle = is_file($tmp) ? fopen($tmp, 'rb') : false;
+            $magic = $handle ? (string) fread($handle, 5) : '';
+            if ($handle) {
+                fclose($handle);
+            }
+            $mime = '';
+            if (is_file($tmp)) {
+                if (class_exists('finfo')) {
+                    $mime = (string) (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
+                } elseif (function_exists('mime_content_type')) {
+                    $mime = (string) mime_content_type($tmp);
+                }
+            }
+            if ($magic !== '%PDF-') {
+                $failure = 'That file is not a PDF. Export your resume as PDF and try again.';
+            } elseif (!preg_match('/\.pdf$/i', $original)) {
+                $failure = 'The file must end in .pdf.';
+            } elseif ($mime !== '' && $mime !== 'application/pdf') {
+                $failure = 'The uploaded file does not look like a PDF document.';
+            } else {
+                $directory = dirname(__DIR__) . '/storage/uploads/resumes';
+                if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
+                    $failure = 'Resume storage is unavailable right now. Ask the placement cell to check server permissions.';
+                } else {
+                    $stored = bin2hex(random_bytes(16)) . '.pdf';
+                    $target = $directory . '/' . $stored;
+                    if (!move_uploaded_file($tmp, $target)) {
+                        $failure = 'The upload could not be saved. Please try again.';
+                    } else {
+                        try {
+                            $db = Database::connection();
+                            $db->beginTransaction();
+                            $old = $db->prepare('SELECT id, stored_name FROM resumes WHERE student_id = ?');
+                            $old->execute([(int) $user['id']]);
+                            $previous = $old->fetchAll();
+                            $db->prepare(
+                                'INSERT INTO resumes (student_id, original_name, stored_name, mime_type, file_size) VALUES (?, ?, ?, ?, ?)',
+                            )->execute([
+                                (int) $user['id'],
+                                mb_substr($original !== '' ? $original : 'resume.pdf', 0, 255),
+                                $stored,
+                                'application/pdf',
+                                (int) filesize($target),
+                            ]);
+                            $db->prepare('DELETE FROM resumes WHERE student_id = ? AND stored_name <> ?')
+                                ->execute([(int) $user['id'], $stored]);
+                            $db->commit();
+                            foreach ($previous as $row) {
+                                $path = $directory . '/' . basename((string) $row['stored_name']);
+                                if (is_file($path)) {
+                                    @unlink($path);
+                                }
+                            }
+                            $success = 'Resume uploaded. Recruiters reviewing your application can download this PDF.';
+                        } catch (Throwable $exception) {
+                            if (isset($db) && $db->inTransaction()) {
+                                $db->rollBack();
+                            }
+                            @unlink($target);
+                            error_log('Resume upload failure: ' . $exception->getMessage());
+                            $failure = 'The resume could not be saved. Please try again.';
+                        }
+                    }
+                }
+            }
+        }
+        if ($failure !== '') {
+            $error = $failure;
+        }
+    } elseif ($action === 'delete_resume') {
+        Security::requireRole(['student']);
+        try {
+            $db = Database::connection();
+            $statement = $db->prepare('SELECT stored_name FROM resumes WHERE student_id = ?');
+            $statement->execute([(int) $user['id']]);
+            $files = $statement->fetchAll(PDO::FETCH_COLUMN);
+            $db->prepare('DELETE FROM resumes WHERE student_id = ?')->execute([(int) $user['id']]);
+            $directory = dirname(__DIR__) . '/storage/uploads/resumes';
+            foreach ($files as $name) {
+                $path = $directory . '/' . basename((string) $name);
+                if (is_file($path)) {
+                    @unlink($path);
+                }
+            }
+            $success = 'Resume removed from your profile.';
+        } catch (Throwable $exception) {
+            error_log('Resume removal failure: ' . $exception->getMessage());
+            $error = 'The resume could not be removed right now.';
+        }
+    } elseif ($action === 'mark_notifications_read') {
+        try {
+            Database::connection()
+                ->prepare('UPDATE notifications SET read_at = NOW() WHERE user_id = ? AND read_at IS NULL')
+                ->execute([(int) $user['id']]);
+            $success = 'All notifications marked as read.';
+        } catch (Throwable $exception) {
+            error_log('Notification read failure: ' . $exception->getMessage());
+            $error = 'Notifications could not be updated right now.';
         }
     } elseif ($action === 'save_profile') {
         Security::requireRole(['student']);
@@ -321,6 +438,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 }
+// Resume download: the owner (or the placement cell) only, streamed from storage.
+if ($page === 'resume' && $user) {
+    $resumeId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+    $canReview = in_array($user['role'], ['tpo', 'admin'], true);
+    try {
+        $statement = Database::connection()->prepare(
+            $canReview
+                ? 'SELECT r.*, u.name AS owner_name FROM resumes r JOIN users u ON u.id = r.student_id WHERE r.id = ? LIMIT 1'
+                : 'SELECT r.*, u.name AS owner_name FROM resumes r JOIN users u ON u.id = r.student_id WHERE r.id = ? AND r.student_id = ? LIMIT 1',
+        );
+        $statement->execute($canReview ? [$resumeId] : [$resumeId, (int) $user['id']]);
+        $resume = $statement->fetch();
+    } catch (Throwable $exception) {
+        error_log('Resume lookup failure: ' . $exception->getMessage());
+        $resume = false;
+    }
+    $file = $resume
+        ? dirname(__DIR__) . '/storage/uploads/resumes/' . basename((string) $resume['stored_name'])
+        : '';
+    if (!$resume || !is_file($file)) {
+        http_response_code(404);
+        $page = 'forbidden';
+        $error = 'That resume is not available.';
+    } else {
+        $download = isset($_GET['download']) && $_GET['download'] === '1';
+        $safeName = preg_replace('/[^A-Za-z0-9 ._-]/', '', (string) $resume['owner_name']) ?: 'student';
+        header('Content-Type: application/pdf');
+        header('Content-Length: ' . (string) filesize($file));
+        header('Content-Disposition: ' . ($download ? 'attachment' : 'inline') . '; filename="' . $safeName . '-resume.pdf"');
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: private, no-store');
+        readfile($file);
+        exit();
+    }
+}
+
 // Enforce role access before running route-specific queries.
 if ($page === 'logout' && $user) {
     $page = 'dashboard';
@@ -352,12 +505,12 @@ if ($page === 'profile' && $user && $user['role'] === 'student') {
         $profileSkills = [];
     }
 }
-if (in_array($page, ['jobs', 'applications'], true) && !$user) {
+if (in_array($page, ['jobs', 'applications', 'notifications'], true) && !$user) {
     header('Location: index.php?page=login');
     exit();
 }
 if (
-    in_array($page, ['jobs', 'applications'], true) &&
+    in_array($page, ['jobs', 'applications', 'notifications'], true) &&
     $user &&
     $user['role'] !== 'student'
 ) {
@@ -395,6 +548,62 @@ if ($page === 'applications' && $user && $user['role'] === 'student') {
         $applications = [];
     }
 }
+// Shared student workspace data: resume, profile strength, unread notices.
+$resume = null;
+$profileStrength = null;
+$profileStrengthParts = [];
+$applicationTimeline = [];
+$notifications = [];
+$unreadNotifications = 0;
+if ($user && $user['role'] === 'student' && in_array($page, ['dashboard', 'profile', 'jobs', 'applications', 'notifications'], true)) {
+    try {
+        $db = Database::connection();
+        $statement = $db->prepare('SELECT * FROM resumes WHERE student_id = ? ORDER BY created_at DESC LIMIT 1');
+        $statement->execute([(int) $user['id']]);
+        $resume = $statement->fetch() ?: null;
+
+        $statement = $db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read_at IS NULL');
+        $statement->execute([(int) $user['id']]);
+        $unreadNotifications = (int) $statement->fetchColumn();
+
+        $profileRow = $db->prepare('SELECT * FROM student_profiles WHERE user_id = ?');
+        $profileRow->execute([(int) $user['id']]);
+        $profileForStrength = $profileRow->fetch() ?: [];
+        $skillCount = $db->prepare('SELECT COUNT(*) FROM student_skills WHERE student_id = ?');
+        $skillCount->execute([(int) $user['id']]);
+        $hasSkills = (int) $skillCount->fetchColumn() > 0;
+        $checks = [
+            'Academic details' => trim((string) ($profileForStrength['branch'] ?? '')) !== ''
+                && trim((string) ($profileForStrength['degree'] ?? '')) !== ''
+                && trim((string) ($profileForStrength['graduation_year'] ?? '')) !== '',
+            'CGPA recorded' => trim((string) ($profileForStrength['cgpa'] ?? '')) !== '',
+            'Contact number' => trim((string) ($profileForStrength['phone'] ?? '')) !== '',
+            'Short introduction' => trim((string) ($profileForStrength['bio'] ?? '')) !== '',
+            'Skills added' => $hasSkills,
+            'PDF resume' => $resume !== null,
+        ];
+        $profileStrengthParts = $checks;
+        $profileStrength = (int) round((count(array_filter($checks)) / max(1, count($checks))) * 100);
+
+        $timelineStatement = $db->prepare(
+            'SELECT h.old_status, h.new_status, h.note, h.created_at, j.title, c.name AS company_name '
+            . 'FROM application_status_history h JOIN applications a ON a.id = h.application_id '
+            . 'JOIN jobs j ON j.id = a.job_id JOIN companies c ON c.id = j.company_id '
+            . 'WHERE a.student_id = ? ORDER BY h.created_at DESC LIMIT 40',
+        );
+        $timelineStatement->execute([(int) $user['id']]);
+        $applicationTimeline = $timelineStatement->fetchAll();
+
+        if ($page === 'notifications' || $page === 'dashboard') {
+            $noticeStatement = $db->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ' . ($page === 'notifications' ? '100' : '4'));
+            $noticeStatement->execute([(int) $user['id']]);
+            $notifications = $noticeStatement->fetchAll();
+        }
+    } catch (Throwable $exception) {
+        error_log('Student workspace data failure: ' . $exception->getMessage());
+    }
+}
+
 if ($page === 'dashboard' && $user) {
     try {
         $db = Database::connection();
@@ -440,11 +649,52 @@ $knownPages = [
     'profile',
     'jobs',
     'applications',
+    'notifications',
     'forbidden',
 ];
 if (!in_array($page, $knownPages, true)) {
     http_response_code(404);
 }
+/**
+ * Bottom water dock for the student workspace. One continuous capsule,
+ * five destinations, the same material as the recruiter and admin docks.
+ */
+function sviet_student_dock(string $active, int $unread): void
+{
+    $tabs = [
+        'dashboard' => ['label' => 'Home', 'href' => 'index.php?page=dashboard', 'icon' => '<path d="M4 11.2 12 4l8 7.2V20a1 1 0 0 1-1 1h-4.6v-5.6H9.6V21H5a1 1 0 0 1-1-1z"/>'],
+        'jobs' => ['label' => 'Jobs', 'href' => 'index.php?page=jobs', 'icon' => '<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8.5 7V5.2A1.7 1.7 0 0 1 10.2 3.5h3.6a1.7 1.7 0 0 1 1.7 1.7V7M3 12.5h18"/>'],
+        'applications' => ['label' => 'Applications', 'href' => 'index.php?page=applications', 'icon' => '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h4M10 12.5h5M10 16.5h4"/>'],
+        'notifications' => ['label' => 'Alerts', 'href' => 'index.php?page=notifications', 'icon' => '<path d="M6 9a6 6 0 1 1 12 0c0 4 1.6 5.6 1.6 5.6H4.4S6 13 6 9Z"/><path d="M10 18.5a2.2 2.2 0 0 0 4 0"/>'],
+        'profile' => ['label' => 'Profile', 'href' => 'index.php?page=profile', 'icon' => '<circle cx="12" cy="8.2" r="3.7"/><path d="M4.8 20.6a7.2 7.2 0 0 1 14.4 0"/>'],
+    ];
+    ?>
+    <nav class="sv-dock" aria-label="Student workspace">
+        <div class="sv-dock-track" id="sv-dock-track">
+            <span class="sv-dock-indicator" aria-hidden="true">
+                <span class="sv-dock-liquid"></span>
+                <span class="sv-dock-rim"></span>
+                <span class="sv-dock-caustic"></span>
+            </span>
+            <?php foreach ($tabs as $key => $tab): ?>
+                <a class="sv-dock-link <?= $active === $key ? 'is-active' : '' ?>"
+                   data-sv-section="<?= htmlspecialchars($key, ENT_QUOTES) ?>"
+                   href="<?= htmlspecialchars($tab['href'], ENT_QUOTES) ?>"
+                   <?= $active === $key ? 'aria-current="page"' : '' ?>>
+                    <span class="sv-dock-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><?= $tab['icon'] ?></svg>
+                    </span>
+                    <span class="sv-dock-label"><?= htmlspecialchars($tab['label'], ENT_QUOTES) ?></span>
+                    <?php if ($key === 'notifications' && $unread > 0): ?>
+                        <span class="sv-dock-badge" aria-label="<?= $unread ?> unread notifications"><?= $unread > 99 ? '99+' : $unread ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </nav>
+    <?php
+}
+
 function e(?string $s): string
 {
     return htmlspecialchars($s ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -461,6 +711,7 @@ $pageTitle = match ($page) {
     'profile' => 'Student profile | SVIET Placement Portal',
     'jobs' => 'Opportunities | SVIET Placement Portal',
     'applications' => 'Applications | SVIET Placement Portal',
+    'notifications' => 'Notifications | SVIET Placement Portal',
     'forbidden' => 'Access restricted | SVIET Placement Portal',
     default => 'Page not found | SVIET Placement Portal',
 };
@@ -470,91 +721,30 @@ $pageTitle = match ($page) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="<?= $page === 'home'
-        ? '#f8fafb'
-        : '#07111e' ?>">
+    <meta name="theme-color" content="#fff8f1">
     <meta name="description" content="A placement portal for Swami Vivekanand Institute of Engineering and Technology. Explore opportunities, manage applications, and connect students, recruiters, and the Training &amp; Placement Cell.">
     <title><?= e($pageTitle) ?></title>
+    <script>
+        /* Apply the stored appearance before first paint so neither theme flashes. */
+        (function () {
+            try {
+                var saved = localStorage.getItem('sviet-theme');
+                var theme = saved === 'dark' || saved === 'light' ? saved : 'light';
+                document.documentElement.dataset.theme = theme;
+                document.documentElement.style.colorScheme = theme;
+            } catch (error) {
+                document.documentElement.dataset.theme = 'light';
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="assets/css/theme.css?v=<?= e($appCssVersion) ?>">
     <link rel="stylesheet" href="assets/css/app.css?v=<?= e($appCssVersion) ?>">
     <?php if ($page === 'home'): ?>
-        <link rel="stylesheet" href="assets/css/homepage.css">
+        <link rel="stylesheet" href="assets/css/homepage.css?v=<?= e($appCssVersion) ?>">
     <?php endif; ?>
-    <style>
-        /* Campus homepage refresh: remove the top dark strip and sharpen the visual hierarchy. */
-        html:has(body.homepage) { background: #f6f9fb; }
-        body.homepage {
-            margin: 0 !important;
-            padding-top: 0 !important;
-            border-top: 0 !important;
-            background:
-                radial-gradient(ellipse at 12% 8%, rgba(166, 232, 199, .22), transparent 34rem),
-                radial-gradient(ellipse at 92% 18%, rgba(172, 205, 235, .22), transparent 38rem),
-                linear-gradient(180deg, #f8fbfd 0%, #f0f5f8 100%);
-        }
-        body.homepage .site-nav {
-            top: 0;
-            width: min(100%, 1500px);
-            min-height: 76px;
-            margin: 0 auto 22px;
-            padding-inline: clamp(20px, 5vw, 76px);
-            border: 0;
-            border-bottom: 1px solid rgba(18, 42, 64, .09);
-            border-radius: 0 0 22px 22px;
-            background: rgba(250, 253, 255, .94);
-            box-shadow: 0 10px 30px rgba(15, 39, 60, .055);
-            -webkit-backdrop-filter: blur(18px) saturate(145%);
-            backdrop-filter: blur(18px) saturate(145%);
-        }
-        body.homepage .home-hero {
-            width: min(calc(100% - 48px), 1420px);
-            min-height: min(740px, calc(100svh - 120px));
-            border: 1px solid rgba(255,255,255,.2);
-            border-radius: 32px;
-            background:
-                radial-gradient(ellipse at 82% 10%, rgba(102, 184, 158, .22), transparent 32rem),
-                radial-gradient(ellipse at 12% 92%, rgba(87, 135, 181, .18), transparent 34rem),
-                linear-gradient(128deg, #071827 0%, #102c40 55%, #123b43 100%);
-            box-shadow: 0 28px 80px rgba(12, 35, 52, .17), inset 0 1px rgba(255,255,255,.1);
-        }
-        body.homepage .home-hero-grid {
-            gap: clamp(38px, 6vw, 92px);
-            padding-block: clamp(66px, 8.5vh, 104px) 88px;
-        }
-        body.homepage .home-hero h1 { max-width: 780px; line-height: 1.01; }
-        body.homepage .home-hero h1 span {
-            background: linear-gradient(100deg, #baf2d4 0%, #8bdcbd 52%, #d6f8e5 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-        body.homepage .hero-feature-card {
-            border-color: rgba(234, 249, 255, .24);
-            background: linear-gradient(145deg, rgba(238, 248, 252, .15), rgba(176, 204, 221, .055) 62%, rgba(8, 23, 37, .32));
-            box-shadow: 0 28px 72px rgba(0, 7, 17, .25), inset 0 1px rgba(255,255,255,.22);
-        }
-        body.homepage .feature-section { padding-block: clamp(72px, 8vw, 112px); }
-        body.homepage .feature-card {
-            min-height: 250px;
-            padding: clamp(24px, 2.5vw, 32px);
-            transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease;
-        }
-        body.homepage .feature-card:hover { transform: translateY(-5px); }
-        body.homepage .feature-icon { border-radius: 16px; }
-        body.homepage .site-footer { max-width: 1420px; }
-        @media (max-width: 780px) {
-            body.homepage .site-nav { width: 100%; min-height: 68px; margin-bottom: 14px; padding-inline: 18px; border-radius: 0 0 18px 18px; }
-            body.homepage .home-hero { width: calc(100% - 28px); min-height: 0; border-radius: 24px; }
-            body.homepage .home-hero-grid { padding: 58px 22px 68px; }
-        }
-        @media (max-width: 520px) {
-            body.homepage .site-nav { width: 100%; margin-top: 0; }
-            body.homepage .home-hero { width: calc(100% - 18px); border-radius: 20px; }
-            body.homepage .home-hero-grid { padding: 50px 18px 58px; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            body.homepage *, body.homepage *::before, body.homepage *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
-        }
-    </style>
+    <?php if ($user && $user['role'] === 'student' && in_array($page, ['dashboard', 'profile', 'jobs', 'applications', 'notifications'], true)): ?>
+        <link rel="stylesheet" href="assets/css/water-dock.css?v=<?= e($appCssVersion) ?>">
+    <?php endif; ?>
 </head>
 <body class="<?= $page === 'home' ? 'homepage' : '' ?>">
 <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -565,6 +755,13 @@ $pageTitle = match ($page) {
             <small>TRAINING &amp; PLACEMENT</small>
         </span>
     </a>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch appearance">
+        <span class="theme-toggle__track" aria-hidden="true">
+            <svg class="theme-toggle__icon theme-toggle__icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+            <svg class="theme-toggle__icon theme-toggle__icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.4A8.2 8.2 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4Z"/></svg>
+        </span>
+        <span class="theme-toggle__label">Light orange</span>
+    </button>
     <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open navigation" aria-controls="site-navigation" aria-expanded="false">
         <span></span><span></span><span class="sr-only">Toggle navigation</span>
     </button>
@@ -612,6 +809,11 @@ $pageTitle = match ($page) {
         <div class="home-hero-bubbles" aria-hidden="true">
             <span class="bubble-orb bubble-orb--one"></span>
             <span class="bubble-orb bubble-orb--two"></span>
+        </div>
+        <div class="water-veil" aria-hidden="true">
+            <span class="water-blob water-blob--hero-one"></span>
+            <span class="water-blob water-blob--hero-two"></span>
+            <span class="water-blob water-blob--hero-three"></span>
         </div>
 
         <div class="container home-hero-grid">
@@ -754,14 +956,19 @@ $pageTitle = match ($page) {
         <p class="eyebrow">SVIET Training &amp; Placement Portal</p>
         <h1 id="auth-title">
             <?= $page === 'login'
-                ? 'Sign in to your portal.'
+                ? 'One sign-in. Your workspace.'
                 : 'Create your portal account.' ?>
         </h1>
         <p class="muted">
             <?= $page === 'login'
-                ? 'Use your SVIET placement portal credentials to continue.'
+                ? 'Students, recruiters and placement-cell staff sign in here. We read your role from your account and open the right workspace automatically.'
                 : 'Choose the account type that matches your placement role.' ?>
         </p>
+        <?php if ($page === 'login'): ?>
+            <p class="auth-role-note">
+                <span>Student</span><span>Recruiter</span><span>TPO / Admin</span>
+            </p>
+        <?php endif; ?>
 
         <form method="post" class="auth-form">
             <input type="hidden" name="_csrf" value="<?= e($csrf) ?>">
@@ -919,6 +1126,47 @@ $pageTitle = match ($page) {
                 </label>
                 <button class="primary-btn" type="submit">Save profile <span aria-hidden="true">↗</span></button>
             </form>
+        </section>
+
+        <section class="panel mt-4" id="resume" aria-labelledby="profile-resume-title">
+            <div class="strength-head">
+                <div>
+                    <p class="eyebrow">RESUME</p>
+                    <h2 id="profile-resume-title">PDF resume</h2>
+                </div>
+                <?php if ($resume): ?>
+                    <span class="status-pill">Uploaded <?= e(date('d M Y', strtotime((string) $resume['created_at']))) ?></span>
+                <?php endif; ?>
+            </div>
+            <?php if ($resume): ?>
+                <p class="muted">
+                    <strong><?= e((string) $resume['original_name']) ?></strong>
+                    · <?= e(number_format(((int) $resume['file_size']) / 1024, 0)) ?> KB
+                </p>
+                <div class="resume-actions">
+                    <a class="secondary-btn" href="index.php?page=resume&amp;id=<?= (int) $resume['id'] ?>" target="_blank" rel="noopener">View PDF</a>
+                    <a class="secondary-btn" href="index.php?page=resume&amp;id=<?= (int) $resume['id'] ?>&amp;download=1">Download</a>
+                </div>
+            <?php else: ?>
+                <p class="muted">No resume on file yet. Recruiters can only review what you upload.</p>
+            <?php endif; ?>
+            <form method="post" enctype="multipart/form-data" class="auth-form resume-form">
+                <input type="hidden" name="_csrf" value="<?= e($csrf) ?>">
+                <input type="hidden" name="action" value="upload_resume">
+                <label for="profile-resume">
+                    <?= $resume ? 'Replace with a new PDF' : 'Upload your resume' ?>
+                    <input id="profile-resume" class="form-control" type="file" name="resume" accept="application/pdf,.pdf" required>
+                    <small>PDF only, up to 5 MB. The newest upload replaces the previous file.</small>
+                </label>
+                <button class="primary-btn" type="submit"><?= $resume ? 'Replace resume' : 'Upload resume' ?> <span aria-hidden="true">↗</span></button>
+            </form>
+            <?php if ($resume): ?>
+                <form method="post" class="inline-form resume-delete">
+                    <input type="hidden" name="_csrf" value="<?= e($csrf) ?>">
+                    <input type="hidden" name="action" value="delete_resume">
+                    <button class="secondary-btn" type="submit">Remove resume</button>
+                </form>
+            <?php endif; ?>
         </section>
 
         <section class="panel mt-4" aria-labelledby="profile-skills-title">
@@ -1086,6 +1334,77 @@ $pageTitle = match ($page) {
             </table>
         </div>
     <?php endif; ?>
+
+    <?php if (!empty($applicationTimeline)): ?>
+            <section class="panel mt-4" aria-labelledby="application-timeline-title">
+                <div class="strength-head">
+                    <div>
+                        <p class="eyebrow">TIMELINE</p>
+                        <h2 id="application-timeline-title">Every stage change</h2>
+                    </div>
+                    <span class="status-pill">Most recent first</span>
+                </div>
+                <ol class="sv-timeline">
+                    <?php foreach ($applicationTimeline as $event): ?>
+                        <li>
+                            <span class="sv-timeline-dot" aria-hidden="true"></span>
+                            <div>
+                                <strong><?= e((string) $event['title']) ?></strong>
+                                <span class="muted"> · <?= e((string) $event['company_name']) ?></span>
+                                <p class="sv-timeline-move">
+                                    <?= e(ucwords(str_replace('_', ' ', (string) ($event['old_status'] ?? 'submitted')))) ?>
+                                    <span aria-hidden="true">→</span>
+                                    <?= e(ucwords(str_replace('_', ' ', (string) $event['new_status']))) ?>
+                                </p>
+                                <?php if (!empty($event['note'])): ?>
+                                    <p class="muted"><?= e((string) $event['note']) ?></p>
+                                <?php endif; ?>
+                                <time datetime="<?= e((string) $event['created_at']) ?>"><?= e(date('d M Y, H:i', strtotime((string) $event['created_at']))) ?></time>
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ol>
+            </section>
+    <?php endif; ?>
+</main>
+<?php elseif ($page === 'notifications' && $user && $user['role'] === 'student'): ?>
+<main id="main-content" class="dashboard container">
+    <div class="dash-top">
+        <div>
+            <p class="eyebrow">STUDENT WORKSPACE</p>
+            <h1>Your inbox.</h1>
+            <p class="muted">Approval notes, application updates, interview calls and placement-cell announcements.</p>
+        </div>
+        <?php if ((int) $unreadNotifications > 0): ?>
+            <form method="post" class="inline-form">
+                <input type="hidden" name="_csrf" value="<?= e($csrf) ?>">
+                <input type="hidden" name="action" value="mark_notifications_read">
+                <button class="secondary-btn" type="submit">Mark all read</button>
+            </form>
+        <?php endif; ?>
+    </div>
+
+    <?php if (empty($notifications)): ?>
+        <div class="empty-state mt-4">
+            <h2>Nothing here yet</h2>
+            <p>When the placement cell or a recruiter updates your application, it appears here.</p>
+        </div>
+    <?php else: ?>
+        <ul class="notice-list mt-4">
+            <?php foreach ($notifications as $notice): ?>
+                <li class="panel notice-item <?= empty($notice['read_at']) ? 'is-unread' : '' ?>">
+                    <div class="notice-item-head">
+                        <strong><?= e((string) $notice['title']) ?></strong>
+                        <time datetime="<?= e((string) $notice['created_at']) ?>"><?= e(date('d M Y, H:i', strtotime((string) $notice['created_at']))) ?></time>
+                    </div>
+                    <p><?= nl2br(e((string) $notice['body'])) ?></p>
+                    <?php if (empty($notice['read_at'])): ?>
+                        <span class="status-pill">Unread</span>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
 </main>
 <?php elseif ($page === 'forbidden'): ?>
 <main id="main-content" class="container dashboard">
@@ -1122,6 +1441,72 @@ $pageTitle = match ($page) {
         </div>
     <?php endif; ?>
 
+    <?php if ($user['role'] === 'student'): ?>
+        <section class="student-grid mt-4" aria-label="Your placement readiness">
+            <article class="panel strength-card">
+                <div class="strength-head">
+                    <div>
+                        <p class="eyebrow">PROFILE STRENGTH</p>
+                        <h2><?= (int) ($profileStrength ?? 0) ?>% complete</h2>
+                    </div>
+                    <span class="status-pill <?= ($profileStrength ?? 0) >= 80 ? '' : 'status-pill--warn' ?>">
+                        <?= ($profileStrength ?? 0) >= 80 ? 'Interview ready' : 'Needs work' ?>
+                    </span>
+                </div>
+                <div class="strength-bar" role="img" aria-label="Profile <?= (int) ($profileStrength ?? 0) ?> percent complete">
+                    <span style="--fill: <?= max(2, (int) ($profileStrength ?? 0)) ?>%"></span>
+                </div>
+                <ul class="strength-list">
+                    <?php foreach (($profileStrengthParts ?? []) as $label => $done): ?>
+                        <li class="<?= $done ? 'is-done' : '' ?>">
+                            <span aria-hidden="true"><?= $done ? '✓' : '○' ?></span><?= e($label) ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+                <a class="secondary-btn" href="index.php?page=profile">Complete your profile</a>
+            </article>
+
+            <article class="panel resume-card">
+                <p class="eyebrow">RESUME</p>
+                <h2><?= $resume ? 'Your PDF is live' : 'No resume yet' ?></h2>
+                <p class="muted">
+                    <?= $resume
+                        ? 'Recruiters reviewing your applications can open ' . e((string) $resume['original_name']) . '.'
+                        : 'Upload a PDF so recruiters can read the full story behind your profile.' ?>
+                </p>
+                <div class="resume-actions">
+                    <?php if ($resume): ?>
+                        <a class="secondary-btn" href="index.php?page=resume&amp;id=<?= (int) $resume['id'] ?>" target="_blank" rel="noopener">View resume</a>
+                        <a class="secondary-btn" href="index.php?page=resume&amp;id=<?= (int) $resume['id'] ?>&amp;download=1">Download</a>
+                    <?php endif; ?>
+                    <a class="primary-btn" href="index.php?page=profile#resume"><?= $resume ? 'Replace PDF' : 'Upload PDF' ?></a>
+                </div>
+            </article>
+
+            <article class="panel alerts-card">
+                <div class="strength-head">
+                    <div>
+                        <p class="eyebrow">ALERTS</p>
+                        <h2><?= (int) ($unreadNotifications ?? 0) > 0 ? (int) $unreadNotifications . ' unread' : 'All caught up' ?></h2>
+                    </div>
+                    <a class="secondary-btn" href="index.php?page=notifications">Open inbox</a>
+                </div>
+                <?php if (empty($notifications)): ?>
+                    <p class="muted">Status changes, announcements and interviews arrive here.</p>
+                <?php else: ?>
+                    <ul class="notice-mini">
+                        <?php foreach ($notifications as $notice): ?>
+                            <li class="<?= empty($notice['read_at']) ? 'is-unread' : '' ?>">
+                                <strong><?= e($notice['title']) ?></strong>
+                                <small><?= e(date('d M', strtotime((string) $notice['created_at']))) ?></small>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+            </article>
+        </section>
+    <?php endif; ?>
+
     <section class="panel mt-4" aria-labelledby="dashboard-next-steps-title">
         <h2 id="dashboard-next-steps-title">Next steps</h2>
         <p class="muted">The portal starts with an empty database. Your workspace will fill as real profiles, jobs, and applications are added.</p>
@@ -1143,6 +1528,11 @@ $pageTitle = match ($page) {
     </div>
 </main>
 <?php endif; ?>
+<?php if ($user && $user['role'] === 'student' && in_array($page, ['dashboard', 'profile', 'jobs', 'applications', 'notifications'], true)): ?>
+    <?php sviet_student_dock($page, (int) $unreadNotifications); ?>
+    <script src="assets/js/student-nav.js?v=<?= e($appCssVersion) ?>" defer></script>
+<?php endif; ?>
+<script src="assets/js/theme.js?v=<?= e($appCssVersion) ?>" defer></script>
 <script src="assets/js/site.js" defer></script>
 </body>
 </html>
