@@ -92,6 +92,7 @@ $recruiterJobs = file_get_contents($root . '/public/views/recruiter/jobs.php');
 $recruiterApplicants = file_get_contents($root . '/public/views/recruiter/applicants.php');
 $recruiterInterviews = file_get_contents($root . '/public/views/recruiter/interviews.php');
 $recruiterStyles = file_get_contents($root . '/public/assets/css/recruiter.css');
+$recruiterNavScript = file_get_contents($root . '/public/assets/js/recruiter-nav.js');
 $database = file_get_contents($root . '/app/Core/Database.php');
 $bootstrap = file_get_contents($root . '/bootstrap/app.php');
 $environmentExample = file_get_contents($root . '/.env.example');
@@ -255,13 +256,19 @@ $test('Portal date handling defaults consistently to SVIET India Standard Time',
     $assert(str_contains($environmentExample, 'DB_TIMEZONE=+05:30'));
 });
 
-$test('Recruiter views provide the responsive glass bottom dock and reduced-motion support', static function () use ($assert, $recruiterLayout, $recruiterStyles, $root): void {
+$test('Recruiter views provide a responsive liquid-glass dock with a persistent sliding bubble', static function () use ($assert, $recruiterLayout, $recruiterStyles, $recruiterNavScript, $root): void {
     $assert(str_contains($recruiterLayout, 'class="rec-bottom-nav"'));
+    $assert(str_contains($recruiterLayout, 'class="rec-nav-indicator"'));
     $assert(str_contains($recruiterLayout, 'aria-label="Recruiter workspace"'));
+    $assert(str_contains($recruiterLayout, 'assets/js/recruiter-nav.js?v='));
     $assert(str_contains($recruiterStyles, 'backdrop-filter: blur(30px)'));
-    $assert(str_contains($recruiterStyles, '.rec-nav-link.is-active::before'));
+    $assert(str_contains($recruiterStyles, '.rec-nav-indicator.is-moving'));
+    $assert(str_contains($recruiterStyles, '@keyframes rec-liquid-wobble'));
     $assert(str_contains($recruiterStyles, 'env(safe-area-inset-bottom'));
     $assert(str_contains($recruiterStyles, '@media (prefers-reduced-motion: reduce)'));
+    $assert(str_contains($recruiterNavScript, 'sessionStorage'));
+    $assert(str_contains($recruiterNavScript, 'translate3d('));
+    $assert(str_contains($recruiterNavScript, 'prefers-reduced-motion'));
     foreach (['overview', 'company', 'jobs', 'applicants', 'interviews'] as $view) {
         $assert(is_file($root . '/public/views/recruiter/' . $view . '.php'), "missing recruiter view {$view}");
     }

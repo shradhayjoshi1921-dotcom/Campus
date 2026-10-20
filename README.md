@@ -4,7 +4,7 @@
 
 Campus is a server-rendered placement portal for students, recruiters, and placement teams. The interface uses an institute-focused navy-and-emerald design, responsive navigation, restrained frosted-glass accents, and reduced-motion-aware transitions. The homepage uses a CSS-built abstract hero rather than unverified campus photography. The website does not depend on remote font, Bootstrap, icon, or hero-image CDNs.
 
-The recruiter workspace uses a responsive frosted-glass bottom dock with a subtle iOS-inspired active bubble, while keeping job and candidate information readable on compact screens. The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
+The recruiter workspace uses a responsive liquid-glass bottom dock with a smoothly sliding iOS-inspired bubble indicator, while keeping job and candidate information readable on compact screens. The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
 
 ## Run on Windows with XAMPP
 

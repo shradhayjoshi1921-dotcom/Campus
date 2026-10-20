@@ -2,6 +2,7 @@
 </div>
 
 <nav class="rec-bottom-nav" aria-label="Recruiter workspace">
+    <span class="rec-nav-indicator" aria-hidden="true"></span>
     <a class="rec-nav-link <?= $section === 'overview' ? 'is-active' : '' ?>" href="recruiter.php?section=overview" <?= $section === 'overview' ? 'aria-current="page"' : '' ?>>
         <span class="rec-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg></span>
         <span class="rec-nav-label">Overview</span>
@@ -28,5 +29,6 @@
     <span>Swami Vivekanand Institute of Engineering and Technology</span>
     <span>SVIET Training &amp; Placement Portal</span>
 </footer>
+<script src="assets/js/recruiter-nav.js?v=<?= recruiter_h($recruiterNavJsVersion) ?>" defer></script>
 </body>
 </html>
