@@ -162,7 +162,7 @@ $test('Portal routes provide accurate not-found and recruiter-approval feedback'
 $test('Homepage uses local assets, avoids unverified campus photography, and keeps accessible responsive navigation', static function () use ($assert, $front, $root): void {
     $styles = file_get_contents($root . '/public/assets/css/app.css');
     $homepageStyles = file_get_contents($root . '/public/assets/css/homepage.css');
-    $assert(str_contains($front, 'assets/css/app.css'));
+    $assert(str_contains($front, 'assets/css/app.css?v='));
     $assert(str_contains($front, 'assets/css/homepage.css'));
     $assert(str_contains($front, 'assets/js/site.js'));
     $assert(is_file($root . '/public/assets/css/app.css'));
@@ -174,7 +174,8 @@ $test('Homepage uses local assets, avoids unverified campus photography, and kee
     $assert(str_contains($front, 'id="nav-toggle"'));
     $assert(str_contains($front, 'aria-expanded="false"'));
     $assert(str_contains($front, '<a class="skip-link" href="#main-content">Skip to main content</a>'));
-    $assert(str_contains($styles, '.skip-link:focus-visible'));
+    $assert((bool) preg_match('/\.skip-link\s*\{[^}]*opacity:\s*0;/s', $styles));
+    $assert((bool) preg_match('/\.skip-link:focus-visible\s*\{[^}]*opacity:\s*1;/s', $styles));
     $assert(str_contains($front, 'role="group" aria-label="Portal access'));
     $assert(!str_contains($front, 'cdn.jsdelivr.net'));
     $assert(!str_contains($front, 'unpkg.com'));
