@@ -2,7 +2,7 @@
 
 **Version 2.0.0** · PHP 8.2+ · MySQL/MariaDB · Apache/XAMPP
 
-Campus is a server-rendered placement portal for students, recruiters, and placement teams. This update refreshes the interface with a locally bundled campus hero image, responsive navigation, a consistent design system, and smooth, reduced-motion-aware transitions. The website does not depend on remote font, Bootstrap, icon, or hero-image CDNs.
+Campus is a server-rendered placement portal for students, recruiters, and placement teams. The interface uses an institute-focused navy-and-emerald design, responsive navigation, restrained frosted-glass accents, and reduced-motion-aware transitions. The homepage uses a CSS-built abstract hero rather than unverified campus photography. The website does not depend on remote font, Bootstrap, icon, or hero-image CDNs.
 
 The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
 
