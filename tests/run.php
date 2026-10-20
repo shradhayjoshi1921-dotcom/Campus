@@ -152,13 +152,29 @@ $test('Admin bootstrap is CLI-only, password-hashed, and refuses a second admin'
     $assert(str_contains($adminSetup, 'initial bootstrap is disabled'));
 });
 
-$test('Homepage uses local assets and an accessible responsive navigation', static function () use ($assert, $front, $root): void {
-    $assert(str_contains($front, 'assets/images/campus-hero.jpg'));
+$test('Portal routes provide accurate not-found and recruiter-approval feedback', static function () use ($assert, $front): void {
+    $assert(str_contains($front, 'http_response_code(404)'));
+    $assert(str_contains($front, 'awaiting Training & Placement Cell approval'));
+    $assert(str_contains($front, '$selectedRole'));
+    $assert(str_contains($front, 'value="recruiter"'));
+});
+
+$test('Homepage uses local assets, avoids unverified campus photography, and keeps accessible responsive navigation', static function () use ($assert, $front, $root): void {
+    $styles = file_get_contents($root . '/public/assets/css/app.css');
+    $homepageStyles = file_get_contents($root . '/public/assets/css/homepage.css');
+    $assert(str_contains($front, 'assets/css/app.css'));
+    $assert(str_contains($front, 'assets/css/homepage.css'));
     $assert(str_contains($front, 'assets/js/site.js'));
+    $assert(is_file($root . '/public/assets/css/app.css'));
+    $assert(is_file($root . '/public/assets/css/homepage.css'));
     $assert(is_file($root . '/public/assets/js/site.js'));
+    $assert(!str_contains($front, 'campus-hero.jpg'));
+    $assert(!str_contains($styles, 'campus-hero.jpg'));
+    $assert(!str_contains($homepageStyles, 'campus-hero.jpg'));
     $assert(str_contains($front, 'id="nav-toggle"'));
     $assert(str_contains($front, 'aria-expanded="false"'));
-    $assert(is_file($root . '/public/assets/images/campus-hero.jpg'));
+    $assert(str_contains($front, '<a class="skip-link" href="#main-content">Skip to main content</a>'));
+    $assert(str_contains($front, 'role="group" aria-label="Portal access'));
     $assert(!str_contains($front, 'cdn.jsdelivr.net'));
     $assert(!str_contains($front, 'unpkg.com'));
 });
