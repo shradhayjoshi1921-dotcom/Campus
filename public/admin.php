@@ -1,90 +1,906 @@
 <?php
+
 declare(strict_types=1);
-require dirname(__DIR__) . '/bootstrap/app.php';
+
 use App\Core\Database;
 use App\Core\Security;
+use App\Services\AdminImportService;
+
+require dirname(__DIR__) . '/bootstrap/app.php';
 Security::requireRole(['tpo','admin']);
+
 $user = Security::currentUser();
-$db = Database::connection();
-$csrf = Security::csrfToken();
-$error = ''; $success = '';
-function admin_h(?string $s): string { return App\Core\Security::escape($s); }
-function admin_audit(PDO $db, int $actor, string $action, string $entity, ?int $id, array $meta=[]): void {
-    $q=$db->prepare('INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,ip_hash,metadata_json) VALUES(?,?,?,?,?,?)');
-    $q->execute([$actor,$action,$entity,$id,isset($_SERVER['REMOTE_ADDR'])?hash('sha256',(string)$_SERVER['REMOTE_ADDR']):null,$meta?json_encode($meta,JSON_UNESCAPED_SLASHES):null]);
+
+function admin_h(?string $value): string
+{
+    return Security::escape($value);
 }
-if ($_SERVER['REQUEST_METHOD']==='POST') {
-    if (!Security::verifyCsrf($_POST['_csrf'] ?? null)) { http_response_code(419); $error='Session token expired. Refresh and try again.'; }
-    else {
-        $action=(string)($_POST['action']??'');
-        try {
-            $db->beginTransaction();
-            if ($action==='user_decision') {
-                $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT); $decision=(string)($_POST['decision']??'');
-                if (!$id || !in_array($decision,['approve','reject','suspend','reactivate'],true)) throw new InvalidArgumentException('Invalid user decision.');
-                $q=$db->prepare("SELECT id,role,status FROM users WHERE id=? AND role IN ('recruiter','student','tpo') FOR UPDATE");$q->execute([$id]);$target=$q->fetch(PDO::FETCH_ASSOC);
-                if (!$target) throw new RuntimeException('User not found or not eligible for this action.');
-                if ($target['role']==='tpo' && $user['role']!=='admin') throw new RuntimeException('Only an administrator can manage TPO accounts.');
-                if ((int)$target['id']===(int)$user['id']) throw new RuntimeException('You cannot change your own account status.');
-                $status=match($decision){'approve','reactivate'=>'active','reject'=>'inactive','suspend'=>'suspended'};
-                $db->prepare('UPDATE users SET status=? WHERE id=?')->execute([$status,$id]);
-                admin_audit($db,(int)$user['id'],'user_'.$decision,'user',(int)$id,['role'=>$target['role'],'new_status'=>$status]);
-                $db->prepare('INSERT INTO notifications(user_id,title,body) VALUES(?,?,?)')->execute([$id,'Account status updated','Your Campus account status is now '.$status.'.']);
-                $success='User account updated.';
-            } elseif ($action==='company_decision') {
-                $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);$decision=(string)($_POST['decision']??'');
-                if(!$id||!in_array($decision,['approve','reject'],true))throw new InvalidArgumentException('Invalid company decision.');
-                $q=$db->prepare('SELECT id,approval_status FROM companies WHERE id=? FOR UPDATE');$q->execute([$id]);if(!$q->fetch())throw new RuntimeException('Company not found.');
-                $status=$decision==='approve'?'approved':'rejected';$db->prepare('UPDATE companies SET approval_status=? WHERE id=?')->execute([$status,$id]);
-                admin_audit($db,(int)$user['id'],'company_'.$decision,'company',(int)$id,['approval_status'=>$status]);
-                $q=$db->prepare('SELECT user_id FROM recruiter_profiles WHERE company_id=?');$q->execute([$id]);foreach($q->fetchAll(PDO::FETCH_COLUMN) as $uid){$db->prepare('INSERT INTO notifications(user_id,title,body) VALUES(?,?,?)')->execute([(int)$uid,'Company review completed','Your company profile was '.$status.'.']);}
-                $success='Company review saved.';
-            } elseif ($action==='job_decision') {
-                $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);$decision=(string)($_POST['decision']??'');
-                if(!$id||!in_array($decision,['publish','pause','close','draft'],true))throw new InvalidArgumentException('Invalid job decision.');
-                $q=$db->prepare('SELECT j.id,j.status,c.approval_status,c.id AS company_id FROM jobs j JOIN companies c ON c.id=j.company_id WHERE j.id=? FOR UPDATE');$q->execute([$id]);$job=$q->fetch(PDO::FETCH_ASSOC);if(!$job)throw new RuntimeException('Job not found.');
-                if($decision==='publish' && $job['approval_status']!=='approved')throw new RuntimeException('Approve the company before publishing its job.');
-                $status=match($decision){'publish'=>'published','pause'=>'paused','close'=>'closed','draft'=>'draft'};
-                $db->prepare('UPDATE jobs SET status=? WHERE id=?')->execute([$status,$id]);admin_audit($db,(int)$user['id'],'job_'.$decision,'job',(int)$id,['new_status'=>$status]);
-                $success='Job moderation updated.';
-            } elseif ($action==='announcement') {
-                $title=trim((string)($_POST['title']??''));$body=trim((string)($_POST['body']??''));$audience=(string)($_POST['audience']??'all');
-                if($title===''||mb_strlen($title)>180||$body===''||mb_strlen($body)>10000||!in_array($audience,['all','students','recruiters','tpo'],true))throw new InvalidArgumentException('Enter a valid title, message and audience.');
-                $db->prepare('INSERT INTO announcements(author_id,title,body,audience,published_at) VALUES(?,?,?,?,NOW())')->execute([(int)$user['id'],$title,$body,$audience]);$id=(int)$db->lastInsertId();
-                $roles=$audience==='all'?['student','recruiter','tpo']:[$audience==='students'?'student':($audience==='recruiters'?'recruiter':'tpo')];$marks=implode(',',array_fill(0,count($roles),'?'));$q=$db->prepare("SELECT id FROM users WHERE status='active' AND role IN ($marks)");$q->execute($roles);$ins=$db->prepare('INSERT INTO notifications(user_id,title,body) VALUES(?,?,?)');foreach($q->fetchAll(PDO::FETCH_COLUMN) as $uid)$ins->execute([(int)$uid,$title,$body]);admin_audit($db,(int)$user['id'],'announcement_published','announcement',$id,['audience'=>$audience]);$success='Announcement published and notifications queued.';
-            } else throw new InvalidArgumentException('Unknown action.');
-            $db->commit();
-        } catch(Throwable $e) { if($db->inTransaction())$db->rollBack();$error=$e instanceof InvalidArgumentException||$e instanceof RuntimeException?$e->getMessage():'The action could not be completed. Check the schema and application logs.'; }
+
+function admin_post(string $key): string
+{
+    $value = $_POST[$key] ?? '';
+    return is_string($value) ? trim($value) : '';
+}
+
+function admin_get(string $key): string
+{
+    $value = $_GET[$key] ?? '';
+    return is_string($value) ? trim($value) : '';
+}
+
+function admin_id(mixed $value): int
+{
+    $id = filter_var($value, FILTER_VALIDATE_INT);
+    return $id !== false && $id > 0 ? (int) $id : 0;
+}
+
+/** @return list<int> */
+function admin_ids(mixed $value): array
+{
+    if (!is_array($value)) {
+        return [];
+    }
+    $ids = [];
+    foreach ($value as $candidate) {
+        $id = admin_id($candidate);
+        if ($id > 0) {
+            $ids[$id] = $id;
+        }
+    }
+    return array_values($ids);
+}
+
+function admin_section(string $candidate): string
+{
+    $sections = ['overview', 'approvals', 'students', 'placements', 'jobs', 'reports', 'comms', 'governance'];
+    return in_array($candidate, $sections, true) ? $candidate : 'overview';
+}
+
+function admin_audit(PDO $db, int $actorId, string $action, string $entity, ?int $entityId, array $metadata = []): void
+{
+    $statement = $db->prepare(
+        'INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, ip_hash, metadata_json) VALUES (?, ?, ?, ?, ?, ?)',
+    );
+    $statement->execute([
+        $actorId,
+        $action,
+        $entity,
+        $entityId,
+        isset($_SERVER['REMOTE_ADDR']) ? hash('sha256', (string) $_SERVER['REMOTE_ADDR']) : null,
+        $metadata ? json_encode($metadata, JSON_UNESCAPED_SLASHES) : null,
+    ]);
+}
+
+function admin_notify(PDO $db, int $userId, string $title, string $body): void
+{
+    $statement = $db->prepare('INSERT INTO notifications (user_id, title, body) VALUES (?, ?, ?)');
+    $statement->execute([$userId, $title, $body]);
+}
+
+function admin_flash_redirect(string $section, string $kind, string $message, array $query = []): never
+{
+    $_SESSION['admin_flash'] = ['kind' => $kind, 'message' => $message];
+    $query['section'] = admin_section($section);
+    header('Location: admin.php?' . http_build_query($query), true, 303);
+    exit;
+}
+
+function admin_table_exists(PDO $db, string $table): bool
+{
+    try {
+        $statement = $db->prepare('SHOW TABLES LIKE ?');
+        $statement->execute([$table]);
+        return (bool) $statement->fetchColumn();
+    } catch (Throwable $exception) {
+        return false;
     }
 }
-$stats=[];
-foreach ([
- 'Students'=>"SELECT COUNT(*) FROM users WHERE role='student'",
- 'Active recruiters'=>"SELECT COUNT(*) FROM users WHERE role='recruiter' AND status='active'",
- 'Pending users'=>"SELECT COUNT(*) FROM users WHERE status='pending'",
- 'Pending companies'=>"SELECT COUNT(*) FROM companies WHERE approval_status='pending'",
- 'Published jobs'=>"SELECT COUNT(*) FROM jobs WHERE status='published'",
- 'Applications'=>"SELECT COUNT(*) FROM applications WHERE status<>'withdrawn'",
- 'Selected students'=>"SELECT COUNT(DISTINCT student_id) FROM applications WHERE status='selected'"
-] as $label=>$sql) { try {$stats[$label]=(int)$db->query($sql)->fetchColumn();} catch(Throwable $e) {$stats[$label]='—';} }
-$pendingUsers=$db->query("SELECT id,name,email,role,status,created_at FROM users WHERE status='pending' AND role IN ('recruiter','student','tpo') ORDER BY created_at ASC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
-$companies=$db->query("SELECT c.id,c.name,c.website,c.industry,c.approval_status,c.created_at,COUNT(rp.user_id) recruiter_count FROM companies c LEFT JOIN recruiter_profiles rp ON rp.company_id=c.id WHERE c.approval_status='pending' GROUP BY c.id ORDER BY c.created_at ASC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
-$jobs=$db->query("SELECT j.id,j.title,j.status,j.closes_at,c.name company_name,c.approval_status FROM jobs j JOIN companies c ON c.id=j.company_id WHERE j.status IN ('draft','paused','published') ORDER BY j.updated_at DESC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
-$students=$db->query("SELECT u.id,u.name,u.email,u.status,sp.branch,sp.cgpa,sp.graduation_year,COUNT(a.id) applications,SUM(a.status='selected') selections FROM users u LEFT JOIN student_profiles sp ON sp.user_id=u.id LEFT JOIN applications a ON a.student_id=u.id WHERE u.role='student' GROUP BY u.id,sp.branch,sp.cgpa,sp.graduation_year ORDER BY u.created_at DESC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
-$recentAudit=[];try{$recentAudit=$db->query('SELECT al.action,al.entity_type,al.entity_id,al.created_at,u.name actor_name FROM audit_logs al LEFT JOIN users u ON u.id=al.actor_id ORDER BY al.created_at DESC LIMIT 30')->fetchAll(PDO::FETCH_ASSOC);}catch(Throwable $e){}
-$reports=[];try{$reports=$db->query("SELECT COALESCE(sp.branch,'Unspecified') branch,COUNT(DISTINCT u.id) students,COUNT(DISTINCT CASE WHEN a.status='selected' THEN u.id END) selected,COUNT(a.id) applications FROM users u LEFT JOIN student_profiles sp ON sp.user_id=u.id LEFT JOIN applications a ON a.student_id=u.id WHERE u.role='student' GROUP BY sp.branch ORDER BY students DESC")->fetchAll(PDO::FETCH_ASSOC);}catch(Throwable $e){}
-?>
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Campus · TPO & Admin</title><link rel="stylesheet" href="assets/css/app.css"><style>
-.admin-wrap{max-width:1360px;margin:auto;padding:32px 26px 70px}.admin-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}.admin-head h1{margin:0}.admin-sub{color:#a9a7b8}.admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:20px 0 30px}.admin-stat,.admin-panel{background:linear-gradient(145deg,rgba(17,34,52,.94),rgba(10,23,37,.96));border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 12px 36px rgba(0,0,0,.12)}.admin-stat strong{display:block;font-size:28px;margin-top:8px;color:var(--mint);letter-spacing:-.05em}.admin-panel{margin:18px 0;overflow:auto}.admin-panel h2{font-size:19px;margin:0 0 15px;font-weight:650}.admin-table{width:100%;border-collapse:collapse;min-width:680px}.admin-table th,.admin-table td{text-align:left;padding:11px;border-bottom:1px solid #292832;vertical-align:top}.admin-table th{color:#c8c1ff;font-size:12px;text-transform:uppercase;letter-spacing:.05em}.admin-form{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.admin-form input,.admin-form select,.admin-panel input,.admin-panel textarea,.admin-panel select{background:rgba(5,15,27,.72);color:var(--text);border:1px solid rgba(206,224,240,.16);border-radius:10px;padding:10px 12px}.admin-btn{border:1px solid rgba(185,242,212,.3);background:var(--mint);color:#07140e;border-radius:999px;padding:9px 14px;cursor:pointer;font-size:10px;font-weight:700}.admin-btn.danger{border-color:#78383d;background:#35171b}.admin-alert{padding:12px 15px;margin:12px 0;border:1px solid #514b76;background:#171422}.admin-alert.error{border-color:#78383d;background:#291317}.admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}.admin-tabs a{padding:8px 13px;border:1px solid var(--line);border-radius:999px;color:#dbe6ed;text-decoration:none;background:rgba(255,255,255,.035)}.admin-tabs a:hover{background:#211d31}@media(max-width:600px){.admin-wrap{padding:18px 10px}.admin-stat strong{font-size:22px}}
-</style></head><body><header class="topbar"><a class="brand" href="index.php" aria-label="Campus home"><span class="brand-mark" aria-hidden="true">C</span><span class="brand-copy"><strong>Campus</strong><small>PLACEMENT INTELLIGENCE</small></span></a><nav aria-label="Admin navigation"><a href="index.php">Main portal</a><a href="index.php?page=dashboard">Dashboard</a><form method="post" action="index.php" class="inline-form"><input type="hidden" name="_csrf" value="<?=admin_h($csrf)?>"><input type="hidden" name="action" value="logout"><button class="nav-cta" type="submit">Sign out</button></form></nav></header><main class="admin-wrap"><div class="admin-head"><div><p class="admin-sub">CONTROL CENTRE / <?=admin_h(strtoupper((string)$user['role']))?></p><h1>TPO & Admin Portal</h1><p class="admin-sub">Approvals, placements, reports and governance. Data is sourced from Campus records.</p></div><span class="admin-sub">Signed in as <?=admin_h((string)$user['name'])?></span></div>
-<?php if($error!==''):?><div class="admin-alert error"><?=admin_h($error)?></div><?php endif;?><?php if($success!==''):?><div class="admin-alert"><?=admin_h($success)?></div><?php endif;?>
-<div class="admin-grid"><?php foreach($stats as $label=>$value):?><div class="admin-stat"><span class="admin-sub"><?=admin_h($label)?></span><strong><?=admin_h((string)$value)?></strong></div><?php endforeach;?></div>
-<div class="admin-tabs"><a href="#approvals">Approvals</a><a href="#jobs">Job moderation</a><a href="#students">Students</a><a href="#reports">Reports</a><a href="#announcements">Announcements</a><a href="#audit">Audit log</a></div>
-<section class="admin-panel" id="approvals"><h2>Pending user accounts</h2><?php if(!$pendingUsers):?><p class="admin-sub">No pending accounts.</p><?php else:?><table class="admin-table"><thead><tr><th>User</th><th>Role</th><th>Created</th><th>Decision</th></tr></thead><tbody><?php foreach($pendingUsers as $r):?><tr><td><?=admin_h($r['name'])?><br><span class="admin-sub"><?=admin_h($r['email'])?></span></td><td><?=admin_h($r['role'])?></td><td><?=admin_h($r['created_at'])?></td><td><form class="admin-form" method="post"><input type="hidden" name="_csrf" value="<?=admin_h($csrf)?>"><input type="hidden" name="action" value="user_decision"><input type="hidden" name="id" value="<?=(int)$r['id']?>"><button class="admin-btn" name="decision" value="approve">Approve</button><button class="admin-btn danger" name="decision" value="reject">Reject / deactivate</button></form></td></tr><?php endforeach;?></tbody></table><?php endif;?>
-<h2 style="margin-top:25px">Pending companies</h2><?php if(!$companies):?><p class="admin-sub">No pending companies.</p><?php else:?><table class="admin-table"><thead><tr><th>Company</th><th>Industry</th><th>Recruiters</th><th>Decision</th></tr></thead><tbody><?php foreach($companies as $c):?><tr><td><?=admin_h($c['name'])?><br><span class="admin-sub"><?=admin_h($c['website']??'')?></span></td><td><?=admin_h($c['industry']??'—')?></td><td><?=(int)$c['recruiter_count']?></td><td><form class="admin-form" method="post"><input type="hidden" name="_csrf" value="<?=admin_h($csrf)?>"><input type="hidden" name="action" value="company_decision"><input type="hidden" name="id" value="<?=(int)$c['id']?>"><button class="admin-btn" name="decision" value="approve">Approve</button><button class="admin-btn danger" name="decision" value="reject">Reject</button></form></td></tr><?php endforeach;?></tbody></table><?php endif;?></section>
-<section class="admin-panel" id="jobs"><h2>Job moderation</h2><table class="admin-table"><thead><tr><th>Job</th><th>Company</th><th>Status</th><th>Moderation</th></tr></thead><tbody><?php foreach($jobs as $j):?><tr><td><?=admin_h($j['title'])?><br><span class="admin-sub">ID <?=(int)$j['id']?></span></td><td><?=admin_h($j['company_name'])?><br><span class="admin-sub">Company: <?=admin_h($j['approval_status'])?></span></td><td><?=admin_h($j['status'])?></td><td><form class="admin-form" method="post"><input type="hidden" name="_csrf" value="<?=admin_h($csrf)?>"><input type="hidden" name="action" value="job_decision"><input type="hidden" name="id" value="<?=(int)$j['id']?>"><button class="admin-btn" name="decision" value="publish">Publish</button><button class="admin-btn" name="decision" value="pause">Pause</button><button class="admin-btn danger" name="decision" value="close">Close</button></form></td></tr><?php endforeach;?></tbody></table></section>
-<section class="admin-panel" id="students"><h2>Student placement overview</h2><table class="admin-table"><thead><tr><th>Student</th><th>Branch</th><th>CGPA</th><th>Applications</th><th>Selected</th><th>Status</th></tr></thead><tbody><?php foreach($students as $s):?><tr><td><?=admin_h($s['name'])?><br><span class="admin-sub"><?=admin_h($s['email'])?></span></td><td><?=admin_h($s['branch']??'Unspecified')?></td><td><?=admin_h((string)($s['cgpa']??'—'))?></td><td><?=(int)$s['applications']?></td><td><?=(int)($s['selections']??0)?></td><td><?=admin_h($s['status'])?></td></tr><?php endforeach;?></tbody></table></section>
-<section class="admin-panel" id="reports"><h2>Department-wise report</h2><table class="admin-table"><thead><tr><th>Branch</th><th>Students</th><th>Applications</th><th>Selected students</th><th>Selection rate</th></tr></thead><tbody><?php foreach($reports as $r):$rate=(int)$r['students']?round(((int)$r['selected']/(int)$r['students'])*100,1):0;?><tr><td><?=admin_h($r['branch'])?></td><td><?=(int)$r['students']?></td><td><?=(int)$r['applications']?></td><td><?=(int)$r['selected']?></td><td><?=$rate?>%</td></tr><?php endforeach;?></tbody></table><p class="admin-sub">Selection rate uses distinct students with selected applications; it is not a package or salary statistic.</p></section>
-<section class="admin-panel" id="announcements"><h2>Publish announcement</h2><form method="post"><input type="hidden" name="_csrf" value="<?=admin_h($csrf)?>"><input type="hidden" name="action" value="announcement"><p><label>Title<br><input required maxlength="180" name="title" style="width:min(100%,600px)"></label></p><p><label>Message<br><textarea required maxlength="10000" name="body" rows="4" style="width:min(100%,800px)"></textarea></label></p><p><label>Audience<br><select name="audience"><option value="all">Everyone</option><option value="students">Students</option><option value="recruiters">Recruiters</option><option value="tpo">TPO</option></select></label></p><button class="admin-btn">Publish announcement</button></form></section>
-<section class="admin-panel" id="audit"><h2>Recent audit activity</h2><?php if(!$recentAudit):?><p class="admin-sub">No audit entries available yet.</p><?php else:?><table class="admin-table"><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th>ID</th></tr></thead><tbody><?php foreach($recentAudit as $a):?><tr><td><?=admin_h($a['created_at'])?></td><td><?=admin_h($a['actor_name']??'System')?></td><td><?=admin_h($a['action'])?></td><td><?=admin_h($a['entity_type']??'—')?></td><td><?=admin_h((string)($a['entity_id']??'—'))?></td></tr><?php endforeach;?></tbody></table><?php endif;?></section>
-<footer class="admin-sub">Campus administration · All state-changing actions require CSRF validation and are audited.</footer></main></body></html>
+
+function admin_age_days(?string $datetime): int
+{
+    if (!$datetime) {
+        return 0;
+    }
+    try {
+        $created = new DateTimeImmutable($datetime);
+        $diff = $created->diff(new DateTimeImmutable('now'));
+        return (int) $diff->days;
+    } catch (Throwable $exception) {
+        return 0;
+    }
+}
+
+function admin_age_label(?string $datetime): string
+{
+    $days = admin_age_days($datetime);
+    if ($days <= 0) {
+        return 'Today';
+    }
+    return $days === 1 ? '1 day' : $days . ' days';
+}
+
+function admin_money(?string $value): string
+{
+    if ($value === null || $value === '') {
+        return '—';
+    }
+    $number = (float) $value;
+    return rtrim(rtrim(number_format($number, 2, '.', ''), '0'), '.') . ' LPA';
+}
+
+function admin_status_label(string $status): string
+{
+    return match ($status) {
+        'under_review' => 'Under review',
+        'shortlisted' => 'Shortlisted',
+        'interview' => 'Interview',
+        'selected' => 'Selected',
+        'rejected' => 'Not selected',
+        'withdrawn' => 'Withdrawn',
+        'published' => 'Published',
+        'paused' => 'Paused',
+        'closed' => 'Closed',
+        'draft' => 'Draft',
+        'offered' => 'Offer sent',
+        'accepted' => 'Offer accepted',
+        'declined' => 'Offer declined',
+        'joined' => 'Joined',
+        'revoked' => 'Offer revoked',
+        'not_submitted' => 'Not submitted',
+        'pending' => 'Pending',
+        'approved' => 'Approved',
+        'rejected_company' => 'Rejected',
+        default => ucfirst(str_replace('_', ' ', $status)),
+    };
+}
+
+function admin_export_csv(string $filename, array $header, array $rows): never
+{
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: no-store');
+    $handle = fopen('php://output', 'w');
+    if ($handle === false) {
+        exit;
+    }
+    if (str_contains($filename, 'students') || str_contains($filename, 'offers') || str_contains($filename, 'report')) {
+        fwrite($handle, "\xEF\xBB\xBF");
+    }
+    fputcsv($handle, $header, ',', '"', '\\');
+    foreach ($rows as $row) {
+        fputcsv($handle, $row, ',', '"', '\\');
+    }
+    fclose($handle);
+    exit;
+}
+
+try {
+    $db = Database::connection();
+} catch (Throwable $exception) {
+    error_log('Admin database connection failure: ' . $exception->getMessage());
+    http_response_code(503);
+    $appCssVersion = (string) (filemtime(__DIR__ . '/assets/css/app.css') ?: 1);
+    ?>
+    <!doctype html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Admin portal unavailable | SVIET</title>
+        <link rel="stylesheet" href="assets/css/app.css?v=<?= admin_h($appCssVersion) ?>">
+    </head>
+    <body>
+        <main class="container" style="padding-block:64px">
+            <h1>Control centre temporarily unavailable</h1>
+            <p>We couldn't connect to the placement database. Please try again shortly.</p>
+            <a class="btn btn-primary" href="index.php?page=dashboard">Back to the portal</a>
+        </main>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
+$importService = new AdminImportService();
+$csrf = Security::csrfToken();
+$section = admin_section(admin_get('section'));
+$offersReady = admin_table_exists($db, 'offers');
+
+$flash = $_SESSION['admin_flash'] ?? null;
+unset($_SESSION['admin_flash']);
+$message = is_array($flash) && ($flash['kind'] ?? '') === 'success' ? (string) ($flash['message'] ?? '') : '';
+$error = is_array($flash) && ($flash['kind'] ?? '') === 'error' ? (string) ($flash['message'] ?? '') : '';
+
+$userDecisionMap = [
+    'approve' => ['status' => 'active', 'label' => 'approved'],
+    'reject' => ['status' => 'inactive', 'label' => 'rejected'],
+    'suspend' => ['status' => 'suspended', 'label' => 'suspended'],
+    'reactivate' => ['status' => 'active', 'label' => 'reactivated'],
+];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $postedToken = $_POST['_csrf'] ?? null;
+    if (!is_string($postedToken) || !Security::verifyCsrf($postedToken)) {
+        http_response_code(419);
+        $error = 'Your session expired. Refresh the page and try again.';
+    } else {
+        $action = admin_post('action');
+        $returnSection = admin_section(admin_post('return_section') ?: admin_section($section));
+        $note = mb_substr(admin_post('note'), 0, 500);
+
+        try {
+            if ($action === 'user_decision' || $action === 'users_bulk') {
+                $decision = admin_post('decision');
+                $requestChanges = $decision === 'request_changes';
+                if (!isset($userDecisionMap[$decision]) && !$requestChanges) {
+                    throw new InvalidArgumentException('Choose a valid account decision.');
+                }
+                if ($requestChanges && $note === '') {
+                    throw new InvalidArgumentException('Describe what the account holder needs to change.');
+                }
+                $ids = $action === 'users_bulk' ? admin_ids($_POST['ids'] ?? null) : array_filter([admin_id($_POST['id'] ?? null)]);
+                if ($ids === [] && $action === 'users_bulk' && admin_post('bulk_scope') === 'all_pending' && $decision === 'approve') {
+                    $ids = $db->query("SELECT id FROM users WHERE status = 'pending' AND role IN ('student', 'recruiter')")->fetchAll(PDO::FETCH_COLUMN);
+                    $ids = array_map('intval', $ids);
+                }
+                if ($ids === []) {
+                    throw new InvalidArgumentException('Select at least one account.');
+                }
+
+                $db->beginTransaction();
+                $select = $db->prepare("SELECT id, name, role, status FROM users WHERE id = ? AND role IN ('student', 'recruiter', 'tpo') FOR UPDATE");
+                $update = $db->prepare('UPDATE users SET status = ? WHERE id = ?');
+                $changed = 0;
+                $skipped = 0;
+                foreach ($ids as $id) {
+                    $select->execute([$id]);
+                    $target = $select->fetch(PDO::FETCH_ASSOC);
+                    if (!$target) {
+                        $skipped++;
+                        continue;
+                    }
+                    if ($target['role'] === 'tpo' && $user['role'] !== 'admin') {
+                        $skipped++;
+                        continue;
+                    }
+                    if ((int) $target['id'] === (int) $user['id']) {
+                        $skipped++;
+                        continue;
+                    }
+                    if ($requestChanges) {
+                        $update->execute(['pending', $id]);
+                        admin_notify(
+                            $db,
+                            $id,
+                            'Action needed on your Campus account',
+                            'The Training & Placement Cell reviewed your account and needs a change: ' . $note . ' Update your details, then contact the cell for re-review.',
+                        );
+                        admin_audit($db, (int) $user['id'], 'user_changes_requested', 'user', $id, ['role' => $target['role'], 'note' => $note]);
+                    } else {
+                        $mapped = $userDecisionMap[$decision];
+                        $update->execute([$mapped['status'], $id]);
+                        $body = 'Your Campus account status is now ' . $mapped['status'] . '.';
+                        if ($note !== '') {
+                            $body .= ' Note from the Training & Placement Cell: ' . $note;
+                        }
+                        admin_notify($db, $id, 'Account status updated', $body);
+                        admin_audit($db, (int) $user['id'], 'user_' . $mapped['label'], 'user', $id, ['role' => $target['role'], 'new_status' => $mapped['status'], 'note' => $note]);
+                    }
+                    $changed++;
+                }
+                $db->commit();
+                $suffix = $skipped > 0 ? ' ' . $skipped . ' skipped (not permitted).' : '';
+                $message = ($requestChanges ? 'Change request sent to ' : 'Updated ') . $changed . ' account' . ($changed === 1 ? '' : 's') . '.' . $suffix;
+            } elseif ($action === 'company_decision') {
+                $id = admin_id($_POST['id'] ?? null);
+                $decision = admin_post('decision');
+                if (!in_array($decision, ['approve', 'reject', 'request_changes'], true)) {
+                    throw new InvalidArgumentException('Choose a valid company decision.');
+                }
+                if ($decision === 'request_changes' && $note === '') {
+                    throw new InvalidArgumentException('Describe what the company needs to change.');
+                }
+
+                $db->beginTransaction();
+                $statement = $db->prepare('SELECT id, name, approval_status FROM companies WHERE id = ? FOR UPDATE');
+                $statement->execute([$id]);
+                $company = $statement->fetch(PDO::FETCH_ASSOC);
+                if (!$company) {
+                    throw new RuntimeException('Company not found.');
+                }
+                $status = match ($decision) {
+                    'approve' => 'approved',
+                    'reject' => 'rejected',
+                    default => 'pending',
+                };
+                $db->prepare('UPDATE companies SET approval_status = ? WHERE id = ?')->execute([$status, $id]);
+                $recipients = $db->prepare('SELECT user_id FROM recruiter_profiles WHERE company_id = ?');
+                $recipients->execute([$id]);
+                $title = $decision === 'request_changes' ? 'Company profile needs changes' : 'Company review completed';
+                $body = $decision === 'request_changes'
+                    ? 'The Training & Placement Cell reviewed ' . $company['name'] . ' and needs a change: ' . $note . ' Update the company profile, then resubmit for review.'
+                    : 'Your company profile was ' . $status . '.' . ($note !== '' ? ' Note: ' . $note : '');
+                foreach ($recipients->fetchAll(PDO::FETCH_COLUMN) as $recruiterId) {
+                    admin_notify($db, (int) $recruiterId, $title, $body);
+                }
+                admin_audit($db, (int) $user['id'], 'company_' . $decision, 'company', $id, ['approval_status' => $status, 'note' => $note]);
+                $db->commit();
+                $message = $decision === 'request_changes' ? 'Change request sent to the company.' : 'Company review saved.';
+            } elseif ($action === 'job_decision') {
+                $id = admin_id($_POST['id'] ?? null);
+                $decision = admin_post('decision');
+                if (!in_array($decision, ['publish', 'pause', 'close', 'draft'], true)) {
+                    throw new InvalidArgumentException('Choose a valid job decision.');
+                }
+                $db->beginTransaction();
+                $statement = $db->prepare('SELECT j.id, j.status, j.title, c.approval_status FROM jobs j JOIN companies c ON c.id = j.company_id WHERE j.id = ? FOR UPDATE');
+                $statement->execute([$id]);
+                $job = $statement->fetch(PDO::FETCH_ASSOC);
+                if (!$job) {
+                    throw new RuntimeException('Job not found.');
+                }
+                if ($decision === 'publish' && $job['approval_status'] !== 'approved') {
+                    throw new RuntimeException('Approve the company before publishing its job.');
+                }
+                $status = match ($decision) {
+                    'publish' => 'published',
+                    'pause' => 'paused',
+                    'close' => 'closed',
+                    default => 'draft',
+                };
+                $db->prepare('UPDATE jobs SET status = ? WHERE id = ?')->execute([$status, $id]);
+                admin_audit($db, (int) $user['id'], 'job_' . $decision, 'job', $id, ['new_status' => $status, 'note' => $note]);
+                $db->commit();
+                $message = 'Job moderation updated.';
+            } elseif ($action === 'announcement') {
+                $title = admin_post('title');
+                $body = admin_post('body');
+                $audience = admin_post('audience');
+                if ($title === '' || mb_strlen($title) > 180 || $body === '' || mb_strlen($body) > 10000 || !in_array($audience, ['all', 'students', 'recruiters', 'tpo'], true)) {
+                    throw new InvalidArgumentException('Enter a valid title, message and audience.');
+                }
+                $db->beginTransaction();
+                $db->prepare('INSERT INTO announcements (author_id, title, body, audience, published_at) VALUES (?, ?, ?, ?, NOW())')
+                    ->execute([(int) $user['id'], $title, $body, $audience]);
+                $announcementId = (int) $db->lastInsertId();
+                $role = match ($audience) {
+                    'students' => 'student',
+                    'recruiters' => 'recruiter',
+                    'tpo' => 'tpo',
+                    default => '',
+                };
+                if ($role === '') {
+                    $recipients = $db->query("SELECT id FROM users WHERE status = 'active' AND role IN ('student', 'recruiter', 'tpo')");
+                } else {
+                    $recipients = $db->prepare("SELECT id FROM users WHERE status = 'active' AND role = ?");
+                    $recipients->execute([$role]);
+                }
+                $insert = $db->prepare('INSERT INTO notifications (user_id, title, body) VALUES (?, ?, ?)');
+                foreach ($recipients->fetchAll(PDO::FETCH_COLUMN) as $recipientId) {
+                    $insert->execute([(int) $recipientId, $title, $body]);
+                }
+                admin_audit($db, (int) $user['id'], 'announcement_published', 'announcement', $announcementId, ['audience' => $audience]);
+                $db->commit();
+                $message = 'Announcement published and notifications queued.';
+            } elseif ($action === 'nudge_profiles') {
+                $statement = $db->query(
+                    "SELECT u.id FROM users u LEFT JOIN student_profiles sp ON sp.user_id = u.id "
+                    . "WHERE u.role = 'student' AND u.status = 'active' AND (sp.user_id IS NULL OR sp.branch IS NULL OR sp.cgpa IS NULL OR sp.graduation_year IS NULL)",
+                );
+                $ids = $statement->fetchAll(PDO::FETCH_COLUMN);
+                $insert = $db->prepare('INSERT INTO notifications (user_id, title, body) VALUES (?, ?, ?)');
+                foreach ($ids as $studentId) {
+                    $insert->execute([
+                        (int) $studentId,
+                        'Complete your placement profile',
+                        'Recruiters can only shortlist students with a complete profile. Add your branch, CGPA, graduation year and resume in the portal before the next drive.',
+                    ]);
+                }
+                admin_audit($db, (int) $user['id'], 'profile_nudge_sent', 'user', null, ['recipients' => count($ids)]);
+                $message = 'Reminder sent to ' . count($ids) . ' student' . (count($ids) === 1 ? '' : 's') . ' with incomplete profiles.';
+            } elseif ($action === 'import_preview') {
+                if (!isset($_FILES['csv']) || !is_array($_FILES['csv'])) {
+                    throw new InvalidArgumentException('Choose a CSV file to import.');
+                }
+                $file = $_FILES['csv'];
+                if ((int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                    throw new InvalidArgumentException('The upload failed. Choose a CSV file smaller than 512 KB.');
+                }
+                if ((int) ($file['size'] ?? 0) > AdminImportService::MAX_BYTES) {
+                    throw new InvalidArgumentException('The file is larger than 512 KB. Split it into smaller files.');
+                }
+                $contents = file_get_contents((string) $file['tmp_name']);
+                if ($contents === false) {
+                    throw new RuntimeException('The uploaded file could not be read.');
+                }
+                $parsed = $importService->parse($contents);
+                if ($parsed['rows'] === []) {
+                    throw new InvalidArgumentException(implode(' ', $parsed['errors']) ?: 'No usable rows were found in that file.');
+                }
+                $_SESSION['admin_import'] = [
+                    'file' => mb_substr(basename((string) $file['name']), 0, 120),
+                    'rows' => $parsed['rows'],
+                    'created_at' => time(),
+                ];
+                $valid = count(array_filter($parsed['rows'], static fn (array $row): bool => $row['valid']));
+                admin_flash_redirect('students', 'success', 'Parsed ' . count($parsed['rows']) . ' row' . (count($parsed['rows']) === 1 ? '' : 's') . '; ' . $valid . ' ready to import.', ['preview' => '1']);
+            } elseif ($action === 'import_cancel') {
+                unset($_SESSION['admin_import']);
+                admin_flash_redirect('students', 'success', 'Import cancelled. No accounts were created.');
+            } elseif ($action === 'import_commit') {
+                $staged = $_SESSION['admin_import'] ?? null;
+                if (!is_array($staged) || !isset($staged['rows'])) {
+                    throw new InvalidArgumentException('That import preview expired. Upload the file again.');
+                }
+                if (time() - (int) ($staged['created_at'] ?? 0) > 1800) {
+                    unset($_SESSION['admin_import']);
+                    throw new InvalidArgumentException('That import preview expired. Upload the file again.');
+                }
+
+                $db->beginTransaction();
+                $emailCheck = $db->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
+                $insertUser = $db->prepare("INSERT INTO users (name, email, password_hash, role, status) VALUES (?, ?, ?, ?, 'active')");
+                $insertProfile = $db->prepare('INSERT INTO student_profiles (user_id, branch, cgpa, graduation_year) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE branch = VALUES(branch), cgpa = VALUES(cgpa), graduation_year = VALUES(graduation_year)');
+                $companyLookup = $db->prepare('SELECT id FROM companies WHERE name = ? LIMIT 1');
+                $companyInsert = $db->prepare("INSERT INTO companies (name, approval_status) VALUES (?, 'pending')");
+                $profileInsert = $db->prepare('INSERT INTO recruiter_profiles (user_id, company_id, designation) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE company_id = VALUES(company_id), designation = VALUES(designation)');
+
+                $created = [];
+                $skipped = [];
+                foreach ($staged['rows'] as $row) {
+                    if (empty($row['valid'])) {
+                        $skipped[] = 'Line ' . (int) $row['line'] . ': ' . implode(' ', (array) $row['errors']);
+                        continue;
+                    }
+                    $values = $row['values'];
+                    $emailCheck->execute([$values['email']]);
+                    if ($emailCheck->fetchColumn()) {
+                        $skipped[] = 'Line ' . (int) $row['line'] . ': ' . $values['email'] . ' already has an account.';
+                        continue;
+                    }
+                    $password = $importService->generatePassword();
+                    $insertUser->execute([
+                        $values['name'],
+                        $values['email'],
+                        password_hash($password, PASSWORD_DEFAULT),
+                        $values['role'],
+                    ]);
+                    $newId = (int) $db->lastInsertId();
+
+                    if ($values['role'] === 'student') {
+                        $insertProfile->execute([
+                            $newId,
+                            $values['branch'] !== '' ? $values['branch'] : null,
+                            $values['cgpa'] !== '' ? $values['cgpa'] : null,
+                            $values['graduation_year'] !== '' ? (int) $values['graduation_year'] : null,
+                        ]);
+                    } else {
+                        $companyLookup->execute([$values['company']]);
+                        $companyId = (int) ($companyLookup->fetchColumn() ?: 0);
+                        if ($companyId === 0) {
+                            $companyInsert->execute([$values['company']]);
+                            $companyId = (int) $db->lastInsertId();
+                        }
+                        $profileInsert->execute([$newId, $companyId, $values['designation'] !== '' ? $values['designation'] : null]);
+                    }
+
+                    admin_notify(
+                        $db,
+                        $newId,
+                        'Welcome to the SVIET placement portal',
+                        'An account was created for you by the Training & Placement Cell. Sign in with your college email and the temporary password you were given, then review your profile.',
+                    );
+                    $created[] = ['name' => $values['name'], 'email' => $values['email'], 'role' => $values['role'], 'password' => $password];
+                }
+
+                admin_audit($db, (int) $user['id'], 'accounts_imported', 'user', null, [
+                    'created' => count($created),
+                    'skipped' => count($skipped),
+                    'file' => (string) ($staged['file'] ?? ''),
+                ]);
+                $db->commit();
+                unset($_SESSION['admin_import']);
+                $_SESSION['admin_import_credentials'] = $created;
+                $_SESSION['admin_import_skipped'] = $skipped;
+                $summary = count($created) . ' account' . (count($created) === 1 ? '' : 's') . ' created';
+                if ($skipped !== []) {
+                    $summary .= '; ' . count($skipped) . ' row' . (count($skipped) === 1 ? '' : 's') . ' skipped';
+                }
+                admin_flash_redirect('students', 'success', $summary . '. Download the credential sheet now — it is shown once.', ['imported' => '1']);
+            } elseif ($action === 'offer_create') {
+                if (!$offersReady) {
+                    throw new RuntimeException('The offers table is missing. Run database/migrations/2026-10-20-admin-portal-offers.sql first.');
+                }
+                $applicationId = admin_id($_POST['application_id'] ?? null);
+                $ctc = admin_post('ctc_lpa');
+                $offerDate = admin_post('offer_date');
+                $status = admin_post('status');
+                if ($applicationId === 0 || !in_array($status, ['offered', 'accepted'], true)) {
+                    throw new InvalidArgumentException('Choose a selected candidate and a valid offer state.');
+                }
+                if ($ctc !== '' && (filter_var($ctc, FILTER_VALIDATE_FLOAT) === false || (float) $ctc < 0 || (float) $ctc > 500)) {
+                    throw new InvalidArgumentException('CTC must be between 0 and 500 LPA.');
+                }
+                $parsedDate = null;
+                if ($offerDate !== '') {
+                    $parsedDate = DateTimeImmutable::createFromFormat('!Y-m-d', $offerDate);
+                    if (!$parsedDate) {
+                        throw new InvalidArgumentException('Enter a valid offer date.');
+                    }
+                }
+
+                $db->beginTransaction();
+                $statement = $db->prepare(
+                    "SELECT a.id, a.status, a.student_id, u.name, j.title, c.name AS company_name FROM applications a "
+                    . 'JOIN users u ON u.id = a.student_id JOIN jobs j ON j.id = a.job_id JOIN companies c ON c.id = j.company_id '
+                    . "WHERE a.id = ? AND a.status = 'selected' FOR UPDATE",
+                );
+                $statement->execute([$applicationId]);
+                $application = $statement->fetch(PDO::FETCH_ASSOC);
+                if (!$application) {
+                    throw new RuntimeException('Offers can only be recorded for applications marked as selected.');
+                }
+                $existing = $db->prepare('SELECT id FROM offers WHERE application_id = ? LIMIT 1');
+                $existing->execute([$applicationId]);
+                if ($existing->fetchColumn()) {
+                    throw new RuntimeException('That application already has an offer recorded.');
+                }
+                $db->prepare('INSERT INTO offers (application_id, ctc_lpa, offer_date, status, created_by) VALUES (?, ?, ?, ?, ?)')
+                    ->execute([$applicationId, $ctc !== '' ? $ctc : null, $parsedDate?->format('Y-m-d'), $status, (int) $user['id']]);
+                $offerId = (int) $db->lastInsertId();
+                admin_notify(
+                    $db,
+                    (int) $application['student_id'],
+                    'Offer recorded for ' . $application['title'],
+                    'The Training & Placement Cell recorded an offer from ' . $application['company_name'] . '. Confirm whether you accept it in the portal.',
+                );
+                admin_audit($db, (int) $user['id'], 'offer_created', 'offer', $offerId, [
+                    'application_id' => $applicationId,
+                    'ctc_lpa' => $ctc !== '' ? $ctc : null,
+                    'status' => $status,
+                ]);
+                $db->commit();
+                $message = 'Offer recorded for ' . $application['name'] . '.';
+            } elseif ($action === 'offer_update') {
+                if (!$offersReady) {
+                    throw new RuntimeException('The offers table is missing. Run database/migrations/2026-10-20-admin-portal-offers.sql first.');
+                }
+                $offerId = admin_id($_POST['id'] ?? null);
+                $status = admin_post('status');
+                $joinedOn = admin_post('joined_on');
+                if ($offerId === 0 || !in_array($status, ['offered', 'accepted', 'declined', 'joined', 'revoked'], true)) {
+                    throw new InvalidArgumentException('Choose a valid offer state.');
+                }
+                $parsedDate = null;
+                if ($joinedOn !== '') {
+                    $parsedDate = DateTimeImmutable::createFromFormat('!Y-m-d', $joinedOn);
+                    if (!$parsedDate) {
+                        throw new InvalidArgumentException('Enter a valid joining date.');
+                    }
+                }
+                $db->beginTransaction();
+                $statement = $db->prepare(
+                    'SELECT o.id, o.status, a.student_id, j.title FROM offers o JOIN applications a ON a.id = o.application_id JOIN jobs j ON j.id = a.job_id WHERE o.id = ? FOR UPDATE',
+                );
+                $statement->execute([$offerId]);
+                $offer = $statement->fetch(PDO::FETCH_ASSOC);
+                if (!$offer) {
+                    throw new RuntimeException('Offer not found.');
+                }
+                $db->prepare('UPDATE offers SET status = ?, joined_on = ? WHERE id = ?')
+                    ->execute([$status, $status === 'joined' ? ($parsedDate?->format('Y-m-d') ?? date('Y-m-d')) : null, $offerId]);
+                admin_notify($db, (int) $offer['student_id'], 'Offer status updated', 'Your offer for ' . $offer['title'] . ' is now marked as ' . admin_status_label($status) . '.');
+                admin_audit($db, (int) $user['id'], 'offer_' . $status, 'offer', $offerId, ['previous' => $offer['status'], 'new_status' => $status]);
+                $db->commit();
+                $message = 'Offer updated to ' . admin_status_label($status) . '.';
+            } else {
+                throw new InvalidArgumentException('Unknown action.');
+            }
+        } catch (Throwable $exception) {
+            if (isset($db) && $db->inTransaction()) {
+                $db->rollBack();
+            }
+            $known = $exception instanceof InvalidArgumentException || $exception instanceof RuntimeException;
+            if (!$known) {
+                error_log('Admin action failure (' . $action . '): ' . $exception->getMessage());
+            }
+            admin_flash_redirect($returnSection, 'error', $known ? $exception->getMessage() : 'That action could not be completed. Check the logs and try again.');
+        }
+
+        if ($message !== '') {
+            admin_flash_redirect($returnSection, 'success', $message);
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ reports export */
+if ($section === 'reports' && admin_get('export') !== '') {
+    $export = admin_get('export');
+    if (in_array($export, ['offers', 'branch'], true) && !$offersReady) {
+        admin_flash_redirect('reports', 'error', 'Offer exports need the offers table. Run database/migrations/2026-10-20-admin-portal-offers.sql first.');
+    }
+    if (!in_array($export, ['students', 'offers', 'branch'], true)) {
+        admin_flash_redirect('reports', 'error', 'Unknown export.');
+    }
+    try {
+        if ($export === 'students') {
+            $rows = $db->query(
+                "SELECT u.name, u.email, u.status, COALESCE(sp.branch, '') , COALESCE(sp.cgpa, ''), COALESCE(sp.graduation_year, '') "
+                . "FROM users u LEFT JOIN student_profiles sp ON sp.user_id = u.id WHERE u.role = 'student' ORDER BY u.name",
+            )->fetchAll(PDO::FETCH_NUM);
+            admin_export_csv('sviet-students-' . date('Y-m-d') . '.csv', ['name', 'email', 'account_status', 'branch', 'cgpa', 'graduation_year'], $rows);
+        }
+        if ($export === 'offers') {
+            $rows = $db->query(
+                'SELECT u.name, u.email, j.title, c.name, o.status, COALESCE(o.ctc_lpa, \'\'), COALESCE(o.offer_date, \'\'), COALESCE(o.joined_on, \'\') '
+                . 'FROM offers o JOIN applications a ON a.id = o.application_id JOIN users u ON u.id = a.student_id '
+                . 'JOIN jobs j ON j.id = a.job_id JOIN companies c ON c.id = j.company_id ORDER BY o.created_at DESC',
+            )->fetchAll(PDO::FETCH_NUM);
+            admin_export_csv('sviet-offers-' . date('Y-m-d') . '.csv', ['student', 'email', 'job_title', 'company', 'offer_status', 'ctc_lpa', 'offer_date', 'joined_on'], $rows);
+        }
+        if ($export === 'branch') {
+            $rows = $db->query(
+                "SELECT COALESCE(sp.branch, 'Unspecified'), COUNT(DISTINCT u.id), "
+                . "COUNT(DISTINCT CASE WHEN o.status = 'joined' THEN u.id END), COUNT(DISTINCT a.id) "
+                . 'FROM users u LEFT JOIN student_profiles sp ON sp.user_id = u.id '
+                . 'LEFT JOIN applications a ON a.student_id = u.id LEFT JOIN offers o ON o.application_id = a.id '
+                . "WHERE u.role = 'student' GROUP BY sp.branch ORDER BY 2 DESC",
+            )->fetchAll(PDO::FETCH_NUM);
+            admin_export_csv('sviet-branch-report-' . date('Y-m-d') . '.csv', ['branch', 'students', 'placed_students', 'applications'], $rows);
+        }
+    } catch (Throwable $exception) {
+        error_log('Admin export failure: ' . $exception->getMessage());
+        admin_flash_redirect('reports', 'error', 'That export could not be generated.');
+    }
+}
+
+/* ------------------------------------------------------------------ shared data */
+$stats = [];
+$statQueries = [
+    'Students' => "SELECT COUNT(*) FROM users WHERE role = 'student'",
+    'Pending accounts' => "SELECT COUNT(*) FROM users WHERE status = 'pending' AND role IN ('student', 'recruiter', 'tpo')",
+    'Pending companies' => "SELECT COUNT(*) FROM companies WHERE approval_status = 'pending'",
+    'Published jobs' => "SELECT COUNT(*) FROM jobs WHERE status = 'published'",
+    'Applications' => "SELECT COUNT(*) FROM applications WHERE status <> 'withdrawn'",
+    'Selected' => "SELECT COUNT(DISTINCT student_id) FROM applications WHERE status = 'selected'",
+];
+foreach ($statQueries as $label => $sql) {
+    try {
+        $stats[$label] = (int) $db->query($sql)->fetchColumn();
+    } catch (Throwable $exception) {
+        $stats[$label] = null;
+    }
+}
+$offersSummary = ['offered' => 0, 'accepted' => 0, 'declined' => 0, 'joined' => 0, 'revoked' => 0, 'median_ctc' => null, 'highest_ctc' => null];
+if ($offersReady) {
+    try {
+        foreach ($db->query('SELECT status, COUNT(*) AS total FROM offers GROUP BY status')->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $offersSummary[$row['status']] = (int) $row['total'];
+        }
+        $ctcs = $db->query("SELECT ctc_lpa FROM offers WHERE ctc_lpa IS NOT NULL AND status IN ('accepted', 'joined') ORDER BY ctc_lpa")->fetchAll(PDO::FETCH_COLUMN);
+        if ($ctcs !== []) {
+            $medianIndex = intdiv(count($ctcs), 2);
+            $offersSummary['median_ctc'] = count($ctcs) % 2 === 0
+                ? (((float) $ctcs[$medianIndex - 1] + (float) $ctcs[$medianIndex]) / 2)
+                : (float) $ctcs[$medianIndex];
+            $offersSummary['highest_ctc'] = (float) max(array_map('floatval', $ctcs));
+        }
+    } catch (Throwable $exception) {
+        error_log('Admin offer summary failure: ' . $exception->getMessage());
+    }
+}
+$stats['Offers accepted'] = $offersSummary['accepted'] + $offersSummary['joined'];
+$stats['Joined'] = $offersSummary['joined'];
+$pendingApprovals = ($stats['Pending accounts'] ?? 0) + ($stats['Pending companies'] ?? 0);
+
+/* ------------------------------------------------------------------ section data */
+$activity = [];
+$approvalUsers = [];
+$approvalCompanies = [];
+$students = [];
+$dataHealth = ['incomplete' => 0, 'no_branch' => 0, 'no_cgpa' => 0, 'no_year' => 0];
+$pendingOffers = [];
+$offers = [];
+$offerStatusFilter = admin_get('offer_status');
+if (!in_array($offerStatusFilter, ['', 'offered', 'accepted', 'declined', 'joined', 'revoked'], true)) {
+    $offerStatusFilter = '';
+}
+$jobs = [];
+$jobStatusFilter = admin_get('job_status');
+if (!in_array($jobStatusFilter, ['', 'draft', 'published', 'paused', 'closed'], true)) {
+    $jobStatusFilter = '';
+}
+$branchReport = [];
+$companyReport = [];
+$reportYear = admin_get('year');
+if ($reportYear !== '' && !preg_match('/^(20)[0-9]{2}$/', $reportYear)) {
+    $reportYear = '';
+}
+$graduationYears = [];
+$announcements = [];
+$auditEntries = [];
+$auditAction = admin_get('audit_action');
+$auditAction = mb_substr(preg_replace('/[^a-z_]/', '', strtolower($auditAction)) ?? '', 0, 40);
+$importPreview = null;
+$importTemplate = '';
+$importCredentials = [];
+$importSkipped = [];
+$recentActivity = [];
+$sectionError = '';
+
+try {
+    if ($section === 'overview') {
+        $recentActivity = $db->query(
+            'SELECT al.action, al.entity_type, al.entity_id, al.created_at, al.metadata_json, u.name AS actor_name '
+            . 'FROM audit_logs al LEFT JOIN users u ON u.id = al.actor_id ORDER BY al.created_at DESC LIMIT 12',
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $approvalUsers = $db->query(
+            "SELECT id, name, email, role, status, created_at FROM users WHERE status = 'pending' AND role IN ('recruiter', 'student', 'tpo') ORDER BY created_at ASC LIMIT 5",
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $approvalCompanies = $db->query(
+            "SELECT c.id, c.name, c.industry, c.created_at, COUNT(rp.user_id) AS recruiter_count FROM companies c "
+            . "LEFT JOIN recruiter_profiles rp ON rp.company_id = c.id WHERE c.approval_status = 'pending' "
+            . 'GROUP BY c.id ORDER BY c.created_at ASC LIMIT 5',
+        )->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    if ($section === 'approvals') {
+        $approvalUsers = $db->query(
+            "SELECT id, name, email, role, status, created_at FROM users WHERE status IN ('pending', 'suspended') AND role IN ('recruiter', 'student', 'tpo') ORDER BY created_at ASC LIMIT 200",
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $approvalCompanies = $db->query(
+            "SELECT c.id, c.name, c.website, c.industry, c.approval_status, c.created_at, COUNT(rp.user_id) AS recruiter_count "
+            . 'FROM companies c LEFT JOIN recruiter_profiles rp ON rp.company_id = c.id '
+            . "WHERE c.approval_status IN ('pending', 'rejected') GROUP BY c.id ORDER BY c.created_at ASC LIMIT 200",
+        )->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    if ($section === 'students') {
+        $importTemplate = $importService->template();
+        $students = $db->query(
+            'SELECT u.id, u.name, u.email, u.status, u.created_at, sp.branch, sp.cgpa, sp.graduation_year, '
+            . 'COUNT(DISTINCT a.id) AS applications, COUNT(DISTINCT CASE WHEN a.status = \'selected\' THEN a.id END) AS selections, '
+            . ($offersReady ? 'COUNT(DISTINCT o.id) AS offers ' : '0 AS offers ')
+            . 'FROM users u LEFT JOIN student_profiles sp ON sp.user_id = u.id '
+            . 'LEFT JOIN applications a ON a.student_id = u.id ' . ($offersReady ? 'LEFT JOIN offers o ON o.application_id = a.id ' : '')
+            . "WHERE u.role = 'student' GROUP BY u.id, sp.branch, sp.cgpa, sp.graduation_year ORDER BY u.created_at DESC LIMIT 200",
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $healthRow = $db->query(
+            "SELECT COUNT(*) AS total, "
+            . 'SUM(sp.user_id IS NULL) AS missing_profile, SUM(sp.branch IS NULL OR sp.branch = \'\') AS no_branch, '
+            . 'SUM(sp.cgpa IS NULL) AS no_cgpa, SUM(sp.graduation_year IS NULL) AS no_year '
+            . "FROM users u LEFT JOIN student_profiles sp ON sp.user_id = u.id WHERE u.role = 'student'",
+        )->fetch(PDO::FETCH_ASSOC) ?: [];
+        $dataHealth = [
+            'incomplete' => (int) ($healthRow['missing_profile'] ?? 0) + (int) ($healthRow['no_branch'] ?? 0) + (int) ($healthRow['no_cgpa'] ?? 0) + (int) ($healthRow['no_year'] ?? 0),
+            'no_branch' => (int) ($healthRow['no_branch'] ?? 0),
+            'no_cgpa' => (int) ($healthRow['no_cgpa'] ?? 0),
+            'no_year' => (int) ($healthRow['no_year'] ?? 0),
+        ];
+        if (isset($_SESSION['admin_import'])) {
+            $importPreview = $_SESSION['admin_import'];
+            if (time() - (int) ($importPreview['created_at'] ?? 0) > 1800) {
+                unset($_SESSION['admin_import']);
+                $importPreview = null;
+            }
+        }
+        if (isset($_SESSION['admin_import_credentials'])) {
+            $importCredentials = (array) $_SESSION['admin_import_credentials'];
+            unset($_SESSION['admin_import_credentials']);
+        }
+        if (isset($_SESSION['admin_import_skipped'])) {
+            $importSkipped = (array) $_SESSION['admin_import_skipped'];
+            unset($_SESSION['admin_import_skipped']);
+        }
+    }
+
+    if ($section === 'placements' && $offersReady) {
+        $pendingOffers = $db->query(
+            "SELECT a.id, a.updated_at, u.name, u.email, j.title, c.name AS company_name FROM applications a "
+            . 'JOIN users u ON u.id = a.student_id JOIN jobs j ON j.id = a.job_id JOIN companies c ON c.id = j.company_id '
+            . "WHERE a.status = 'selected' AND NOT EXISTS (SELECT 1 FROM offers o WHERE o.application_id = a.id) "
+            . 'ORDER BY a.updated_at DESC LIMIT 100',
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $offerSql = 'SELECT o.id, o.ctc_lpa, o.offer_date, o.status, o.joined_on, o.created_at, u.name, u.email, j.title, c.name AS company_name '
+            . 'FROM offers o JOIN applications a ON a.id = o.application_id JOIN users u ON u.id = a.student_id '
+            . 'JOIN jobs j ON j.id = a.job_id JOIN companies c ON c.id = j.company_id';
+        if ($offerStatusFilter !== '') {
+            $offerStatement = $db->prepare($offerSql . ' WHERE o.status = ? ORDER BY o.updated_at DESC LIMIT 200');
+            $offerStatement->execute([$offerStatusFilter]);
+            $offers = $offerStatement->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $offers = $db->query($offerSql . ' ORDER BY o.updated_at DESC LIMIT 200')->fetchAll(PDO::FETCH_ASSOC);
+        }
+    }
+
+    if ($section === 'jobs') {
+        if ($jobStatusFilter !== '') {
+            $jobStatement = $db->prepare(
+                'SELECT j.id, j.title, j.status, j.closes_at, j.updated_at, c.name AS company_name, c.approval_status, '
+                . '(SELECT COUNT(*) FROM applications a WHERE a.job_id = j.id) AS applications '
+                . 'FROM jobs j JOIN companies c ON c.id = j.company_id WHERE j.status = ? ORDER BY j.updated_at DESC LIMIT 200',
+            );
+            $jobStatement->execute([$jobStatusFilter]);
+            $jobs = $jobStatement->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $jobs = $db->query(
+                'SELECT j.id, j.title, j.status, j.closes_at, j.updated_at, c.name AS company_name, c.approval_status, '
+                . '(SELECT COUNT(*) FROM applications a WHERE a.job_id = j.id) AS applications '
+                . 'FROM jobs j JOIN companies c ON c.id = j.company_id ORDER BY j.updated_at DESC LIMIT 200',
+            )->fetchAll(PDO::FETCH_ASSOC);
+        }
+    }
+
+    if ($section === 'reports') {
+        $graduationYears = $db->query(
+            "SELECT DISTINCT sp.graduation_year FROM student_profiles sp WHERE sp.graduation_year IS NOT NULL ORDER BY sp.graduation_year DESC LIMIT 12",
+        )->fetchAll(PDO::FETCH_COLUMN);
+        $yearClause = $reportYear !== '' ? ' AND sp.graduation_year = ' . (int) $reportYear : '';
+        $branchReport = $db->query(
+            "SELECT COALESCE(sp.branch, 'Unspecified') AS branch, COUNT(DISTINCT u.id) AS students, "
+            . "COUNT(DISTINCT CASE WHEN o.status = 'joined' THEN u.id END) AS placed, "
+            . 'COUNT(DISTINCT CASE WHEN o.id IS NOT NULL THEN u.id END) AS offered_students, '
+            . 'COUNT(DISTINCT a.id) AS applications, COALESCE(AVG(CASE WHEN o.status IN (\'accepted\', \'joined\') THEN o.ctc_lpa END), 0) AS avg_ctc '
+            . 'FROM users u LEFT JOIN student_profiles sp ON sp.user_id = u.id LEFT JOIN applications a ON a.student_id = u.id '
+            . 'LEFT JOIN offers o ON o.application_id = a.id '
+            . "WHERE u.role = 'student'" . $yearClause . ' GROUP BY sp.branch ORDER BY students DESC',
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $companyReport = $db->query(
+            'SELECT c.name AS company_name, COUNT(DISTINCT a.id) AS applications, '
+            . 'COUNT(DISTINCT CASE WHEN a.status = \'selected\' THEN a.id END) AS selected, '
+            . "COUNT(DISTINCT CASE WHEN o.status IN ('accepted', 'joined') THEN o.id END) AS accepted, "
+            . "COUNT(DISTINCT CASE WHEN o.status = 'joined' THEN o.id END) AS joined, "
+            . 'COALESCE(MAX(o.ctc_lpa), 0) AS highest_ctc '
+            . 'FROM companies c JOIN jobs j ON j.company_id = c.id LEFT JOIN applications a ON a.job_id = j.id '
+            . 'LEFT JOIN offers o ON o.application_id = a.id GROUP BY c.id ORDER BY applications DESC LIMIT 50',
+        )->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    if ($section === 'comms') {
+        $announcements = $db->query(
+            'SELECT an.id, an.title, an.body, an.audience, an.published_at, an.created_at, u.name AS author, '
+            . '(SELECT COUNT(*) FROM notifications n WHERE n.title = an.title) AS delivered '
+            . 'FROM announcements an JOIN users u ON u.id = an.author_id ORDER BY an.published_at DESC, an.id DESC LIMIT 50',
+        )->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    if ($section === 'governance') {
+        if ($auditAction !== '') {
+            $auditStatement = $db->prepare(
+                'SELECT al.action, al.entity_type, al.entity_id, al.created_at, al.metadata_json, u.name AS actor_name '
+                . 'FROM audit_logs al LEFT JOIN users u ON u.id = al.actor_id WHERE al.action LIKE ? '
+                . 'ORDER BY al.created_at DESC LIMIT 150',
+            );
+            $auditStatement->execute(['%' . $auditAction . '%']);
+            $auditEntries = $auditStatement->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $auditEntries = $db->query(
+                'SELECT al.action, al.entity_type, al.entity_id, al.created_at, al.metadata_json, u.name AS actor_name '
+                . 'FROM audit_logs al LEFT JOIN users u ON u.id = al.actor_id ORDER BY al.created_at DESC LIMIT 150',
+            )->fetchAll(PDO::FETCH_ASSOC);
+        }
+    }
+} catch (Throwable $exception) {
+    error_log('Admin section query failure (' . $section . '): ' . $exception->getMessage());
+    $sectionError = 'Some of this section could not be loaded. Check the schema and logs, then refresh.';
+}
+
+$sectionTitles = [
+    'overview' => ['Control centre', 'Approvals, placements and governance for the SVIET Training & Placement Cell.'],
+    'approvals' => ['Approvals', 'Review accounts and companies, and send a reason with every decision.'],
+    'students' => ['Students', 'Import a batch, watch profile completeness, and open placement histories.'],
+    'placements' => ['Placements', 'Record offers, track acceptance and joining, and keep package data honest.'],
+    'jobs' => ['Jobs', 'Moderate published roles and stop anything that should not be live.'],
+    'reports' => ['Reports', 'Branch and company funnels with exportable numbers for accreditation.'],
+    'comms' => ['Announcements', 'Publish targeted notices and see how many accounts were reached.'],
+    'governance' => ['Governance', 'Every state change is audited. Search the trail here.'],
+];
+[$pageTitle, $pageDescription] = $sectionTitles[$section];
+
+$appCssVersion = (string) (filemtime(__DIR__ . '/assets/css/app.css') ?: 1);
+$adminCssVersion = (string) (filemtime(__DIR__ . '/assets/css/admin.css') ?: 1);
+$adminNavJsVersion = (string) (filemtime(__DIR__ . '/assets/js/admin-nav.js') ?: 1);
+
+require __DIR__ . '/views/admin/layout-start.php';
+require __DIR__ . '/views/admin/' . $section . '.php';
+require __DIR__ . '/views/admin/layout-end.php';

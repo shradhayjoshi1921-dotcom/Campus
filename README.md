@@ -18,6 +18,16 @@ The recruiter workspace uses a compact liquid-glass bottom dock whose active ind
 
 The capsule is built from stacked CSS layers rather than an image: a translucent body with `backdrop-filter`, a specular band and hot spot (`::before`), a masked 1px refraction ring (`::after`), and three inner spans for the meniscus, lower-rim bounce light and a caustic blob. `recruiter-nav.js` owns its width, position and two custom properties (`--rec-slosh`, `--rec-stretch`); no filter or backdrop animation runs per frame, and the blur is reduced while dragging. Browsers without `backdrop-filter` get a denser glass fill so labels keep their contrast.
 
+### Admin / TPO control centre
+
+`admin.php` is the placement cell workspace. It reuses the same sessions, roles, CSRF token and `app.css` theme as the rest of the portal, and adds `assets/css/admin.css` and `assets/js/admin-nav.js`.
+
+- **Eight sections:** Overview, Approvals, Students, Placements, Jobs, Reports, Comms and Governance. The dock is a horizontally scrollable rail, so every destination stays visible on a phone instead of being hidden behind an overflow menu. The active indicator is the same layered liquid-glass capsule as the recruiter dock — a masked 1px refraction ring, a top specular band, a lower rim bounce and a caustic blob — driven by a spring (`admin-nav.js`). Dragging the rail pans the track, previews the tab under the pointer, and releases onto the nearest one; swiping the section content moves one section at a time.
+- **Approvals with reasons:** each decision (approve / request changes / reject / suspend / reactivate) writes `audit_logs`, updates the account, and sends the note to the applicant as a notification. Anything older than seven days is flagged. Companies are reviewed the same way, and bulk approve-all is available for a verified batch.
+- **Bulk import:** `app/Services/AdminImportService.php` parses a CSV in memory (300 rows / 512 KB cap, quoted fields, BOM, common header aliases such as `Full Name` or `E-Mail`), validates email, role, company, CGPA (0–10) and graduation year (2000–2100), flags duplicate emails inside the file, and never touches the database. The parsed rows are staged in the session and shown as a review table; only **Import** creates accounts, hashes a fresh 14-character temporary password per row, and returns a one-time credential sheet as a CSV download. Existing emails are skipped, and each new account receives a welcome notification.
+- **Offer tracking (opt-in migration):** run `database/migrations/2026-10-20-admin-portal-offers.sql` (also appended to `database/schema.sql`) to add the `offers` table — one offer per application, `ctc_lpa`, `offer_date`, `status` (`offered`/`accepted`/`declined`/`joined`/`revoked`) and `joined_on`. Until the table exists, Placements shows the migration hint and the rest of the portal keeps working. Placement percentage counts **joined** offers only; median and highest CTC use accepted and joined offers; students without offers stay in the denominator. Exports: `admin.php?section=reports&export=students|offers|branch`.
+- **Honest empty states:** nothing in the workspace fabricates students, companies or package numbers; an empty database renders empty tables and zeroed stats.
+
 ## Run on Windows with XAMPP
 
 1. Download and extract `Campus-XAMPP-v2.0.0.zip` into `C:\xampp\htdocs\Campus`. The archive includes a top-level `Campus` folder.
@@ -68,7 +78,9 @@ For deployment, set the Apache document root to `Campus/public/`. If using the l
 ## Known limitations
 
 - Recruiters cannot yet enter required/preferred job skills in the job editor; the career-insights service reads skills from `job_skills`, so skill matching is limited until that workflow is added.
-- Resume upload/download, certification and project management, assessment workflows, a complete notification inbox, CSV export, a migration runner, rate limiting, and full browser/database integration tests are not complete.
+- Resume upload/download, certification and project management, assessment workflows, a complete notification inbox, a migration runner, rate limiting, and full browser/database integration tests are not complete.
+- The admin CSV import covers accounts (students and recruiters). Placement drives, eligibility-based bulk shortlisting, announcement read receipts and editable `system_settings` are not built yet, and `jobs` still has no salary column, so CTC lives only on offers.
+- The `offers` table arrives through the migration in `database/migrations/`; importing only `schema.sql` into an existing database will not add it.
 - Do not use this project with real personal data until you have tested and reviewed the deployment configuration.
 
 ## Verify locally
@@ -94,3 +106,5 @@ node tests\js\recruiter-nav.test.js
 ```
 
 Manual interaction check in a desktop browser and a phone-sized viewport: drag the dock slowly across all five tabs (the bubble should follow the pointer and stretch), reverse direction mid-drag (it should compress), release between tabs (it should settle on the nearest one), swipe the section content sideways on touch, use the GET filters on Jobs and Applicants, then use browser Back and Forward. Enable "reduce motion" in the OS to confirm transitions stop.
+
+The admin rail has no Node test yet; `tests/run.php` asserts the section routes, dock layers, spring constants, CSV-download exemptions and import limits. A static render of the real views with fixture data is available for design review at `preview/admin-portal.html` (served by any static file server; forms are disabled there because the pages are pre-rendered).

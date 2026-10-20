@@ -6,12 +6,14 @@ require dirname(__DIR__) . '/app/Services/CareerFitService.php';
 require dirname(__DIR__) . '/app/Services/SkillGapService.php';
 require dirname(__DIR__) . '/app/Services/RecommendationService.php';
 require dirname(__DIR__) . '/app/Services/RoadmapService.php';
+require dirname(__DIR__) . '/app/Services/AdminImportService.php';
 
 use App\Services\CareerFitService;
 use App\Services\EligibilityService;
 use App\Services\RecommendationService;
 use App\Services\RoadmapService;
 use App\Services\SkillGapService;
+use App\Services\AdminImportService;
 
 $passed = 0;
 $failed = 0;
@@ -94,6 +96,12 @@ $recruiterApplicants = file_get_contents($root . '/public/views/recruiter/applic
 $recruiterInterviews = file_get_contents($root . '/public/views/recruiter/interviews.php');
 $recruiterStyles = file_get_contents($root . '/public/assets/css/recruiter.css');
 $recruiterNavScript = file_get_contents($root . '/public/assets/js/recruiter-nav.js');
+$adminController = file_get_contents($root . '/public/admin.php');
+$adminLayoutStart = file_get_contents($root . '/public/views/admin/layout-start.php');
+$adminLayoutEnd = file_get_contents($root . '/public/views/admin/layout-end.php');
+$adminStyles = file_get_contents($root . '/public/assets/css/admin.css');
+$adminNavScript = file_get_contents($root . '/public/assets/js/admin-nav.js');
+$adminImportScript = file_get_contents($root . '/app/Services/AdminImportService.php');
 $database = file_get_contents($root . '/app/Core/Database.php');
 $bootstrap = file_get_contents($root . '/bootstrap/app.php');
 $environmentExample = file_get_contents($root . '/.env.example');
@@ -193,11 +201,14 @@ $test('Homepage uses local assets, avoids unverified campus photography, and kee
 });
 
 $test('Workspace sign-out forms submit a CSRF-protected POST', static function () use ($assert, $root): void {
-    foreach (['public/index.php', 'public/career.php', 'public/admin.php'] as $file) {
+    foreach (['public/index.php', 'public/career.php'] as $file) {
         $contents = file_get_contents($root . '/' . $file);
         $assert(str_contains($contents, 'name="action" value="logout"'), "logout action missing in {$file}");
         $assert(str_contains($contents, 'name="_csrf"'), "CSRF token missing in {$file}");
     }
+    $adminLayout = file_get_contents($root . '/public/views/admin/layout-start.php');
+    $assert(str_contains($adminLayout, 'name="action" value="logout"'), 'logout action missing in admin layout');
+    $assert(str_contains($adminLayout, 'name="_csrf"'), 'CSRF token missing in admin layout');
     $recruiterLayout = file_get_contents($root . '/public/views/recruiter/layout-start.php');
     $assert(str_contains($recruiterLayout, 'name="action" value="logout"'), 'logout action missing in recruiter layout');
     $assert(str_contains($recruiterLayout, 'name="_csrf"'), 'CSRF token missing in recruiter layout');
@@ -216,8 +227,9 @@ $test('Approved recruiters can publish directly while company approval is checke
     $assert(str_contains($recruiter, 'if ($status === \'published\' && $companyApprovalStatus !== \'approved\')'));
     $assert(str_contains($recruiterJobs, 'Approved companies can publish roles directly'));
     $assert(str_contains($recruiterJobs, 'locked until approval'));
-    $assert(str_contains($admin, "'pause'=>'paused'"));
-    $assert(str_contains($admin, "'close'=>'closed'"));
+    $assert(str_contains($admin, "'pause' => 'paused'"));
+    $assert(str_contains($admin, "'close' => 'closed'"));
+    $assert(str_contains($admin, 'Approve the company before publishing its job.'));
 });
 
 $test('Company profile edits preserve approval only when material details are unchanged', static function () use ($assert, $recruiter): void {
@@ -339,6 +351,161 @@ $test('Recruiter dock renders a dimensional glass capsule driven by a spring', s
     $assert(str_contains($recruiterStyles, '@supports not ((backdrop-filter: blur(1px))'));
     $assert(str_contains($recruiterStyles, ':not(.has-sliding-indicator) .rec-nav-link.is-active::before'));
     $assert(str_contains($recruiterLayout, 'aria-hidden="true"'));
+});
+
+$test('Admin import parses a CSV and separates ready rows from invalid ones', static function () use ($assert): void {
+    $service = new AdminImportService();
+    $csv = "name,email,role,branch,cgpa,graduation_year,company,designation\n"
+        . "Aarav Sharma,AARAV@example.edu,student,CSE,8.4,2027,,\n"
+        . "Neha Kapoor,neha@example.com,recruiter,,,,Northwind Labs,Talent Partner\n"
+        . "Bad Row,not-an-email,student,CSE,12,2019,,\n"
+        . "No Company,recruiter2@example.com,recruiter,,,,\n";
+    $parsed = $service->parse($csv);
+
+    $assert($parsed['errors'] === [], 'unexpected file-level errors');
+    $assert(count($parsed['rows']) === 4, 'expected four data rows');
+    $assert($parsed['rows'][0]['valid'] === true);
+    $assert($parsed['rows'][0]['values']['email'] === 'aarav@example.edu', 'emails are normalised to lowercase');
+    $assert($parsed['rows'][1]['valid'] === true, 'recruiter row with a company is valid');
+    $assert($parsed['rows'][2]['valid'] === false);
+    $assert(str_contains(implode(' ', $parsed['rows'][2]['errors']), 'valid address'));
+    $assert(str_contains(implode(' ', $parsed['rows'][2]['errors']), 'CGPA'));
+    $assert($parsed['rows'][3]['valid'] === false);
+    $assert(str_contains(implode(' ', $parsed['rows'][3]['errors']), 'Company is required'));
+});
+
+$test('Admin import understands common spreadsheet header names', static function () use ($assert): void {
+    $service = new AdminImportService();
+    $parsed = $service->parse("Full Name,E-Mail,Type,Department,Passing Year\nRiya Verma,riya@example.edu,student,ECE,2026\n");
+    $assert($parsed['errors'] === [], 'aliases should map onto canonical columns');
+    $assert(count($parsed['rows']) === 1);
+    $assert($parsed['rows'][0]['valid'] === true);
+    $assert($parsed['rows'][0]['values']['branch'] === 'ECE');
+    $assert($parsed['rows'][0]['values']['graduation_year'] === '2026');
+});
+
+$test('Admin import refuses duplicate emails and impossible batches', static function () use ($assert): void {
+    $service = new AdminImportService();
+
+    $duplicate = $service->parse("name,email,role\nA,a@example.edu,student\nB,a@example.edu,student\n");
+    $assert(count($duplicate['rows']) === 2);
+    $assert($duplicate['rows'][0]['valid'] === true);
+    $assert($duplicate['rows'][1]['valid'] === false);
+    $assert(str_contains(implode(' ', $duplicate['rows'][1]['errors']), 'Duplicate email'));
+
+    $rows = "name,email,role\n";
+    for ($i = 0; $i <= AdminImportService::MAX_ROWS; $i++) {
+        $rows .= 'Student ' . $i . ',student' . $i . '@example.edu,student' . "\n";
+    }
+    $oversized = $service->parse($rows);
+    $assert($oversized['rows'] === []);
+    $assert(str_contains(implode(' ', $oversized['errors']), (string) AdminImportService::MAX_ROWS));
+
+    $missingHeader = $service->parse("name,branch\nA,CSE\n");
+    $assert($missingHeader['rows'] === []);
+    $assert(str_contains(implode(' ', $missingHeader['errors']), 'name, email and role'));
+});
+
+$test('Admin import issues unique temporary credentials and a clean sheet', static function () use ($assert): void {
+    $service = new AdminImportService();
+    $passwords = [];
+    for ($i = 0; $i < 25; $i++) {
+        $password = $service->generatePassword();
+        $assert(strlen($password) === 14, 'temporary passwords match the portal minimum');
+        $assert(preg_match('/^[A-HJ-NP-Za-km-z2-9]+$/', $password) === 1, 'ambiguous characters are excluded');
+        $passwords[$password] = true;
+    }
+    $assert(count($passwords) === 25, 'passwords must not repeat');
+
+    $csv = AdminImportService::credentialsCsv([
+        ['name' => 'Aarav, Sharma', 'email' => 'aarav@example.edu', 'role' => 'student', 'password' => 'Abcdefgh2345Xy'],
+    ]);
+    $assert(str_starts_with($csv, 'name,email,role') && str_contains($csv, 'temporary password'), 'credential sheet header');
+    $assert(str_contains($csv, '"Aarav, Sharma"'), 'commas must stay quoted');
+    $assert(str_contains($csv, 'Abcdefgh2345Xy'));
+});
+
+$test('Admin portal keeps role guards, CSRF and consistent audit coverage', static function () use ($assert, $adminController): void {
+    $assert(str_contains($adminController, "Security::requireRole(['tpo','admin'])"), 'TPO/admin guard must stay first');
+    $assert(str_contains($adminController, 'Security::verifyCsrf'), 'all POSTs verify CSRF');
+    $assert(str_contains($adminController, "http_response_code(419)"));
+    $assert(str_contains($adminController, 'beginTransaction'));
+    $assert(str_contains($adminController, 'rollBack'));
+    foreach (['user_decision', 'company_decision', 'job_decision', 'announcement', 'offer_create', 'offer_update', 'import_commit'] as $action) {
+        $assert(str_contains($adminController, "'{$action}'"), "missing action {$action}");
+    }
+    $assert(str_contains($adminController, "admin_audit(\$db, (int) \$user['id'], 'accounts_imported'"));
+    $assert(str_contains($adminController, "admin_audit(\$db, (int) \$user['id'], 'offer_created'"));
+    $assert(str_contains($adminController, "'user_changes_requested'"), 'change requests are audited');
+    $assert(str_contains($adminController, 'admin_notify('), 'decisions notify the account holder');
+    $assert(!str_contains($adminController, 'password_hash($password, PASSWORD_DEFAULT)  ??'), 'no placeholder hashing');
+});
+
+$test('Admin portal has eight routed sections with all views on disk', static function () use ($assert, $adminController, $adminLayoutEnd, $adminLayoutStart, $root): void {
+    $sections = ['overview', 'approvals', 'students', 'placements', 'jobs', 'reports', 'comms', 'governance'];
+    foreach ($sections as $section) {
+        $assert(str_contains($adminController, "'{$section}'"), "section {$section} is not routable");
+        $assert(is_file($root . '/public/views/admin/' . $section . '.php'), "missing admin view {$section}");
+        $assert(str_contains($adminLayoutEnd, "'{$section}' => ["), "dock is missing {$section}");
+    }
+    $assert(str_contains($adminLayoutStart, 'id="admin-section-content"'));
+    $assert(str_contains($adminLayoutEnd, 'id="admin-nav-status"'));
+    $assert(str_contains($adminLayoutEnd, 'assets/js/admin-nav.js?v='));
+    $assert(str_contains($adminController, "require __DIR__ . '/views/admin/layout-start.php'"));
+    $assert(str_contains($adminController, "require __DIR__ . '/views/admin/layout-end.php'"));
+});
+
+$test('Admin dock is a scrollable rail with the liquid glass capsule', static function () use ($assert, $adminLayoutEnd, $adminStyles, $adminNavScript): void {
+    foreach (['admin-dock-liquid', 'admin-dock-rim', 'admin-dock-caustic'] as $layer) {
+        $assert(str_contains($adminLayoutEnd, $layer), "missing dock layer {$layer}");
+    }
+    $assert(str_contains($adminStyles, 'overflow-x: auto'), 'the rail must scroll');
+    $assert(str_contains($adminStyles, 'scrollbar-width: none'));
+    $assert(str_contains($adminStyles, 'border-radius: 999px'));
+    $assert(str_contains($adminStyles, 'mask-composite: exclude'));
+    $assert(str_contains($adminStyles, 'backdrop-filter: blur(12px) saturate(185%)'));
+    $assert(str_contains($adminStyles, '@media (prefers-reduced-motion: reduce)'));
+    $assert(str_contains($adminStyles, '@supports not ((backdrop-filter: blur(1px))'));
+
+    $assert(str_contains($adminNavScript, 'admin-dock-track'));
+    $assert(str_contains($adminNavScript, 'scrollLeft'), 'dragging pans the rail');
+    $assert(str_contains($adminNavScript, 'MOVE_SPRING'));
+    $assert(str_contains($adminNavScript, 'DRAG_SPRING'));
+    $assert(str_contains($adminNavScript, 'setPointerCapture'));
+    $assert(str_contains($adminNavScript, 'requestAnimationFrame'));
+    $assert(!str_contains($adminNavScript, 'setInterval'));
+    $assert(str_contains($adminNavScript, "url.searchParams.has('export')"), 'CSV downloads must stay native');
+    $assert(str_contains($adminNavScript, 'window.history.pushState'));
+    $assert(str_contains($adminNavScript, "addEventListener('popstate'"));
+    $assert(str_contains($adminNavScript, 'prefers-reduced-motion'));
+});
+
+$test('Offer tracking ships a schema, a migration and honest reporting', static function () use ($assert, $root, $adminController): void {
+    $assert(is_file($root . '/database/migrations/2026-10-20-admin-portal-offers.sql'));
+    foreach ([$root . '/database/schema.sql', $root . '/database/migrations/2026-10-20-admin-portal-offers.sql'] as $file) {
+        $sql = file_get_contents($file);
+        $assert(str_contains($sql, 'CREATE TABLE IF NOT EXISTS offers'), basename($file) . ' is missing the offers table');
+        $assert(str_contains($sql, 'UNIQUE KEY uq_offer_application'), basename($file) . ' must keep one offer per application');
+        $assert(str_contains($sql, "ENUM('offered','accepted','declined','joined','revoked')"));
+    }
+    $assert(str_contains($adminController, "a.status = 'selected'"), 'offers only attach to selected applications');
+    $assert(str_contains($adminController, 'admin_table_exists($db, \'offers\')'), 'a missing table must degrade, not fatal');
+    $assert(str_contains($adminController, "o.status = 'joined'"), 'placement rate counts joined offers only');
+    $assert(str_contains($adminController, 'median_ctc'));
+    $assert(str_contains($adminController, "admin_export_csv('sviet-offers-"));
+    $assert(str_contains($adminController, "'sviet-branch-report-'"));
+});
+
+$test('Admin import is file-limited, review-first and free of raw inserts from request data', static function () use ($assert, $adminImportScript, $adminController): void {
+    $assert(str_contains($adminImportScript, 'MAX_ROWS = 300'));
+    $assert(str_contains($adminImportScript, 'MAX_BYTES = 524288'));
+    $assert(str_contains($adminImportScript, 'FILTER_VALIDATE_EMAIL'));
+    $assert(str_contains($adminImportScript, 'generatePassword'));
+    $assert(str_contains($adminController, "'import_preview'"), 'imports must be previewed first');
+    $assert(str_contains($adminController, '$_SESSION[\'admin_import\']'), 'preview is staged in the session');
+    $assert(str_contains($adminController, 'password_hash($password, PASSWORD_DEFAULT)'), 'temporary passwords are hashed');
+    $assert(!str_contains($adminController, 'unserialize('), 'no unserialise of uploads');
+    $assert(!str_contains($adminController, 'eval('));
 });
 
 $test('No merge-conflict markers remain in key project files', static function () use ($assert, $root): void {
