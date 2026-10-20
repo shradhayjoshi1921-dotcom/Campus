@@ -88,6 +88,7 @@ $admin = file_get_contents($root . '/public/admin.php');
 $career = file_get_contents($root . '/public/career.php');
 $recruiter = file_get_contents($root . '/public/recruiter.php');
 $recruiterLayout = file_get_contents($root . '/public/views/recruiter/layout-end.php');
+$recruiterLayoutStart = file_get_contents($root . '/public/views/recruiter/layout-start.php');
 $recruiterJobs = file_get_contents($root . '/public/views/recruiter/jobs.php');
 $recruiterApplicants = file_get_contents($root . '/public/views/recruiter/applicants.php');
 $recruiterInterviews = file_get_contents($root . '/public/views/recruiter/interviews.php');
@@ -271,7 +272,37 @@ $test('Recruiter views provide a responsive liquid-glass dock with a persistent 
     $assert(str_contains($recruiterNavScript, 'prefers-reduced-motion'));
     foreach (['overview', 'company', 'jobs', 'applicants', 'interviews'] as $view) {
         $assert(is_file($root . '/public/views/recruiter/' . $view . '.php'), "missing recruiter view {$view}");
+        $assert(str_contains($recruiterLayout, 'data-rec-section="' . $view . '"'));
     }
+});
+
+$test('Recruiter navigation is a gesture-driven liquid dock wired for safe client-side sections', static function () use ($assert, $recruiterLayout, $recruiterLayoutStart, $recruiterStyles, $recruiterNavScript): void {
+    $assert(str_contains($recruiterLayoutStart, 'id="recruiter-section-content"'));
+    $assert(str_contains($recruiterLayout, 'id="recruiter-nav-status"'));
+    $assert(str_contains($recruiterLayout, 'aria-live="polite"'));
+    $assert(str_contains($recruiterNavScript, "addEventListener('pointerdown'"));
+    $assert(str_contains($recruiterNavScript, "addEventListener('pointermove'"));
+    $assert(str_contains($recruiterNavScript, "addEventListener('pointerup'"));
+    $assert(str_contains($recruiterNavScript, "addEventListener('pointercancel'"));
+    $assert(str_contains($recruiterNavScript, 'setPointerCapture'));
+    $assert(str_contains($recruiterNavScript, 'requestAnimationFrame'));
+    $assert(!str_contains($recruiterNavScript, 'setInterval'));
+    $assert(str_contains($recruiterNavScript, 'suppressClickUntil'));
+    $assert(str_contains($recruiterNavScript, 'is-preview'));
+    $assert(str_contains($recruiterNavScript, 'window.history.pushState'));
+    $assert(str_contains($recruiterNavScript, "'popstate'"));
+    $assert(str_contains($recruiterNavScript, "addEventListener('submit'"));
+    $assert(str_contains($recruiterNavScript, 'DOMParser'));
+    $assert(str_contains($recruiterNavScript, 'prefers-reduced-motion'));
+    $assert(str_contains($recruiterNavScript, 'ArrowRight'));
+    $assert(str_contains($recruiterStyles, '.rec-page-content.is-pending[data-direction="forward"]'));
+    $assert(str_contains($recruiterStyles, '.rec-page-content.is-entering[data-direction="backward"]'));
+    $assert(str_contains($recruiterStyles, '.rec-page-content.is-swiping { transition: none; }'));
+    $assert(str_contains($recruiterStyles, '.rec-bottom-nav.is-dragging'));
+    $assert(str_contains($recruiterStyles, 'touch-action: pan-y'));
+    $assert(str_contains($recruiterStyles, '@keyframes rec-section-enter-forward'));
+    $assert(str_contains($recruiterStyles, '@keyframes rec-section-enter-backward'));
+    $assert(str_contains($recruiterStyles, 'user-select: none'));
 });
 
 $test('No merge-conflict markers remain in key project files', static function () use ($assert, $root): void {
