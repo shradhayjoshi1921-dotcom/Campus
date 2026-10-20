@@ -479,6 +479,82 @@ $pageTitle = match ($page) {
     <?php if ($page === 'home'): ?>
         <link rel="stylesheet" href="assets/css/homepage.css">
     <?php endif; ?>
+    <style>
+        /* Campus homepage refresh: remove the top dark strip and sharpen the visual hierarchy. */
+        html:has(body.homepage) { background: #f6f9fb; }
+        body.homepage {
+            margin: 0 !important;
+            padding-top: 0 !important;
+            border-top: 0 !important;
+            background:
+                radial-gradient(ellipse at 12% 8%, rgba(166, 232, 199, .22), transparent 34rem),
+                radial-gradient(ellipse at 92% 18%, rgba(172, 205, 235, .22), transparent 38rem),
+                linear-gradient(180deg, #f8fbfd 0%, #f0f5f8 100%);
+        }
+        body.homepage .site-nav {
+            top: 0;
+            width: min(100%, 1500px);
+            min-height: 76px;
+            margin: 0 auto 22px;
+            padding-inline: clamp(20px, 5vw, 76px);
+            border: 0;
+            border-bottom: 1px solid rgba(18, 42, 64, .09);
+            border-radius: 0 0 22px 22px;
+            background: rgba(250, 253, 255, .94);
+            box-shadow: 0 10px 30px rgba(15, 39, 60, .055);
+            -webkit-backdrop-filter: blur(18px) saturate(145%);
+            backdrop-filter: blur(18px) saturate(145%);
+        }
+        body.homepage .home-hero {
+            width: min(calc(100% - 48px), 1420px);
+            min-height: min(740px, calc(100svh - 120px));
+            border: 1px solid rgba(255,255,255,.2);
+            border-radius: 32px;
+            background:
+                radial-gradient(ellipse at 82% 10%, rgba(102, 184, 158, .22), transparent 32rem),
+                radial-gradient(ellipse at 12% 92%, rgba(87, 135, 181, .18), transparent 34rem),
+                linear-gradient(128deg, #071827 0%, #102c40 55%, #123b43 100%);
+            box-shadow: 0 28px 80px rgba(12, 35, 52, .17), inset 0 1px rgba(255,255,255,.1);
+        }
+        body.homepage .home-hero-grid {
+            gap: clamp(38px, 6vw, 92px);
+            padding-block: clamp(66px, 8.5vh, 104px) 88px;
+        }
+        body.homepage .home-hero h1 { max-width: 780px; line-height: 1.01; }
+        body.homepage .home-hero h1 span {
+            background: linear-gradient(100deg, #baf2d4 0%, #8bdcbd 52%, #d6f8e5 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        body.homepage .hero-feature-card {
+            border-color: rgba(234, 249, 255, .24);
+            background: linear-gradient(145deg, rgba(238, 248, 252, .15), rgba(176, 204, 221, .055) 62%, rgba(8, 23, 37, .32));
+            box-shadow: 0 28px 72px rgba(0, 7, 17, .25), inset 0 1px rgba(255,255,255,.22);
+        }
+        body.homepage .feature-section { padding-block: clamp(72px, 8vw, 112px); }
+        body.homepage .feature-card {
+            min-height: 250px;
+            padding: clamp(24px, 2.5vw, 32px);
+            transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease;
+        }
+        body.homepage .feature-card:hover { transform: translateY(-5px); }
+        body.homepage .feature-icon { border-radius: 16px; }
+        body.homepage .site-footer { max-width: 1420px; }
+        @media (max-width: 780px) {
+            body.homepage .site-nav { width: 100%; min-height: 68px; margin-bottom: 14px; padding-inline: 18px; border-radius: 0 0 18px 18px; }
+            body.homepage .home-hero { width: calc(100% - 28px); min-height: 0; border-radius: 24px; }
+            body.homepage .home-hero-grid { padding: 58px 22px 68px; }
+        }
+        @media (max-width: 520px) {
+            body.homepage .site-nav { width: 100%; margin-top: 0; }
+            body.homepage .home-hero { width: calc(100% - 18px); border-radius: 20px; }
+            body.homepage .home-hero-grid { padding: 50px 18px 58px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            body.homepage *, body.homepage *::before, body.homepage *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+        }
+    </style>
 </head>
 <body class="<?= $page === 'home' ? 'homepage' : '' ?>">
 <a class="skip-link" href="#main-content">Skip to main content</a>
