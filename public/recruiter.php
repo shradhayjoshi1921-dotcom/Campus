@@ -1,59 +1,851 @@
 <?php
 declare(strict_types=1);
-require dirname(__DIR__) . '/bootstrap/app.php';
+
 use App\Core\Database;
 use App\Core\Security;
+
+require dirname(__DIR__) . '/bootstrap/app.php';
 Security::requireRole(['recruiter']);
-$user=Security::currentUser(); $db=Database::connection(); $csrf=Security::csrfToken(); $message=''; $error='';
-function h(?string $v): string { return Security::escape($v); }
-function auditRecruiter(PDO $db,int $actor,string $action,string $type,?int $id,array $meta=[]): void { $q=$db->prepare('INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,ip_hash,metadata_json) VALUES(?,?,?,?,?,?)'); $q->execute([$actor,$action,$type,$id,isset($_SERVER['REMOTE_ADDR'])?hash('sha256',(string)$_SERVER['REMOTE_ADDR']):null,$meta?json_encode($meta,JSON_UNESCAPED_SLASHES):null]); }
-try {
- $q=$db->prepare('SELECT rp.company_id,rp.designation,c.name AS company_name,c.approval_status FROM recruiter_profiles rp LEFT JOIN companies c ON c.id=rp.company_id WHERE rp.user_id=?'); $q->execute([(int)$user['id']]); $company=$q->fetch() ?: null;
-} catch(Throwable $e) { http_response_code(500); exit('Recruiter portal could not load. Check database schema and configuration.'); }
-if($_SERVER['REQUEST_METHOD']==='POST') {
- if(!Security::verifyCsrf($_POST['_csrf']??null)){http_response_code(419);$error='Session token expired. Refresh and try again.';}
- else {
-  $action=(string)($_POST['action']??'');
-  try {
-   if($action==='save_company') {
-    $name=trim((string)($_POST['name']??''));$website=trim((string)($_POST['website']??''));$industry=trim((string)($_POST['industry']??''));$description=trim((string)($_POST['description']??''));
-    if($name===''||mb_strlen($name)>180||mb_strlen($industry)>120||mb_strlen($description)>4000||($website!==''&&!filter_var($website,FILTER_VALIDATE_URL))) throw new InvalidArgumentException('Enter a company name and valid website URL; keep fields within their limits.');
-    $db->beginTransaction();
-    if($company && $company['company_id']) { $q=$db->prepare("UPDATE companies SET name=?,website=?,industry=?,description=?,approval_status='pending' WHERE id=?");$q->execute([$name,$website?:null,$industry?:null,$description?:null,(int)$company['company_id']]);$cid=(int)$company['company_id']; }
-    else { $q=$db->prepare("INSERT INTO companies(name,website,industry,description,approval_status) VALUES(?,?,?,?, 'pending')");$q->execute([$name,$website?:null,$industry?:null,$description?:null]);$cid=(int)$db->lastInsertId();$db->prepare('INSERT INTO recruiter_profiles(user_id,company_id,designation) VALUES(?,?,?) ON DUPLICATE KEY UPDATE company_id=VALUES(company_id)')->execute([(int)$user['id'],$cid,trim((string)($_POST['designation']??''))?:null]); }
-    auditRecruiter($db,(int)$user['id'],'company.profile_submitted','company',$cid);$db->commit();$message='Company profile submitted for approval. Job publishing remains disabled until approval.';header('Location: recruiter.php?notice='.rawurlencode($message));exit;
-   } elseif($action==='save_job') {
-    if(!$company||!$company['company_id'])throw new InvalidArgumentException('Create a company profile before creating jobs.');
-    if($company['approval_status']!=='approved')throw new InvalidArgumentException('Your company must be approved before you can publish or manage jobs.');
-    $id=filter_var($_POST['job_id']??0,FILTER_VALIDATE_INT)?:0;$title=trim((string)($_POST['title']??''));$description=trim((string)($_POST['description']??''));$location=trim((string)($_POST['location']??''));$type=trim((string)($_POST['employment_type']??''));$cgpa=trim((string)($_POST['min_cgpa']??'0'));$branch=trim((string)($_POST['eligible_branch']??''));$year=trim((string)($_POST['graduation_year']??''));$closes=trim((string)($_POST['closes_at']??''));$status=(string)($_POST['status']??'draft');
-    if($title===''||mb_strlen($title)>180||$description===''||mb_strlen($description)>12000||mb_strlen($location)>180||mb_strlen($type)>80||!is_numeric($cgpa)||(float)$cgpa<0||(float)$cgpa>10||($year!==''&&(!ctype_digit($year)||(int)$year<2000||(int)$year>2150))||!in_array($status,['draft','published','paused','closed'],true))throw new InvalidArgumentException('Check job fields, CGPA, graduation year and status.');
-    if($closes!==''){ $dt=DateTime::createFromFormat('Y-m-d\TH:i',$closes);if(!$dt)throw new InvalidArgumentException('Invalid closing date.');$closes=$dt->format('Y-m-d H:i:s'); } else $closes=null;
-    if($status==='published' && $closes!==null && strtotime($closes)<=time())throw new InvalidArgumentException('A published job must have a future closing date.');
-    if($id){$q=$db->prepare('UPDATE jobs SET title=?,description=?,location=?,employment_type=?,min_cgpa=?,eligible_branch=?,graduation_year=?,closes_at=?,status=? WHERE id=? AND company_id=?');$q->execute([$title,$description,$location?:null,$type?:null,(float)$cgpa,$branch?:null,$year!==''?(int)$year:null,$closes,$status,$id,(int)$company['company_id']]);if(!$q->rowCount())throw new InvalidArgumentException('Job not found or not owned by your company.');auditRecruiter($db,(int)$user['id'],'job.updated','job',$id,['status'=>$status]);$message='Job updated.';}
-    else{$q=$db->prepare('INSERT INTO jobs(company_id,title,description,location,employment_type,min_cgpa,eligible_branch,graduation_year,closes_at,status) VALUES(?,?,?,?,?,?,?,?,?,?)');$q->execute([(int)$company['company_id'],$title,$description,$location?:null,$type?:null,(float)$cgpa,$branch?:null,$year!==''?(int)$year:null,$closes,$status]);$id=(int)$db->lastInsertId();auditRecruiter($db,(int)$user['id'],'job.created','job',$id,['status'=>$status]);$message='Job created.';}
-   } elseif($action==='change_application') {
-    $appId=filter_var($_POST['application_id']??null,FILTER_VALIDATE_INT);$next=(string)($_POST['status']??'');$allowed=['under_review','shortlisted','interview','selected','rejected'];if(!$appId||!in_array($next,$allowed,true))throw new InvalidArgumentException('Invalid application or status.');
-    $q=$db->prepare('SELECT a.id,a.status FROM applications a JOIN jobs j ON j.id=a.job_id WHERE a.id=? AND j.company_id=?');$q->execute([(int)$appId,(int)($company['company_id']??0)]);$app=$q->fetch();if(!$app)throw new InvalidArgumentException('Application not found or not owned by your company.');
-    $db->beginTransaction();$db->prepare('UPDATE applications SET status=? WHERE id=?')->execute([$next,(int)$appId]);$db->prepare('INSERT INTO application_status_history(application_id,changed_by,old_status,new_status,note) VALUES(?,?,?,?,?)')->execute([(int)$appId,(int)$user['id'],$app['status'],$next,'Updated by recruiter']);auditRecruiter($db,(int)$user['id'],'application.status_changed','application',(int)$appId,['from'=>$app['status'],'to'=>$next]);$db->commit();$message='Application status updated.';
-   } elseif($action==='schedule_interview') {
-    $appId=filter_var($_POST['application_id']??null,FILTER_VALIDATE_INT);$when=trim((string)($_POST['scheduled_at']??''));$mode=trim((string)($_POST['mode']??''));$place=trim((string)($_POST['location_or_link']??''));$dt=DateTime::createFromFormat('Y-m-d\TH:i',$when);
-    if(!$appId||!$dt||$dt<=new DateTime()||mb_strlen($mode)>60||mb_strlen($place)>500)throw new InvalidArgumentException('Enter a valid future interview date and details.');
-    $q=$db->prepare("SELECT a.id FROM applications a JOIN jobs j ON j.id=a.job_id WHERE a.id=? AND j.company_id=? AND a.status IN ('shortlisted','interview')");$q->execute([(int)$appId,(int)($company['company_id']??0)]);if(!$q->fetchColumn())throw new InvalidArgumentException('Only shortlisted/interview-stage applications belonging to your company can be scheduled.');
-    $q=$db->prepare("INSERT INTO interviews(application_id,scheduled_by,scheduled_at,mode,location_or_link,status) VALUES(?,?,?,?,?,'scheduled')");$q->execute([(int)$appId,(int)$user['id'],$dt->format('Y-m-d H:i:s'),$mode?:null,$place?:null]);$db->prepare("UPDATE applications SET status='interview' WHERE id=?")->execute([(int)$appId]);$db->prepare("INSERT INTO application_status_history(application_id,changed_by,old_status,new_status,note) VALUES(?,?, 'shortlisted','interview','Interview scheduled')")->execute([(int)$appId,(int)$user['id']]);auditRecruiter($db,(int)$user['id'],'interview.scheduled','application',(int)$appId);$message='Interview scheduled.';
-   } else throw new InvalidArgumentException('Unknown action.');
-  } catch(InvalidArgumentException $e){if(isset($db)&&$db->inTransaction())$db->rollBack();$error=$e->getMessage();} catch(Throwable $e){if(isset($db)&&$db->inTransaction())$db->rollBack();$error='Operation failed. Check database configuration and try again.';}
- }
+
+$user = Security::currentUser();
+if (!$user) {
+    header('Location: index.php?page=login');
+    exit;
 }
-if(isset($_GET['notice']))$message=substr((string)$_GET['notice'],0,200);
-$q=$db->prepare('SELECT rp.company_id,rp.designation,c.name AS company_name,c.website,c.industry,c.description,c.approval_status FROM recruiter_profiles rp LEFT JOIN companies c ON c.id=rp.company_id WHERE rp.user_id=?');$q->execute([(int)$user['id']]);$company=$q->fetch()?:null;
-$jobs=[];$apps=[];$interviews=[];
-if($company && $company['company_id']){$q=$db->prepare('SELECT j.*, (SELECT COUNT(*) FROM applications a WHERE a.job_id=j.id) AS applicant_count FROM jobs j WHERE j.company_id=? ORDER BY j.created_at DESC');$q->execute([(int)$company['company_id']]);$jobs=$q->fetchAll();$q=$db->prepare('SELECT a.id,a.status,a.applied_at,a.cover_note,u.name AS student_name,u.email,p.branch,p.cgpa,p.graduation_year,j.title,j.id AS job_id FROM applications a JOIN jobs j ON j.id=a.job_id JOIN users u ON u.id=a.student_id LEFT JOIN student_profiles p ON p.user_id=u.id WHERE j.company_id=? ORDER BY a.applied_at DESC');$q->execute([(int)$company['company_id']]);$apps=$q->fetchAll();$q=$db->prepare('SELECT i.*,j.title,u.name AS student_name FROM interviews i JOIN applications a ON a.id=i.application_id JOIN jobs j ON j.id=a.job_id JOIN users u ON u.id=a.student_id WHERE j.company_id=? ORDER BY i.scheduled_at');$q->execute([(int)$company['company_id']]);$interviews=$q->fetchAll();}
-?>
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recruiter Workspace · Campus</title><link href="assets/css/app.css" rel="stylesheet"><style>.phase3{max-width:1220px;margin:auto;padding:34px 26px 72px}.p3grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}.p3form{display:grid;gap:.8rem}.p3form input,.p3form textarea,.p3form select{width:100%;padding:11px 13px;border:1px solid rgba(206,224,240,.16);background:rgba(5,15,27,.72);color:var(--text);border-radius:10px}.p3table{width:100%;border-collapse:collapse}.p3table th,.p3table td{text-align:left;padding:.7rem;border-bottom:1px solid #29292f;vertical-align:top}.p3panel{margin:16px 0;padding:clamp(18px,3vw,26px);border:1px solid var(--line);border-radius:20px;background:linear-gradient(145deg,rgba(17,34,52,.94),rgba(10,23,37,.96));overflow-x:auto;box-shadow:0 12px 36px rgba(0,0,0,.12)}.p3msg{padding:12px 15px;border:1px solid rgba(117,221,179,.25);border-radius:12px;margin:12px 0;background:rgba(16,55,39,.68);color:#d6ffe7}.p3err{border-color:rgba(255,126,139,.3);background:rgba(80,24,33,.78);color:#ffd8dc}.p3muted{color:var(--muted)}.p3inline{display:flex;gap:.5rem;flex-wrap:wrap}.p3inline form{margin:0;min-width:130px}</style></head><body><header class="topbar"><a class="brand" href="index.php" aria-label="Campus home"><span class="brand-mark" aria-hidden="true">C</span><span class="brand-copy"><strong>Campus</strong><small>PLACEMENT INTELLIGENCE</small></span></a><nav aria-label="Recruiter navigation"><a href="index.php">Main portal</a><a href="index.php?page=dashboard">Dashboard</a><form method="post" action="index.php" class="inline-form"><input type="hidden" name="_csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="logout"><button class="nav-cta" type="submit">Sign out</button></form></nav></header><main class="phase3"><div class="dash-top"><div><p class="eyebrow">CAMPUS · PHASE 3</p><h1>Recruiter workspace</h1><p class="p3muted">Signed in as <?=h($user['name'])?>. Company ownership is enforced server-side.</p></div><a class="secondary-btn" href="index.php?page=dashboard">Main dashboard</a></div>
-<?php if($message): ?><div class="p3msg"><?=h($message)?></div><?php endif; ?><?php if($error): ?><div class="p3msg p3err"><?=h($error)?></div><?php endif; ?>
-<section class="p3panel"><h2>Company profile</h2><?php if($company && $company['company_id']): ?><p><strong><?=h($company['company_name'])?></strong> · Approval: <strong><?=h($company['approval_status'])?></strong></p><p class="p3muted">Editing profile resubmits it for approval. Job publishing requires approved status.</p><?php else: ?><p class="p3muted">Submit your company profile for TPO/admin approval. Jobs cannot be published until approval.</p><?php endif; ?><form class="p3form p3grid" method="post"><input type="hidden" name="_csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="save_company"><label>Company name<input required maxlength="180" name="name" value="<?=h($company['company_name']??'')?>"></label><label>Website URL<input type="url" maxlength="255" name="website" value="<?=h($company['website']??'')?>"></label><label>Industry<input maxlength="120" name="industry" value="<?=h($company['industry']??'')?>"></label><label>Designation<input maxlength="120" name="designation" value="<?=h($company['designation']??'')?>"></label><label style="grid-column:1/-1">Description<textarea name="description" maxlength="4000" rows="3"><?=h($company['description']??'')?></textarea></label><button class="primary-btn" type="submit">Submit company profile</button></form></section>
-<section class="p3panel"><h2>Create a job</h2><?php if(!$company||!$company['company_id']||$company['approval_status']!=='approved'): ?><p class="p3muted">Job creation is locked until the company is approved by TPO/admin.</p><?php else: ?><form class="p3form p3grid" method="post"><input type="hidden" name="_csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="save_job"><label>Job title<input required maxlength="180" name="title"></label><label>Location<input maxlength="180" name="location"></label><label>Employment type<input maxlength="80" name="employment_type" placeholder="Full-time / Internship"></label><label>Minimum CGPA<input required type="number" min="0" max="10" step="0.01" name="min_cgpa" value="0"></label><label>Eligible branch<input maxlength="120" name="eligible_branch"></label><label>Graduation year<input type="number" min="2000" max="2150" name="graduation_year"></label><label>Closing date<input type="datetime-local" name="closes_at"></label><label>Status<select name="status"><option value="draft">Draft</option><option value="published">Published</option><option value="paused">Paused</option><option value="closed">Closed</option></select></label><label style="grid-column:1/-1">Description<textarea required maxlength="12000" rows="5" name="description"></textarea></label><button class="primary-btn" type="submit">Create job</button></form><?php endif; ?></section>
-<section class="p3panel"><h2>Your jobs</h2><?php if(!$jobs): ?><p class="p3muted">No jobs have been created yet.</p><?php else: ?><table class="p3table"><thead><tr><th>Role</th><th>Status</th><th>Applicants</th><th>Edit / status</th></tr></thead><tbody><?php foreach($jobs as $j): ?><tr><td><strong><?=h($j['title'])?></strong><br><span class="p3muted"><?=h($j['location']??'')?></span></td><td><?=h($j['status'])?></td><td><?=(int)$j['applicant_count']?></td><td><details><summary>Edit job</summary><form class="p3form" method="post"><input type="hidden" name="_csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="save_job"><input type="hidden" name="job_id" value="<?=(int)$j['id']?>"><input required name="title" maxlength="180" value="<?=h($j['title'])?>"><textarea required name="description" maxlength="12000" rows="3"><?=h($j['description'])?></textarea><input name="location" maxlength="180" placeholder="Location" value="<?=h($j['location']??'')?>"><input name="employment_type" maxlength="80" placeholder="Employment type" value="<?=h($j['employment_type']??'')?>"><input type="number" name="min_cgpa" min="0" max="10" step=".01" value="<?=h((string)$j['min_cgpa'])?>"><input name="eligible_branch" maxlength="120" placeholder="Eligible branch" value="<?=h($j['eligible_branch']??'')?>"><input type="number" name="graduation_year" min="2000" max="2150" placeholder="Graduation year" value="<?=h((string)($j['graduation_year']??''))?>"><input type="datetime-local" name="closes_at" value="<?=h($j['closes_at']?date('Y-m-d\TH:i',strtotime($j['closes_at'])):'')?>"><select name="status"><?php foreach(['draft','published','paused','closed'] as $s): ?><option value="<?=$s?>" <?=$j['status']===$s?'selected':''?>><?=$s?></option><?php endforeach; ?></select><button class="secondary-btn" type="submit">Save changes</button></form></details></td></tr><?php endforeach; ?></tbody></table><?php endif; ?></section>
-<section class="p3panel"><h2>Applicants</h2><?php if(!$apps): ?><p class="p3muted">No applications received yet.</p><?php else: ?><table class="p3table"><thead><tr><th>Candidate</th><th>Job</th><th>Academic profile</th><th>Status / action</th><th>Interview</th></tr></thead><tbody><?php foreach($apps as $a): ?><tr><td><strong><?=h($a['student_name'])?></strong><br><?=h($a['email'])?><p><?=nl2br(h($a['cover_note']??''))?></p></td><td><?=h($a['title'])?></td><td><?=h($a['branch']??'Not provided')?> · CGPA <?=h((string)($a['cgpa']??'N/A'))?> · <?=h((string)($a['graduation_year']??'Year n/a'))?></td><td><p><?=h($a['status'])?></p><form method="post" class="p3form"><input type="hidden" name="_csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="change_application"><input type="hidden" name="application_id" value="<?=(int)$a['id']?>"><select name="status"><?php foreach(['under_review','shortlisted','interview','selected','rejected'] as $s): ?><option value="<?=$s?>" <?=$a['status']===$s?'selected':''?>><?=$s?></option><?php endforeach; ?></select><button class="secondary-btn">Update status</button></form></td><td><form method="post" class="p3form"><input type="hidden" name="_csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="schedule_interview"><input type="hidden" name="application_id" value="<?=(int)$a['id']?>"><input type="datetime-local" required name="scheduled_at"><input name="mode" maxlength="60" placeholder="Online / onsite"><input name="location_or_link" maxlength="500" placeholder="Venue or meeting link"><button class="secondary-btn">Schedule</button></form></td></tr><?php endforeach; ?></tbody></table><?php endif; ?></section>
-<section class="p3panel"><h2>Scheduled interviews</h2><?php if(!$interviews): ?><p class="p3muted">No interviews scheduled.</p><?php else: ?><table class="p3table"><thead><tr><th>Candidate</th><th>Job</th><th>When</th><th>Mode / venue</th><th>Status</th></tr></thead><tbody><?php foreach($interviews as $i): ?><tr><td><?=h($i['student_name'])?></td><td><?=h($i['title'])?></td><td><?=h($i['scheduled_at'])?></td><td><?=h($i['mode']??'')?> <?=h($i['location_or_link']??'')?></td><td><?=h($i['status'])?></td></tr><?php endforeach; ?></tbody></table><?php endif; ?></section>
-<p class="p3muted">No sample companies, jobs, or applicants are created. Keep company approval and recruiter account activation controlled by an authorized TPO/admin.</p></main></body></html>
+
+function recruiter_h(?string $value): string
+{
+    return Security::escape($value);
+}
+
+function recruiter_post(string $key): string
+{
+    $value = $_POST[$key] ?? '';
+    return is_string($value) ? trim($value) : '';
+}
+
+function recruiter_get(string $key): string
+{
+    $value = $_GET[$key] ?? '';
+    return is_string($value) ? trim($value) : '';
+}
+
+function recruiter_section(string $candidate, string $fallback = 'overview'): string
+{
+    $sections = ['overview', 'company', 'jobs', 'applicants', 'interviews'];
+    return in_array($candidate, $sections, true) ? $candidate : $fallback;
+}
+
+function recruiter_positive_id(mixed $value): int
+{
+    $id = filter_var($value, FILTER_VALIDATE_INT);
+    return $id !== false && $id > 0 ? (int) $id : 0;
+}
+
+function recruiter_company(PDO $db, int $userId): ?array
+{
+    $statement = $db->prepare(
+        'SELECT rp.company_id, rp.designation, c.name AS company_name, c.website, c.industry, c.description, c.approval_status '
+        . 'FROM recruiter_profiles rp LEFT JOIN companies c ON c.id = rp.company_id WHERE rp.user_id = ? LIMIT 1',
+    );
+    $statement->execute([$userId]);
+    $company = $statement->fetch(PDO::FETCH_ASSOC);
+    return $company ?: null;
+}
+
+function recruiter_audit(PDO $db, int $actorId, string $action, string $entity, ?int $id, array $metadata = []): void
+{
+    $statement = $db->prepare(
+        'INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, ip_hash, metadata_json) VALUES (?, ?, ?, ?, ?, ?)',
+    );
+    $statement->execute([
+        $actorId,
+        $action,
+        $entity,
+        $id,
+        isset($_SERVER['REMOTE_ADDR']) ? hash('sha256', (string) $_SERVER['REMOTE_ADDR']) : null,
+        $metadata ? json_encode($metadata, JSON_UNESCAPED_SLASHES) : null,
+    ]);
+}
+
+function recruiter_notify(PDO $db, int $userId, string $title, string $body): void
+{
+    $statement = $db->prepare('INSERT INTO notifications (user_id, title, body) VALUES (?, ?, ?)');
+    $statement->execute([$userId, $title, $body]);
+}
+
+function recruiter_flash_redirect(string $section, string $kind, string $message, array $query = []): never
+{
+    $_SESSION['recruiter_flash'] = ['kind' => $kind, 'message' => $message];
+    $query['section'] = recruiter_section($section);
+    header('Location: recruiter.php?' . http_build_query($query), true, 303);
+    exit;
+}
+
+function recruiter_parse_datetime(string $value): ?DateTimeImmutable
+{
+    if ($value === '') {
+        return null;
+    }
+
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', $value);
+    $errors = DateTimeImmutable::getLastErrors();
+    if (!$date || (is_array($errors) && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))) {
+        throw new InvalidArgumentException('Enter a valid date and time.');
+    }
+
+    return $date;
+}
+
+function recruiter_status_label(string $status): string
+{
+    return match ($status) {
+        'under_review' => 'Under review',
+        'shortlisted' => 'Shortlisted',
+        'interview' => 'Interview',
+        'selected' => 'Selected',
+        'rejected' => 'Not selected',
+        'withdrawn' => 'Withdrawn',
+        'published' => 'Published',
+        'paused' => 'Paused',
+        'closed' => 'Closed',
+        'scheduled' => 'Scheduled',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+        'rescheduled' => 'Rescheduled',
+        default => ucfirst(str_replace('_', ' ', $status)),
+    };
+}
+
+try {
+    $db = Database::connection();
+} catch (Throwable $exception) {
+    error_log('Recruiter database connection failure: ' . $exception->getMessage());
+    http_response_code(503);
+    $appCssVersion = (string) (filemtime(__DIR__ . '/assets/css/app.css') ?: 1);
+    $recruiterCssVersion = (string) (filemtime(__DIR__ . '/assets/css/recruiter.css') ?: 1);
+    ?>
+    <!doctype html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Recruiter workspace unavailable | SVIET</title>
+        <link rel="stylesheet" href="assets/css/app.css?v=<?= recruiter_h($appCssVersion) ?>">
+        <link rel="stylesheet" href="assets/css/recruiter.css?v=<?= recruiter_h($recruiterCssVersion) ?>">
+    </head>
+    <body class="recruiter-portal">
+        <main class="rec-main rec-unavailable">
+            <p class="rec-eyebrow">SVIET · RECRUITER WORKSPACE</p>
+            <section class="rec-card">
+                <h1>Workspace temporarily unavailable</h1>
+                <p>We couldn't load your recruiter workspace. Please try again shortly.</p>
+                <a class="rec-button rec-button--primary" href="index.php?page=dashboard">Back to the portal</a>
+            </section>
+        </main>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
+$csrf = Security::csrfToken();
+$section = recruiter_section(recruiter_get('section'));
+$flash = $_SESSION['recruiter_flash'] ?? null;
+unset($_SESSION['recruiter_flash']);
+$message = is_array($flash) && ($flash['kind'] ?? '') === 'success' ? (string) ($flash['message'] ?? '') : '';
+$error = is_array($flash) && ($flash['kind'] ?? '') === 'error' ? (string) ($flash['message'] ?? '') : '';
+$company = null;
+$companyLoadError = false;
+
+try {
+    $company = recruiter_company($db, (int) $user['id']);
+} catch (Throwable $exception) {
+    error_log('Recruiter company profile query failure: ' . $exception->getMessage());
+    $companyLoadError = true;
+}
+
+$applicationTransitions = [
+    'submitted' => ['under_review', 'rejected'],
+    'under_review' => ['shortlisted', 'rejected'],
+    'shortlisted' => ['interview', 'rejected'],
+    'interview' => ['selected', 'rejected'],
+    'selected' => [],
+    'rejected' => [],
+    'withdrawn' => [],
+];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $postedToken = $_POST['_csrf'] ?? null;
+    if (!is_string($postedToken) || !Security::verifyCsrf($postedToken)) {
+        http_response_code(419);
+        $error = 'Your session expired. Refresh the page and try again.';
+    } else {
+        $action = recruiter_post('action');
+        $returnSection = recruiter_section(recruiter_post('return_section'), match ($action) {
+            'save_company' => 'company',
+            'save_job' => 'jobs',
+            'change_application' => 'applicants',
+            'schedule_interview', 'cancel_interview', 'complete_interview', 'reschedule_interview' => 'interviews',
+            default => 'overview',
+        });
+
+        try {
+            if ($action === 'save_company') {
+                $companyName = recruiter_post('name');
+                $website = recruiter_post('website');
+                $industry = recruiter_post('industry');
+                $description = recruiter_post('description');
+                $designation = recruiter_post('designation');
+
+                if (
+                    $companyName === '' ||
+                    mb_strlen($companyName) > 180 ||
+                    mb_strlen($website) > 255 ||
+                    mb_strlen($industry) > 120 ||
+                    mb_strlen($description) > 4000 ||
+                    mb_strlen($designation) > 120 ||
+                    ($website !== '' && !filter_var($website, FILTER_VALIDATE_URL))
+                ) {
+                    throw new InvalidArgumentException('Check the company details and enter a valid website URL.');
+                }
+
+                $db->beginTransaction();
+                $ensureProfileStatement = $db->prepare(
+                    'INSERT INTO recruiter_profiles (user_id, company_id, designation) VALUES (?, NULL, NULL) '
+                    . 'ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)',
+                );
+                $ensureProfileStatement->execute([(int) $user['id']]);
+                $profileStatement = $db->prepare('SELECT company_id FROM recruiter_profiles WHERE user_id = ? FOR UPDATE');
+                $profileStatement->execute([(int) $user['id']]);
+                $recruiterProfile = $profileStatement->fetch(PDO::FETCH_ASSOC) ?: null;
+                $existingCompanyId = recruiter_positive_id($recruiterProfile['company_id'] ?? null);
+                if ($existingCompanyId > 0) {
+                    $statement = $db->prepare(
+                        'SELECT name AS company_name, website, industry, description, approval_status FROM companies WHERE id = ? FOR UPDATE',
+                    );
+                    $statement->execute([$existingCompanyId]);
+                    $currentCompany = $statement->fetch(PDO::FETCH_ASSOC);
+                    if (!$currentCompany) {
+                        throw new InvalidArgumentException('Your company profile could not be found. Please contact the Training & Placement Cell.');
+                    }
+                    $materialChange =
+                        trim((string) ($currentCompany['company_name'] ?? '')) !== $companyName ||
+                        trim((string) ($currentCompany['website'] ?? '')) !== $website ||
+                        trim((string) ($currentCompany['industry'] ?? '')) !== $industry ||
+                        trim((string) ($currentCompany['description'] ?? '')) !== $description;
+                    $approvalStatus =
+                        ($currentCompany['approval_status'] ?? '') === 'approved' && !$materialChange
+                            ? 'approved'
+                            : 'pending';
+
+                    $statement = $db->prepare(
+                        'UPDATE companies SET name = ?, website = ?, industry = ?, description = ?, approval_status = ? WHERE id = ?',
+                    );
+                    $statement->execute([
+                        $companyName,
+                        $website !== '' ? $website : null,
+                        $industry !== '' ? $industry : null,
+                        $description !== '' ? $description : null,
+                        $approvalStatus,
+                        $existingCompanyId,
+                    ]);
+                    $companyId = $existingCompanyId;
+                } else {
+                    $approvalStatus = 'pending';
+                    $statement = $db->prepare(
+                        'INSERT INTO companies (name, website, industry, description, approval_status) VALUES (?, ?, ?, ?, ?)',
+                    );
+                    $statement->execute([
+                        $companyName,
+                        $website !== '' ? $website : null,
+                        $industry !== '' ? $industry : null,
+                        $description !== '' ? $description : null,
+                        $approvalStatus,
+                    ]);
+                    $companyId = (int) $db->lastInsertId();
+                }
+
+                $statement = $db->prepare(
+                    'INSERT INTO recruiter_profiles (user_id, company_id, designation) VALUES (?, ?, ?) '
+                    . 'ON DUPLICATE KEY UPDATE company_id = VALUES(company_id), designation = VALUES(designation)',
+                );
+                $statement->execute([
+                    (int) $user['id'],
+                    $companyId,
+                    $designation !== '' ? $designation : null,
+                ]);
+                recruiter_audit($db, (int) $user['id'], 'company.profile_saved', 'company', $companyId, [
+                    'approval_status' => $approvalStatus,
+                ]);
+                $db->commit();
+
+                $message = $approvalStatus === 'approved'
+                    ? 'Company profile saved. Its approval remains active.'
+                    : 'Company profile saved and sent to the Training & Placement Cell for review.';
+                recruiter_flash_redirect('company', 'success', $message);
+            }
+
+            if ($action === 'save_job') {
+                $companyId = recruiter_positive_id($company['company_id'] ?? null);
+                if ($companyId < 1) {
+                    throw new InvalidArgumentException('Complete your company profile before preparing a job.');
+                }
+
+                $jobId = recruiter_positive_id($_POST['job_id'] ?? null);
+                $title = recruiter_post('title');
+                $description = recruiter_post('description');
+                $location = recruiter_post('location');
+                $employmentType = recruiter_post('employment_type');
+                $minimumCgpa = recruiter_post('min_cgpa');
+                $eligibleBranch = recruiter_post('eligible_branch');
+                $graduationYear = recruiter_post('graduation_year');
+                $closingValue = recruiter_post('closes_at');
+                $status = recruiter_post('status') ?: 'draft';
+
+                if (
+                    $title === '' ||
+                    mb_strlen($title) > 180 ||
+                    $description === '' ||
+                    mb_strlen($description) > 12000 ||
+                    mb_strlen($location) > 180 ||
+                    mb_strlen($employmentType) > 80 ||
+                    mb_strlen($eligibleBranch) > 120 ||
+                    !is_numeric($minimumCgpa) ||
+                    (float) $minimumCgpa < 0 ||
+                    (float) $minimumCgpa > 10 ||
+                    ($graduationYear !== '' &&
+                        (!ctype_digit($graduationYear) || (int) $graduationYear < 2000 || (int) $graduationYear > 2150)) ||
+                    !in_array($status, ['draft', 'published', 'paused', 'closed'], true)
+                ) {
+                    throw new InvalidArgumentException('Check the job title, description, eligibility details, and status.');
+                }
+
+                $closingDate = recruiter_parse_datetime($closingValue);
+                if ($status === 'published' && $closingDate && $closingDate <= new DateTimeImmutable()) {
+                    throw new InvalidArgumentException('A published job needs a future closing date.');
+                }
+
+                $db->beginTransaction();
+                $companyStatement = $db->prepare(
+                    'SELECT c.approval_status FROM recruiter_profiles rp JOIN companies c ON c.id = rp.company_id '
+                    . 'WHERE rp.user_id = ? AND c.id = ? FOR UPDATE',
+                );
+                $companyStatement->execute([(int) $user['id'], $companyId]);
+                $companyApprovalStatus = $companyStatement->fetchColumn();
+                if ($companyApprovalStatus === false) {
+                    throw new InvalidArgumentException('Your company profile could not be found. Please refresh and try again.');
+                }
+                if ($status === 'published' && $companyApprovalStatus !== 'approved') {
+                    throw new InvalidArgumentException('Your company must be approved before you can publish a job. Drafts can still be prepared.');
+                }
+
+                $existingJob = null;
+                if ($jobId > 0) {
+                    $statement = $db->prepare('SELECT id, status FROM jobs WHERE id = ? AND company_id = ? FOR UPDATE');
+                    $statement->execute([$jobId, $companyId]);
+                    $existingJob = $statement->fetch(PDO::FETCH_ASSOC);
+                    if (!$existingJob) {
+                        throw new InvalidArgumentException('That job could not be found in your company workspace.');
+                    }
+                }
+
+                $closingDateValue = $closingDate?->format('Y-m-d H:i:s');
+                $jobValues = [
+                    $title,
+                    $description,
+                    $location !== '' ? $location : null,
+                    $employmentType !== '' ? $employmentType : null,
+                    (float) $minimumCgpa,
+                    $eligibleBranch !== '' ? $eligibleBranch : null,
+                    $graduationYear !== '' ? (int) $graduationYear : null,
+                    $closingDateValue,
+                    $status,
+                ];
+
+                if ($existingJob) {
+                    $statement = $db->prepare(
+                        'UPDATE jobs SET title = ?, description = ?, location = ?, employment_type = ?, min_cgpa = ?, eligible_branch = ?, graduation_year = ?, closes_at = ?, status = ? WHERE id = ? AND company_id = ?',
+                    );
+                    $statement->execute([...$jobValues, $jobId, $companyId]);
+                    recruiter_audit($db, (int) $user['id'], 'job.updated', 'job', $jobId, [
+                        'from' => $existingJob['status'],
+                        'to' => $status,
+                    ]);
+                    $message = 'Job changes saved.';
+                } else {
+                    $statement = $db->prepare(
+                        'INSERT INTO jobs (company_id, title, description, location, employment_type, min_cgpa, eligible_branch, graduation_year, closes_at, status) '
+                        . 'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    );
+                    $statement->execute([$companyId, ...$jobValues]);
+                    $jobId = (int) $db->lastInsertId();
+                    recruiter_audit($db, (int) $user['id'], 'job.created', 'job', $jobId, ['status' => $status]);
+                    $message = $status === 'published' ? 'Job published to eligible students.' : 'Draft job saved.';
+                }
+                $db->commit();
+                recruiter_flash_redirect('jobs', 'success', $message);
+            }
+
+            if ($action === 'change_application') {
+                $applicationId = recruiter_positive_id($_POST['application_id'] ?? null);
+                $nextStatus = recruiter_post('status');
+                $note = recruiter_post('note');
+                if ($applicationId < 1 || mb_strlen($note) > 500) {
+                    throw new InvalidArgumentException('Check the application and keep the note under 500 characters.');
+                }
+
+                $db->beginTransaction();
+                $statement = $db->prepare(
+                    'SELECT a.id, a.student_id, a.status, j.title FROM applications a '
+                    . 'JOIN jobs j ON j.id = a.job_id WHERE a.id = ? AND j.company_id = ? FOR UPDATE',
+                );
+                $statement->execute([$applicationId, recruiter_positive_id($company['company_id'] ?? null)]);
+                $application = $statement->fetch(PDO::FETCH_ASSOC);
+                if (!$application) {
+                    throw new InvalidArgumentException('That application is not available in your company workspace.');
+                }
+
+                $currentStatus = (string) $application['status'];
+                $allowedNext = $applicationTransitions[$currentStatus] ?? [];
+                if (!in_array($nextStatus, $allowedNext, true)) {
+                    throw new InvalidArgumentException('Choose a valid next step for this application. Completed or withdrawn applications cannot be changed.');
+                }
+
+                $db->prepare('UPDATE applications SET status = ? WHERE id = ?')->execute([$nextStatus, $applicationId]);
+                $history = $db->prepare(
+                    'INSERT INTO application_status_history (application_id, changed_by, old_status, new_status, note) VALUES (?, ?, ?, ?, ?)',
+                );
+                $history->execute([
+                    $applicationId,
+                    (int) $user['id'],
+                    $currentStatus,
+                    $nextStatus,
+                    $note !== '' ? $note : 'Updated by recruiter',
+                ]);
+                $label = recruiter_status_label($nextStatus);
+                recruiter_notify(
+                    $db,
+                    (int) $application['student_id'],
+                    'Application status updated',
+                    'Your application for ' . $application['title'] . ' is now ' . $label . '.',
+                );
+                recruiter_audit($db, (int) $user['id'], 'application.status_changed', 'application', $applicationId, [
+                    'from' => $currentStatus,
+                    'to' => $nextStatus,
+                ]);
+                $db->commit();
+                recruiter_flash_redirect('applicants', 'success', 'Application moved to ' . strtolower($label) . '.');
+            }
+
+            if ($action === 'schedule_interview') {
+                $applicationId = recruiter_positive_id($_POST['application_id'] ?? null);
+                $whenValue = recruiter_post('scheduled_at');
+                $mode = recruiter_post('mode');
+                $locationOrLink = recruiter_post('location_or_link');
+                $scheduledAt = recruiter_parse_datetime($whenValue);
+                if (
+                    $applicationId < 1 ||
+                    !$scheduledAt ||
+                    $scheduledAt <= new DateTimeImmutable() ||
+                    mb_strlen($mode) > 60 ||
+                    mb_strlen($locationOrLink) > 500
+                ) {
+                    throw new InvalidArgumentException('Enter a valid future interview time and details.');
+                }
+
+                $db->beginTransaction();
+                $statement = $db->prepare(
+                    'SELECT a.id, a.student_id, a.status, j.title FROM applications a '
+                    . 'JOIN jobs j ON j.id = a.job_id WHERE a.id = ? AND j.company_id = ? FOR UPDATE',
+                );
+                $statement->execute([$applicationId, recruiter_positive_id($company['company_id'] ?? null)]);
+                $application = $statement->fetch(PDO::FETCH_ASSOC);
+                if (!$application || !in_array($application['status'], ['shortlisted', 'interview'], true)) {
+                    throw new InvalidArgumentException('Only shortlisted candidates can be scheduled for interview.');
+                }
+                $activeInterview = $db->prepare(
+                    "SELECT id FROM interviews WHERE application_id = ? AND status = 'scheduled' AND scheduled_at >= NOW() LIMIT 1 FOR UPDATE",
+                );
+                $activeInterview->execute([$applicationId]);
+                if ($activeInterview->fetchColumn()) {
+                    throw new InvalidArgumentException('This candidate already has a scheduled interview. Use the reschedule action instead.');
+                }
+
+                $statement = $db->prepare(
+                    "INSERT INTO interviews (application_id, scheduled_by, scheduled_at, mode, location_or_link, status) VALUES (?, ?, ?, ?, ?, 'scheduled')",
+                );
+                $statement->execute([
+                    $applicationId,
+                    (int) $user['id'],
+                    $scheduledAt->format('Y-m-d H:i:s'),
+                    $mode !== '' ? $mode : null,
+                    $locationOrLink !== '' ? $locationOrLink : null,
+                ]);
+                if ($application['status'] !== 'interview') {
+                    $db->prepare('UPDATE applications SET status = ? WHERE id = ?')->execute(['interview', $applicationId]);
+                    $db->prepare(
+                        'INSERT INTO application_status_history (application_id, changed_by, old_status, new_status, note) VALUES (?, ?, ?, ?, ?)',
+                    )->execute([$applicationId, (int) $user['id'], $application['status'], 'interview', 'Interview scheduled']);
+                }
+                recruiter_notify(
+                    $db,
+                    (int) $application['student_id'],
+                    'Interview scheduled',
+                    'An interview for ' . $application['title'] . ' has been scheduled for ' . $scheduledAt->format('M j, Y g:i A T') . '.',
+                );
+                recruiter_audit($db, (int) $user['id'], 'interview.scheduled', 'application', $applicationId);
+                $db->commit();
+                recruiter_flash_redirect('interviews', 'success', 'Interview scheduled and the student notified.');
+            }
+
+            if (in_array($action, ['cancel_interview', 'complete_interview', 'reschedule_interview'], true)) {
+                $interviewId = recruiter_positive_id($_POST['interview_id'] ?? null);
+                if ($interviewId < 1) {
+                    throw new InvalidArgumentException('Select a valid interview.');
+                }
+
+                $rescheduledAt = null;
+                $mode = recruiter_post('mode');
+                $locationOrLink = recruiter_post('location_or_link');
+                if ($action === 'reschedule_interview') {
+                    $rescheduledAt = recruiter_parse_datetime(recruiter_post('scheduled_at'));
+                    if (
+                        !$rescheduledAt ||
+                        $rescheduledAt <= new DateTimeImmutable() ||
+                        mb_strlen($mode) > 60 ||
+                        mb_strlen($locationOrLink) > 500
+                    ) {
+                        throw new InvalidArgumentException('Enter a valid future interview time and details.');
+                    }
+                }
+
+                $db->beginTransaction();
+                $companyId = recruiter_positive_id($company['company_id'] ?? null);
+                $lookup = $db->prepare(
+                    'SELECT i.application_id FROM interviews i JOIN applications a ON a.id = i.application_id '
+                    . 'JOIN jobs j ON j.id = a.job_id WHERE i.id = ? AND j.company_id = ? LIMIT 1',
+                );
+                $lookup->execute([$interviewId, $companyId]);
+                $applicationId = recruiter_positive_id($lookup->fetchColumn());
+                if ($applicationId < 1) {
+                    throw new InvalidArgumentException('That interview is not available in your company workspace.');
+                }
+
+                $applicationLock = $db->prepare('SELECT id FROM applications WHERE id = ? FOR UPDATE');
+                $applicationLock->execute([$applicationId]);
+                if (!$applicationLock->fetchColumn()) {
+                    throw new InvalidArgumentException('The application for this interview could not be found.');
+                }
+
+                $statement = $db->prepare(
+                    'SELECT i.id, i.application_id, i.scheduled_at, i.mode, i.location_or_link, i.status, '
+                    . 'a.student_id, j.title FROM interviews i JOIN applications a ON a.id = i.application_id '
+                    . 'JOIN jobs j ON j.id = a.job_id WHERE i.id = ? AND j.company_id = ? FOR UPDATE',
+                );
+                $statement->execute([$interviewId, $companyId]);
+                $interview = $statement->fetch(PDO::FETCH_ASSOC);
+                if (!$interview || $interview['status'] !== 'scheduled') {
+                    throw new InvalidArgumentException('Only scheduled interviews can be changed.');
+                }
+                if ($action === 'reschedule_interview') {
+                    $activeInterview = $db->prepare(
+                        "SELECT id FROM interviews WHERE application_id = ? AND status = 'scheduled' AND scheduled_at >= NOW() AND id <> ? LIMIT 1 FOR UPDATE",
+                    );
+                    $activeInterview->execute([(int) $interview['application_id'], $interviewId]);
+                    if ($activeInterview->fetchColumn()) {
+                        throw new InvalidArgumentException('This candidate already has another scheduled interview.');
+                    }
+                }
+
+                if ($action === 'cancel_interview') {
+                    $db->prepare('UPDATE interviews SET status = ? WHERE id = ?')->execute(['cancelled', $interviewId]);
+                    recruiter_notify(
+                        $db,
+                        (int) $interview['student_id'],
+                        'Interview cancelled',
+                        'The interview for ' . $interview['title'] . ' has been cancelled by the recruiter.',
+                    );
+                    recruiter_audit($db, (int) $user['id'], 'interview.cancelled', 'interview', $interviewId);
+                    $successMessage = 'Interview cancelled and the student notified.';
+                } elseif ($action === 'complete_interview') {
+                    if (new DateTimeImmutable((string) $interview['scheduled_at']) > new DateTimeImmutable()) {
+                        throw new InvalidArgumentException('An upcoming interview cannot be marked complete.');
+                    }
+                    $db->prepare('UPDATE interviews SET status = ? WHERE id = ?')->execute(['completed', $interviewId]);
+                    recruiter_audit($db, (int) $user['id'], 'interview.completed', 'interview', $interviewId);
+                    $successMessage = 'Interview marked complete.';
+                } else {
+                    $db->prepare('UPDATE interviews SET status = ? WHERE id = ?')->execute(['rescheduled', $interviewId]);
+                    $statement = $db->prepare(
+                        "INSERT INTO interviews (application_id, scheduled_by, scheduled_at, mode, location_or_link, status) VALUES (?, ?, ?, ?, ?, 'scheduled')",
+                    );
+                    $statement->execute([
+                        (int) $interview['application_id'],
+                        (int) $user['id'],
+                        $rescheduledAt->format('Y-m-d H:i:s'),
+                        $mode !== '' ? $mode : $interview['mode'],
+                        $locationOrLink !== '' ? $locationOrLink : $interview['location_or_link'],
+                    ]);
+                    recruiter_notify(
+                        $db,
+                        (int) $interview['student_id'],
+                        'Interview rescheduled',
+                        'The interview for ' . $interview['title'] . ' has been rescheduled to ' . $rescheduledAt->format('M j, Y g:i A T') . '.',
+                    );
+                    recruiter_audit($db, (int) $user['id'], 'interview.rescheduled', 'interview', $interviewId);
+                    $successMessage = 'Interview rescheduled and the student notified.';
+                }
+
+                $db->commit();
+                recruiter_flash_redirect('interviews', 'success', $successMessage);
+            }
+
+            throw new InvalidArgumentException('Choose a valid recruiter action.');
+        } catch (InvalidArgumentException $exception) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            recruiter_flash_redirect($returnSection, 'error', $exception->getMessage());
+        } catch (Throwable $exception) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log('Recruiter action failure: ' . $exception->getMessage());
+            recruiter_flash_redirect($returnSection, 'error', 'We could not complete that action. Please try again shortly.');
+        }
+    }
+}
+
+try {
+    $company = recruiter_company($db, (int) $user['id']);
+} catch (Throwable $exception) {
+    error_log('Recruiter company refresh failure: ' . $exception->getMessage());
+    $company = null;
+    $companyLoadError = true;
+}
+$companyId = recruiter_positive_id($company['company_id'] ?? null);
+$companyStatus = (string) ($company['approval_status'] ?? 'not_submitted');
+$companyStatusLabel = match ($companyStatus) {
+    'approved' => 'Approved',
+    'pending' => 'Under T&P review',
+    'rejected' => 'Changes requested',
+    default => 'Profile not submitted',
+};
+
+$statistics = [
+    'live_jobs' => 0,
+    'new_applicants' => 0,
+    'active_pipeline' => 0,
+    'upcoming_interviews' => 0,
+];
+$recentApplications = [];
+if ($companyId > 0 && !$companyLoadError) {
+    try {
+        $statement = $db->prepare(
+            "SELECT COUNT(*) FROM jobs j JOIN companies c ON c.id = j.company_id WHERE j.company_id = ? AND j.status = 'published' AND c.approval_status = 'approved' AND (j.closes_at IS NULL OR j.closes_at >= NOW())",
+        );
+        $statement->execute([$companyId]);
+        $statistics['live_jobs'] = (int) $statement->fetchColumn();
+
+        $statement = $db->prepare(
+            "SELECT COUNT(*) FROM applications a JOIN jobs j ON j.id = a.job_id WHERE j.company_id = ? AND a.status = 'submitted'",
+        );
+        $statement->execute([$companyId]);
+        $statistics['new_applicants'] = (int) $statement->fetchColumn();
+
+        $statement = $db->prepare(
+            "SELECT COUNT(*) FROM applications a JOIN jobs j ON j.id = a.job_id WHERE j.company_id = ? AND a.status IN ('under_review', 'shortlisted', 'interview')",
+        );
+        $statement->execute([$companyId]);
+        $statistics['active_pipeline'] = (int) $statement->fetchColumn();
+
+        $statement = $db->prepare(
+            "SELECT COUNT(*) FROM interviews i JOIN applications a ON a.id = i.application_id JOIN jobs j ON j.id = a.job_id WHERE j.company_id = ? AND i.status = 'scheduled' AND i.scheduled_at >= NOW()",
+        );
+        $statement->execute([$companyId]);
+        $statistics['upcoming_interviews'] = (int) $statement->fetchColumn();
+
+        $statement = $db->prepare(
+            'SELECT a.id, a.status, a.applied_at, u.name AS student_name, j.title '
+            . 'FROM applications a JOIN jobs j ON j.id = a.job_id JOIN users u ON u.id = a.student_id '
+            . 'WHERE j.company_id = ? ORDER BY a.applied_at DESC LIMIT 6',
+        );
+        $statement->execute([$companyId]);
+        $recentApplications = $statement->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $exception) {
+        error_log('Recruiter overview query failure: ' . $exception->getMessage());
+        $companyLoadError = true;
+    }
+}
+
+$jobStatusFilter = recruiter_get('status');
+if (!in_array($jobStatusFilter, ['all', 'draft', 'published', 'paused', 'closed'], true)) {
+    $jobStatusFilter = 'all';
+}
+$jobSearch = mb_substr(recruiter_get('q'), 0, 80);
+$jobPage = max(1, recruiter_positive_id($_GET['job_page'] ?? 1));
+$jobPageSize = 9;
+$jobTotal = 0;
+$jobPages = 1;
+$jobs = [];
+$editJob = null;
+$editJobId = recruiter_positive_id($_GET['edit'] ?? null);
+if ($companyId > 0 && $section === 'jobs' && !$companyLoadError) {
+    try {
+        $conditions = ['company_id = ?'];
+        $parameters = [$companyId];
+        if ($jobStatusFilter !== 'all') {
+            $conditions[] = 'status = ?';
+            $parameters[] = $jobStatusFilter;
+        }
+        if ($jobSearch !== '') {
+            $conditions[] = '(title LIKE ? OR location LIKE ?)';
+            $parameters[] = '%' . $jobSearch . '%';
+            $parameters[] = '%' . $jobSearch . '%';
+        }
+        $where = implode(' AND ', $conditions);
+        $statement = $db->prepare('SELECT COUNT(*) FROM jobs WHERE ' . $where);
+        $statement->execute($parameters);
+        $jobTotal = (int) $statement->fetchColumn();
+        $jobPages = max(1, (int) ceil($jobTotal / $jobPageSize));
+        $jobPage = min($jobPage, $jobPages);
+        $offset = ($jobPage - 1) * $jobPageSize;
+        $statement = $db->prepare(
+            'SELECT j.*, (SELECT COUNT(*) FROM applications a WHERE a.job_id = j.id) AS applicant_count '
+            . 'FROM jobs j WHERE ' . $where . ' ORDER BY j.updated_at DESC LIMIT ' . $jobPageSize . ' OFFSET ' . $offset,
+        );
+        $statement->execute($parameters);
+        $jobs = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($editJobId > 0) {
+            $statement = $db->prepare('SELECT * FROM jobs WHERE id = ? AND company_id = ? LIMIT 1');
+            $statement->execute([$editJobId, $companyId]);
+            $editJob = $statement->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+    } catch (Throwable $exception) {
+        error_log('Recruiter jobs query failure: ' . $exception->getMessage());
+        $companyLoadError = true;
+    }
+}
+
+$applicationStatusFilter = recruiter_get('status');
+if (!in_array($applicationStatusFilter, ['all', 'submitted', 'under_review', 'shortlisted', 'interview', 'selected', 'rejected', 'withdrawn'], true)) {
+    $applicationStatusFilter = 'all';
+}
+$applicationSearch = mb_substr(recruiter_get('q'), 0, 80);
+$applicationPage = max(1, recruiter_positive_id($_GET['app_page'] ?? 1));
+$applicationPageSize = 12;
+$applicationTotal = 0;
+$applicationPages = 1;
+$applications = [];
+$applicationHistory = [];
+if ($companyId > 0 && $section === 'applicants' && !$companyLoadError) {
+    try {
+        $conditions = ['j.company_id = ?'];
+        $parameters = [$companyId];
+        if ($applicationStatusFilter !== 'all') {
+            $conditions[] = 'a.status = ?';
+            $parameters[] = $applicationStatusFilter;
+        }
+        if ($applicationSearch !== '') {
+            $conditions[] = '(u.name LIKE ? OR u.email LIKE ? OR j.title LIKE ?)';
+            $like = '%' . $applicationSearch . '%';
+            array_push($parameters, $like, $like, $like);
+        }
+        $where = implode(' AND ', $conditions);
+        $from = ' FROM applications a JOIN jobs j ON j.id = a.job_id JOIN users u ON u.id = a.student_id '
+            . 'LEFT JOIN student_profiles p ON p.user_id = u.id';
+        $statement = $db->prepare('SELECT COUNT(*)' . $from . ' WHERE ' . $where);
+        $statement->execute($parameters);
+        $applicationTotal = (int) $statement->fetchColumn();
+        $applicationPages = max(1, (int) ceil($applicationTotal / $applicationPageSize));
+        $applicationPage = min($applicationPage, $applicationPages);
+        $offset = ($applicationPage - 1) * $applicationPageSize;
+        $statement = $db->prepare(
+            'SELECT a.id, a.student_id, a.status, a.applied_at, a.cover_note, u.name AS student_name, u.email, '
+            . 'p.branch, p.cgpa, p.graduation_year, j.title, j.id AS job_id, '
+            . "EXISTS (SELECT 1 FROM interviews future_i WHERE future_i.application_id = a.id AND future_i.status = 'scheduled' AND future_i.scheduled_at >= NOW()) AS has_upcoming_interview"
+            . $from . ' WHERE ' . $where
+            . ' ORDER BY a.applied_at DESC LIMIT ' . $applicationPageSize . ' OFFSET ' . $offset,
+        );
+        $statement->execute($parameters);
+        $applications = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($applications) {
+            $applicationIds = array_map('intval', array_column($applications, 'id'));
+            $placeholders = implode(',', array_fill(0, count($applicationIds), '?'));
+            $statement = $db->prepare(
+                'SELECT application_id, old_status, new_status, note, created_at FROM application_status_history '
+                . 'WHERE application_id IN (' . $placeholders . ') ORDER BY created_at DESC',
+            );
+            $statement->execute($applicationIds);
+            foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $event) {
+                $applicationId = (int) $event['application_id'];
+                if (count($applicationHistory[$applicationId] ?? []) < 3) {
+                    $applicationHistory[$applicationId][] = $event;
+                }
+            }
+        }
+    } catch (Throwable $exception) {
+        error_log('Recruiter applications query failure: ' . $exception->getMessage());
+        $companyLoadError = true;
+    }
+}
+
+$interviewFilter = recruiter_get('when');
+if (!in_array($interviewFilter, ['upcoming', 'past', 'all'], true)) {
+    $interviewFilter = 'upcoming';
+}
+$interviews = [];
+$interviewCandidates = [];
+$scheduleApplicationId = recruiter_positive_id($_GET['application'] ?? null);
+if ($companyId > 0 && $section === 'interviews' && !$companyLoadError) {
+    try {
+        $candidateStatement = $db->prepare(
+            "SELECT a.id, a.status, u.name AS student_name, j.title FROM applications a "
+            . "JOIN jobs j ON j.id = a.job_id JOIN users u ON u.id = a.student_id "
+            . "WHERE j.company_id = ? AND a.status IN ('shortlisted', 'interview') "
+            . "AND NOT EXISTS (SELECT 1 FROM interviews i WHERE i.application_id = a.id AND i.status = 'scheduled' AND i.scheduled_at >= NOW()) "
+            . 'ORDER BY a.applied_at DESC',
+        );
+        $candidateStatement->execute([$companyId]);
+        $interviewCandidates = $candidateStatement->fetchAll(PDO::FETCH_ASSOC);
+
+        $interviewConditions = ['j.company_id = ?'];
+        $interviewParameters = [$companyId];
+        if ($interviewFilter === 'upcoming') {
+            $interviewConditions[] = "i.status = 'scheduled' AND i.scheduled_at >= NOW()";
+        } elseif ($interviewFilter === 'past') {
+            $interviewConditions[] = "(i.status <> 'scheduled' OR i.scheduled_at < NOW())";
+        }
+        $statement = $db->prepare(
+            'SELECT i.id, i.application_id, i.scheduled_at, i.mode, i.location_or_link, i.status, '
+            . 'a.status AS application_status, u.name AS student_name, j.title '
+            . 'FROM interviews i JOIN applications a ON a.id = i.application_id '
+            . 'JOIN jobs j ON j.id = a.job_id JOIN users u ON u.id = a.student_id '
+            . 'WHERE ' . implode(' AND ', $interviewConditions) . ' ORDER BY i.scheduled_at '
+            . ($interviewFilter === 'past' ? 'DESC' : 'ASC') . ' LIMIT 100',
+        );
+        $statement->execute($interviewParameters);
+        $interviews = $statement->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $exception) {
+        error_log('Recruiter interviews query failure: ' . $exception->getMessage());
+        $companyLoadError = true;
+    }
+}
+
+$pageTitles = [
+    'overview' => ['Overview', 'Your hiring activity, next steps, and recent applicants.'],
+    'company' => ['Company profile', 'Manage your organization details and review status.'],
+    'jobs' => ['Your jobs', 'Create, update, and track opportunities for SVIET students.'],
+    'applicants' => ['Applicants', 'Review candidates and move applications through your hiring pipeline.'],
+    'interviews' => ['Interviews', 'Schedule, reschedule, and follow up on candidate interviews.'],
+];
+[$pageTitle, $pageDescription] = $pageTitles[$section];
+$appCssVersion = (string) (filemtime(__DIR__ . '/assets/css/app.css') ?: 1);
+$recruiterCssVersion = (string) (filemtime(__DIR__ . '/assets/css/recruiter.css') ?: 1);
+
+require __DIR__ . '/views/recruiter/layout-start.php';
+require __DIR__ . '/views/recruiter/' . $section . '.php';
+require __DIR__ . '/views/recruiter/layout-end.php';
