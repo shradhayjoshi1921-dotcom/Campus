@@ -263,8 +263,8 @@ $test('Recruiter views provide a responsive liquid-glass dock with a persistent 
     $assert(str_contains($recruiterLayout, 'aria-label="Recruiter workspace"'));
     $assert(str_contains($recruiterLayout, 'assets/js/recruiter-nav.js?v='));
     $assert(str_contains($recruiterStyles, 'backdrop-filter: blur(30px)'));
-    $assert(str_contains($recruiterStyles, '.rec-nav-indicator.is-moving'));
-    $assert(str_contains($recruiterStyles, '@keyframes rec-liquid-wobble'));
+    $assert(str_contains($recruiterStyles, '.rec-nav-indicator.is-stretched') || str_contains($recruiterNavScript, 'is-stretched'));
+    $assert(!str_contains($recruiterStyles, 'rec-liquid-wobble'));
     $assert(str_contains($recruiterStyles, 'env(safe-area-inset-bottom'));
     $assert(str_contains($recruiterStyles, '@media (prefers-reduced-motion: reduce)'));
     $assert(str_contains($recruiterNavScript, 'sessionStorage'));
@@ -303,6 +303,42 @@ $test('Recruiter navigation is a gesture-driven liquid dock wired for safe clien
     $assert(str_contains($recruiterStyles, '@keyframes rec-section-enter-forward'));
     $assert(str_contains($recruiterStyles, '@keyframes rec-section-enter-backward'));
     $assert(str_contains($recruiterStyles, 'user-select: none'));
+});
+
+$test('Recruiter dock renders a dimensional glass capsule driven by a spring', static function () use ($assert, $recruiterLayout, $recruiterStyles, $recruiterNavScript): void {
+    // Layered 3D material, not a flat pill.
+    foreach (['rec-nav-bubble-liquid', 'rec-nav-bubble-rim', 'rec-nav-bubble-caustic'] as $layer) {
+        $assert(str_contains($recruiterLayout, $layer), "missing glass layer {$layer}");
+    }
+    $assert(str_contains($recruiterStyles, 'border-radius: 999px'));
+    $assert(str_contains($recruiterStyles, '.rec-nav-indicator::before'));
+    $assert(str_contains($recruiterStyles, '.rec-nav-indicator::after'));
+    $assert(str_contains($recruiterStyles, 'mask-composite: exclude'));
+    $assert(str_contains($recruiterStyles, '-webkit-mask-composite: xor'));
+    $assert(str_contains($recruiterStyles, 'backdrop-filter: blur(12px) saturate(185%)'));
+    $assert(str_contains($recruiterStyles, 'box-shadow:'));
+
+    // One tab wide, not the whole bar, and re-sized from the tab box.
+    $assert(str_contains($recruiterNavScript, 'bubble.baseWidth'));
+    $assert(str_contains($recruiterNavScript, 'getBoundingClientRect'));
+    $assert(str_contains($recruiterNavScript, 'narrowest - inset'));
+    $assert(!str_contains($recruiterStyles, '.rec-nav-indicator { width: 100%'));
+
+    // Real spring motion with stretch, squash and interior slosh.
+    $assert(str_contains($recruiterNavScript, 'MOVE_SPRING'));
+    $assert(str_contains($recruiterNavScript, 'DRAG_SPRING'));
+    $assert(str_contains($recruiterNavScript, 'FIXED_STEP'));
+    $assert(str_contains($recruiterNavScript, '--rec-slosh'));
+    $assert(str_contains($recruiterNavScript, '--rec-stretch'));
+    $assert(str_contains($recruiterNavScript, 'scaleY('));
+    $assert(str_contains($recruiterNavScript, 'bubble.dragging'));
+    $assert(str_contains($recruiterNavScript, 'has-sliding-indicator'));
+    $assert(!str_contains($recruiterStyles, 'transition: transform .36s'));
+
+    // Degradation + accessibility.
+    $assert(str_contains($recruiterStyles, '@supports not ((backdrop-filter: blur(1px))'));
+    $assert(str_contains($recruiterStyles, ':not(.has-sliding-indicator) .rec-nav-link.is-active::before'));
+    $assert(str_contains($recruiterLayout, 'aria-hidden="true"'));
 });
 
 $test('No merge-conflict markers remain in key project files', static function () use ($assert, $root): void {
