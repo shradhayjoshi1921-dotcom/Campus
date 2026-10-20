@@ -407,11 +407,18 @@
       } catch (_) { return null; }
     })();
     const originIndex = stored !== null && stored !== activeIndex && !reduced ? stored : activeIndex;
-    state.x = (metrics[originIndex] || metrics[activeIndex]).center;
-    state.target = state.x;
+    const originMetric = metrics[originIndex] || metrics[activeIndex];
+    // A dock can mount before it has a box (hidden container, deferred CSS).
+    // Stay dormant and let the ResizeObserver measure it as soon as it does.
+    if (originMetric) {
+      state.x = originMetric.center;
+      state.target = state.x;
+    }
     state.width = state.baseWidth;
     render();
-    if (!isGroup) ensureVisible(activeIndex, false);
+    // Bring the rendered destination into view: the dock rail and a long
+    // option group (e.g. graduation years) can both start scrolled away.
+    ensureVisible(activeIndex, false);
 
     const reveal = () => {
       if (revealed) return;

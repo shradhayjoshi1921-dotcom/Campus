@@ -48,17 +48,20 @@ const page = (activeIndex, extra = '') => `<!doctype html><html><head><title>${S
 </nav>
 </body></html>`;
 
-function stubGeometry(link, index) {
-  const left = PAD_LEFT + index * TAB_WIDTH;
-  Object.defineProperty(link, 'offsetLeft', { get: () => left });
-  Object.defineProperty(link, 'offsetWidth', { get: () => TAB_WIDTH });
-  Object.defineProperty(link, 'offsetTop', { get: () => 7 });
-  Object.defineProperty(link, 'offsetHeight', { get: () => TAB_HEIGHT });
-  Object.defineProperty(link, 'offsetParent', { get: () => null });
-  link.getBoundingClientRect = () => ({ left, top: 7, width: TAB_WIDTH, height: TAB_HEIGHT, right: left + TAB_WIDTH, bottom: 7 + TAB_HEIGHT });
+function stubGeometry(link, index, visible = true) {
+  const left = visible ? PAD_LEFT + index * TAB_WIDTH : 0;
+  const width = visible ? TAB_WIDTH : 0;
+  const height = visible ? TAB_HEIGHT : 0;
+  const top = visible ? 7 : 0;
+  Object.defineProperty(link, 'offsetLeft', { configurable: true, get: () => left });
+  Object.defineProperty(link, 'offsetWidth', { configurable: true, get: () => width });
+  Object.defineProperty(link, 'offsetTop', { configurable: true, get: () => top });
+  Object.defineProperty(link, 'offsetHeight', { configurable: true, get: () => height });
+  Object.defineProperty(link, 'offsetParent', { configurable: true, get: () => null });
+  link.getBoundingClientRect = () => ({ left, top, width, height, right: left + width, bottom: top + height });
 }
 
-function buildDock({ activeIndex = 0, storedIndex = null, reducedMotion = false } = {}) {
+function buildDock({ activeIndex = 0, storedIndex = null, reducedMotion = false, deferLayout = false } = {}) {
   const dom = new JSDOM(page(activeIndex), {
     url: `https://portal.test/recruiter.php?section=${SECTIONS[activeIndex]}`,
     runScripts: 'outside-only',
@@ -81,12 +84,17 @@ function buildDock({ activeIndex = 0, storedIndex = null, reducedMotion = false 
   const indicator = document.querySelector('.lg-indicator');
   const links = Array.from(document.querySelectorAll('.rec-nav-link'));
 
-  links.forEach(stubGeometry);
-  nav.getBoundingClientRect = () => ({ left: 0, top: 0, width: TAB_WIDTH * 5 + PAD_LEFT * 2, height: TAB_HEIGHT + 14, right: TAB_WIDTH * 5 + PAD_LEFT * 2, bottom: TAB_HEIGHT + 14 });
-  Object.defineProperty(nav, 'clientLeft', { get: () => 0 });
-  Object.defineProperty(nav, 'clientTop', { get: () => 0 });
-  Object.defineProperty(nav, 'scrollWidth', { get: () => TAB_WIDTH * 5 + PAD_LEFT * 2 });
-  Object.defineProperty(nav, 'clientWidth', { get: () => TAB_WIDTH * 5 + PAD_LEFT * 2 });
+  const applyGeometry = (visible) => {
+    links.forEach((link, index) => stubGeometry(link, index, visible));
+    const barWidth = visible ? TAB_WIDTH * 5 + PAD_LEFT * 2 : 0;
+    const barHeight = visible ? TAB_HEIGHT + 14 : 0;
+    nav.getBoundingClientRect = () => ({ left: 0, top: 0, width: barWidth, height: barHeight, right: barWidth, bottom: barHeight });
+    Object.defineProperty(nav, 'clientLeft', { configurable: true, get: () => 0 });
+    Object.defineProperty(nav, 'clientTop', { configurable: true, get: () => 0 });
+    Object.defineProperty(nav, 'scrollWidth', { configurable: true, get: () => barWidth });
+    Object.defineProperty(nav, 'clientWidth', { configurable: true, get: () => barWidth });
+  };
+  applyGeometry(!deferLayout);
   nav.scrollLeft = 0;
   nav.scrollTo = ({ left }) => { nav.scrollLeft = left; };
 
@@ -123,7 +131,10 @@ function buildDock({ activeIndex = 0, storedIndex = null, reducedMotion = false 
 
   window.eval(ENGINE);
   window.eval(NAV);
-  return { dom, window, document, nav, indicator, links, store, requests, pushes };
+  return {
+    dom, window, document, nav, indicator, links, store, requests, pushes,
+    showLayout: () => applyGeometry(true),
+  };
 }
 
 function buildGroup({ activeIndex = 1 } = {}) {
@@ -418,7 +429,20 @@ const down = (env, index) => env.links[index].dispatchEvent(pointer(env.window, 
     env.dom.window.close();
   }
 
-  console.log('PASS liquid-glass engine + recruiter dock (13 scenarios, simulated DOM)');
+  // 14. Mounting before layout is safe; the capsule appears once measured.
+  {
+    const env = buildDock({ activeIndex: 2, deferLayout: true });
+    await wait(40);
+    assert.equal(width(env.indicator), 0, 'a dock without a box stays dormant');
+    assert.equal(env.nav.classList.contains('has-liquid-indicator'), true, 'reveal is still scheduled');
+    env.showLayout();
+    env.window.LiquidGlass.controller(env.nav).refresh();
+    assert.equal(width(env.indicator), Number(BASE_WIDTH.toFixed(2)), 'the capsule measures once the dock is laid out');
+    assert(Math.abs(translateX(env.indicator) - restingLeft(2)) < 0.2, 'and lands on the rendered tab');
+    env.dom.window.close();
+  }
+
+  console.log('PASS liquid-glass engine + recruiter dock (14 scenarios, simulated DOM)');
 })().catch((error) => {
   console.error(error);
   process.exit(1);

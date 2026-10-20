@@ -700,6 +700,7 @@ $test('One shared liquid-glass capsule drives every dock and option group', stat
     $assert(str_contains($liquidGlassScript, 'Math.max(isGroup ? 40 : 46'));
     $assert(str_contains($liquidGlassScript, 'Math.min(18, insetX)'), 'the stretch budget never exceeds the tab inset');
     $assert(str_contains($liquidGlassScript, 'persist(activeIndex)'), 'the rendered tab becomes the next hand-off point');
+    $assert(str_contains($liquidGlassScript, 'if (originMetric)'), 'a dock that mounts before layout must not throw');
     $assert(str_contains($liquidGlassScript, 'const handled = !emit('), 'a canceled activate event keeps routing in the page');
     $assert(!preg_match('/\.lg-indicator\s*\{[^}]*\bwidth:\s*100%/s', $liquidGlassStyles), 'the capsule must never span the whole bar');
 

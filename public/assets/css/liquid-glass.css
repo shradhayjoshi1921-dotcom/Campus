@@ -189,7 +189,7 @@ html[data-theme="light"] .sv-dock,
 html[data-theme="light"] .admin-dock,
 html[data-theme="light"] .rec-bottom-nav {
   border-color: var(--sv-line-strong);
-  background: linear-gradient(180deg, rgba(255, 255, 255, .82), rgba(244, 248, 251, .74));
+  background: linear-gradient(180deg, rgba(255, 255, 255, .72), rgba(242, 247, 250, .62));
   box-shadow:
     0 22px 50px -22px rgba(28, 38, 48, .38),
     0 2px 8px -4px rgba(28, 38, 48, .18),
@@ -199,7 +199,7 @@ html[data-theme="dark"] .sv-dock,
 html[data-theme="dark"] .admin-dock,
 html[data-theme="dark"] .rec-bottom-nav {
   border-color: var(--sv-line-strong);
-  background: linear-gradient(180deg, rgba(19, 30, 38, .72), rgba(7, 14, 20, .86));
+  background: linear-gradient(180deg, rgba(21, 33, 42, .66), rgba(7, 14, 20, .78));
   box-shadow:
     0 24px 56px -18px rgba(0, 0, 0, .62),
     inset 0 1px rgba(226, 250, 255, .12);
@@ -295,6 +295,18 @@ html[data-theme="dark"] .lg-group { background: rgba(255, 255, 255, .05); }
   html[data-theme="dark"] .lg-indicator {
     background:
       linear-gradient(180deg, rgba(190, 218, 236, .32), rgba(28, 46, 60, .55) 60%, rgba(8, 18, 26, .62));
+  }
+  /* The shells cannot blur the page without backdrop-filter, so they turn
+     opaque enough to keep dock labels readable over any content. */
+  html[data-theme="light"] .sv-dock,
+  html[data-theme="light"] .admin-dock,
+  html[data-theme="light"] .rec-bottom-nav {
+    background: linear-gradient(180deg, #fbfdfe, #eef3f7);
+  }
+  html[data-theme="dark"] .sv-dock,
+  html[data-theme="dark"] .admin-dock,
+  html[data-theme="dark"] .rec-bottom-nav {
+    background: linear-gradient(180deg, #141f27, #070e14);
   }
 }
 

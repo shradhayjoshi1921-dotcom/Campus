@@ -147,7 +147,7 @@ npm install --no-save --no-package-lock jsdom
 node tests\js\liquid-glass.test.js
 ```
 
-It covers 13 scenarios: boot geometry, click flight, one-tab width, drag and release, reversal/cancel, vertical gestures, synthetic-click suppression, GET filters and history, rapid switching, reduced motion, keyboard preview, cross-page handoff and option groups.
+It covers 14 scenarios: boot geometry, click flight, one-tab width, drag and release, reversal/cancel, vertical gestures, synthetic-click suppression, GET filters and history, rapid switching, reduced motion, keyboard preview, cross-page handoff, option groups and mounting before layout.
 
 Manual interaction check in a desktop browser and a phone-sized viewport: drag the dock slowly across all five tabs (the bubble should follow the pointer and stretch), reverse direction mid-drag (it should compress), release between tabs (it should settle on the nearest one), swipe the section content sideways on touch, use the GET filters on Jobs and Applicants, then use browser Back and Forward. Enable "reduce motion" in the OS to confirm transitions stop.
 
