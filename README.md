@@ -4,7 +4,17 @@
 
 Campus is a server-rendered placement portal for students, recruiters, and placement teams. The interface uses an institute-focused navy-and-emerald design, responsive navigation, restrained frosted-glass accents, and reduced-motion-aware transitions. The homepage uses a CSS-built abstract hero rather than unverified campus photography. The website does not depend on remote font, Bootstrap, icon, or hero-image CDNs.
 
-The recruiter workspace uses a responsive liquid-glass bottom dock with a smoothly sliding iOS-inspired bubble indicator, while keeping job and candidate information readable on compact screens. The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
+The recruiter workspace uses a responsive liquid-glass bottom dock with a gesture-driven, iOS-inspired bubble indicator, while keeping job and candidate information readable on compact screens. The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
+
+### Recruiter navigation interaction
+
+- Tap or click a tab (Overview, Company, Jobs, Applicants, Interviews) to glide the bubble to it.
+- On desktop, press and drag horizontally anywhere on the dock: the bubble follows the pointer, stretches with travel, and compresses when you reverse direction. Release over a tab to open it. A plain click still opens the tab normally.
+- On touch screens, swipe the dock left or right, or swipe the section content horizontally, to move to the next or previous section. Vertical scrolling is unaffected.
+- A horizontal trackpad swipe over the section content also moves one section at a time.
+- Arrow keys move focus between the five tabs; Enter opens the focused tab.
+- Sections load in place over `recruiter.php?section=…`, so browser back/forward, direct links, and GET filters keep working. Any failed or unexpected request falls back to a normal page load.
+- `prefers-reduced-motion: reduce` disables the stretch, deform, and section slide while keeping every destination reachable.
 
 ## Run on Windows with XAMPP
 
@@ -73,3 +83,12 @@ C:\xampp\php\php.exe tests\run.php
 ```
 
 The included automated suite covers pure service rules and static security/workflow checks. Complete `PHASE-7-TEST-CHECKLIST.md` on the target XAMPP/MySQL installation for live workflow acceptance; passing static tests alone does not verify a production deployment.
+
+The recruiter dock's gesture logic has an optional Node check. It uses jsdom with stubbed geometry, so it verifies behaviour rather than pixels:
+
+```bat
+npm install --no-save --no-package-lock jsdom
+node tests\js\recruiter-nav.test.js
+```
+
+Manual interaction check in a desktop browser and a phone-sized viewport: drag the dock slowly across all five tabs (the bubble should follow the pointer and stretch), reverse direction mid-drag (it should compress), release between tabs (it should settle on the nearest one), swipe the section content sideways on touch, use the GET filters on Jobs and Applicants, then use browser Back and Forward. Enable "reduce motion" in the OS to confirm transitions stop.

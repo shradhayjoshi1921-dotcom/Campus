@@ -45,6 +45,7 @@
 
 <div class="rec-workspace">
     <main id="main-content" class="rec-main">
+        <div class="rec-page-content" id="recruiter-section-content">
         <div class="rec-page-heading">
             <div>
                 <p class="rec-eyebrow">SVIET · PLACEMENT PORTAL</p>

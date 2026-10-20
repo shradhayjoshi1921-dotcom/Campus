@@ -7,3 +7,4 @@
 /public/uploads/
 .DS_Store
 *.zip
+/node_modules/
