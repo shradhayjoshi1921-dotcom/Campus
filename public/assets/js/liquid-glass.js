@@ -104,11 +104,10 @@
       const insetX = isGroup ? 3 : Math.max(4, Math.min(8, metrics[0].width * 0.06));
       const insetY = isGroup ? 3 : Math.max(3, Math.min(6, metrics[0].height * 0.07));
       state.baseWidth = Math.max(isGroup ? 40 : 46, metrics[0].width - insetX);
-      // The capsule owns one tab, never more: the stretch budget is the inset it
-      // was trimmed by, so a stretched capsule still fits inside a single tab.
-      state.maxStretch = isGroup
-        ? Math.max(6, Math.min(14, metrics[0].width * 0.18))
-        : Math.max(6, Math.min(18, insetX));
+      // The capsule owns one tab/option, never more: the stretch budget is the
+      // inset it was trimmed by, so even a stretched capsule still fits inside
+      // a single tab and cannot paint over a neighbour.
+      state.maxStretch = Math.min(isGroup ? 9 : 18, insetX);
       state.height = Math.max(isGroup ? 26 : 34, metrics[0].height - insetY);
       state.top = (metrics[0].top || 0) + insetY / 2;
       indicator.style.height = `${state.height.toFixed(1)}px`;

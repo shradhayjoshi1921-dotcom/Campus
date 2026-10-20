@@ -425,7 +425,12 @@ const down = (env, index) => env.links[index].dispatchEvent(pointer(env.window, 
     assert.equal(env.options[3].getAttribute('aria-current'), 'page', 'the chosen option is marked current');
     assert.equal(env.options[1].hasAttribute('aria-current'), false);
     assert.equal(selected, 3, 'the group emits an informational select event');
-    assert(width(env.indicator) <= 74, 'group stretch never exceeds the option width');
+    let widest = 0;
+    for (let frame = 0; frame < 12; frame += 1) {
+      widest = Math.max(widest, width(env.indicator));
+      await wait(16);
+    }
+    assert(widest <= 75, `group stretch never exceeds the option width (was ${widest})`);
     env.dom.window.close();
   }
 
