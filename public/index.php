@@ -452,6 +452,7 @@ function e(?string $s): string
 
 // Prepare shared layout data and a page-specific browser title.
 $csrf = Security::csrfToken();
+$appCssVersion = (string) (filemtime(__DIR__ . '/assets/css/app.css') ?: 1);
 $pageTitle = match ($page) {
     'home' => 'SVIET Placement Portal',
     'login' => 'Sign in | SVIET Placement Portal',
@@ -474,7 +475,7 @@ $pageTitle = match ($page) {
         : '#07111e' ?>">
     <meta name="description" content="A placement portal for Swami Vivekanand Institute of Engineering and Technology. Explore opportunities, manage applications, and connect students, recruiters, and the Training &amp; Placement Cell.">
     <title><?= e($pageTitle) ?></title>
-    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="assets/css/app.css?v=<?= e($appCssVersion) ?>">
     <?php if ($page === 'home'): ?>
         <link rel="stylesheet" href="assets/css/homepage.css">
     <?php endif; ?>
