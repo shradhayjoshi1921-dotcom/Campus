@@ -18,6 +18,35 @@ The recruiter workspace uses a compact liquid-glass bottom dock whose active ind
 
 The capsule is built from stacked CSS layers rather than an image: a translucent body with `backdrop-filter`, a specular band and hot spot (`::before`), a masked 1px refraction ring (`::after`), and three inner spans for the meniscus, lower-rim bounce light and a caustic blob. `recruiter-nav.js` owns its width, position and two custom properties (`--rec-slosh`, `--rec-stretch`); no filter or backdrop animation runs per frame, and the blur is reduced while dragging. Browsers without `backdrop-filter` get a denser glass fill so labels keep their contrast.
 
+### Appearance: orange water, light and dark
+
+The whole portal now runs on one appearance layer, `public/assets/css/theme.css`, loaded before every portal stylesheet.
+
+- **Light is the default:** warm white paper (`#fff8f1`) with SVIET orange (`#ef6a1c`) accents and peach-glass navigation, cards and docks.
+- **Dark is deep water:** teal-black surfaces (`#051519`) with ember-orange accents, so it reads as dark water rather than the old navy dashboard.
+- **One switch everywhere:** a sun/moon button in the public header, recruiter topbar and admin topbar. The choice is stored in `localStorage` as `sviet-theme` and applied by a small inline bootstrap before the first paint, so neither theme flashes. `public/assets/js/theme.js` owns the toggle, the `aria-pressed` state and the `theme-color` meta tag. With no stored choice the page opens light; following the OS preference is available in the script for anyone who prefers it.
+- The homepage hero is now a single sheet of orange water (three slow CSS droplets behind the copy), with the same treatment in dark as deep teal water. Login and registration sit on a shallow water pool.
+
+### One sign-in for every role
+
+`index.php?page=login` is the only sign-in form. After the password check the server reads the account role and answers with a 303 redirect: students to `index.php?page=dashboard`, recruiters to `recruiter.php`, TPO/admin staff to `admin.php`. The login page says so and lists the three audiences; only the registration form still asks for an account type.
+
+### Student workspace additions
+
+- **PDF resume upload** (`upload_resume`): signature-checked (`%PDF-`), MIME-checked, `.pdf`-only, 5 MB cap, stored in `storage/uploads/resumes/` (outside the document root, which `.htaccess` also blocks). The newest upload replaces the previous file; `delete_resume` removes it. Downloads stream through `index.php?page=resume&id=…` — the owning student or TPO/admin only, with `Content-Type: application/pdf`, `X-Content-Type-Options: nosniff` and `no-store`.
+- **Profile strength:** a six-point checklist (academic details, CGPA, phone, intro, skills, resume) rendered as a percentage meter on the dashboard.
+- **Application timeline:** every `application_status_history` transition for the student, with the note and timestamp.
+- **Notifications inbox** (`?page=notifications`): unread styling, unread count on the dashboard and a dock badge, plus "mark all read".
+- **Student dock:** five destinations (Home, Jobs, Applications, Alerts, Profile) on the same spring-driven water capsule as the other portals. Dragging pans the rail and previews the tab under the pointer; the capsule flows in from the previous workspace via `sessionStorage` so arrival still reads as one continuous element.
+
+### Recruiter CTC on selection
+
+When a recruiter moves an application to **selected**, the applicant form now accepts an optional CTC in LPA (0–500, validated). The server upserts the matching `offers` row (`status = offered`, `offer_date = CURDATE()`, `created_by`), audits `offer.created` / `offer.updated`, and the student's notification names the recorded CTC. If the `offers` table has not been migrated the pipeline still works and no offer row is written.
+
+### Docks on all three portals
+
+Admin, recruiter and student docks share the same geometry change: the capsule now fills almost the whole tab (inset 2–5 px horizontally, 2–3 px vertically), so the active indicator reads as a large water drop rather than a small highlight. Dock colours come from the theme: peach water in light mode, dark water in dark mode.
+
 ### Admin / TPO control centre
 
 `admin.php` is the placement cell workspace. It reuses the same sessions, roles, CSRF token and `app.css` theme as the rest of the portal, and adds `assets/css/admin.css` and `assets/js/admin-nav.js`.
@@ -79,6 +108,7 @@ For deployment, set the Apache document root to `Campus/public/`. If using the l
 
 - Recruiters cannot yet enter required/preferred job skills in the job editor; the career-insights service reads skills from `job_skills`, so skill matching is limited until that workflow is added.
 - Resume upload/download, certification and project management, assessment workflows, a complete notification inbox, a migration runner, rate limiting, and full browser/database integration tests are not complete.
+- Resume files live on local disk; there is no virus scanning, and recruiters see the resume only through the student-owned download route today. A recruiter-side resume viewer is not built yet.
 - The admin CSV import covers accounts (students and recruiters). Placement drives, eligibility-based bulk shortlisting, announcement read receipts and editable `system_settings` are not built yet, and `jobs` still has no salary column, so CTC lives only on offers.
 - The `offers` table arrives through the migration in `database/migrations/`; importing only `schema.sql` into an existing database will not add it.
 - Do not use this project with real personal data until you have tested and reviewed the deployment configuration.
@@ -108,3 +138,5 @@ node tests\js\recruiter-nav.test.js
 Manual interaction check in a desktop browser and a phone-sized viewport: drag the dock slowly across all five tabs (the bubble should follow the pointer and stretch), reverse direction mid-drag (it should compress), release between tabs (it should settle on the nearest one), swipe the section content sideways on touch, use the GET filters on Jobs and Applicants, then use browser Back and Forward. Enable "reduce motion" in the OS to confirm transitions stop.
 
 The admin rail has no Node test yet; `tests/run.php` asserts the section routes, dock layers, spring constants, CSV-download exemptions and import limits. A static render of the real views with fixture data is available for design review at `preview/admin-portal.html` (served by any static file server; forms are disabled there because the pages are pre-rendered).
+
+The new student dock has no Node test yet; `tests/run.php` covers the theme tokens, the unified sign-in redirect, resume validation, the notification and timeline queries, the recruiter CTC path and the larger droplet geometry. Static previews of the reworked home, login and registration pages are written to `preview/index-*.html` for design review.

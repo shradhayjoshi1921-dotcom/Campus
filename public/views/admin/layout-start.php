@@ -3,9 +3,23 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#08131f">
+    <meta name="theme-color" content="#fff8f1">
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem('sviet-theme');
+                var theme = saved === 'dark' || saved === 'light' ? saved : 'light';
+                document.documentElement.dataset.theme = theme;
+                document.documentElement.style.colorScheme = theme;
+            } catch (error) {
+                document.documentElement.dataset.theme = 'light';
+            }
+        })();
+    </script>
+
     <meta name="description" content="SVIET Training &amp; Placement control centre: approvals, students, placements, reports and governance.">
     <title><?= admin_h($pageTitle) ?> · SVIET Control Centre</title>
+    <link rel="stylesheet" href="assets/css/theme.css?v=<?= admin_h($appCssVersion) ?>">
     <link rel="stylesheet" href="assets/css/app.css?v=<?= admin_h($appCssVersion) ?>">
     <link rel="stylesheet" href="assets/css/admin.css?v=<?= admin_h($adminCssVersion) ?>">
 </head>
@@ -25,6 +39,13 @@
         </span>
     </a>
     <div class="admin-topbar-right">
+        <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch appearance">
+            <span class="theme-toggle__track" aria-hidden="true">
+                <svg class="theme-toggle__icon theme-toggle__icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+                <svg class="theme-toggle__icon theme-toggle__icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.4A8.2 8.2 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4Z"/></svg>
+            </span>
+            <span class="theme-toggle__label">Light orange</span>
+        </button>
         <span class="admin-role-pill">
             <span class="admin-role-dot" aria-hidden="true"></span>
             <?= admin_h(strtoupper((string) $user['role'])) ?>

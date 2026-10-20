@@ -72,11 +72,13 @@
   const applyMetrics = () => {
     if (metrics.length === 0) return;
     const narrowest = metrics.reduce((min, metric) => Math.min(min, metric.width), Infinity);
-    const inset = Math.max(5, Math.min(10, narrowest * 0.08));
-    const insetY = Math.max(3, Math.min(5, metrics[0].height * 0.08));
-    bubble.baseWidth = Math.max(38, narrowest - inset);
-    bubble.maxWidth = narrowest + inset * 0.5;
-    indicator.style.height = `${Math.max(32, metrics[0].height - insetY * 2).toFixed(1)}px`;
+    // A larger droplet: the capsule owns almost the whole tab, so it reads as
+    // one body of water rather than a highlight sitting inside a button.
+    const inset = Math.max(2, Math.min(5, narrowest * 0.045));
+    const insetY = Math.max(2, Math.min(3, metrics[0].height * 0.045));
+    bubble.baseWidth = Math.max(46, narrowest - inset);
+    bubble.maxWidth = narrowest + inset * 0.8;
+    indicator.style.height = `${Math.max(40, metrics[0].height - insetY * 2).toFixed(1)}px`;
     indicator.style.top = `${(metrics[0].top + insetY).toFixed(1)}px`;
     if (!bubble.width) bubble.width = bubble.baseWidth;
     bubble.width = Math.min(bubble.width, bubble.baseWidth);

@@ -508,6 +508,119 @@ $test('Admin import is file-limited, review-first and free of raw inserts from r
     $assert(!str_contains($adminController, 'eval('));
 });
 
+
+$test('Every portal ships the same light-orange and dark-water appearance switch', static function () use ($assert, $root): void {
+    $theme = file_get_contents($root . '/public/assets/css/theme.css');
+    $assert(str_contains($theme, ':root {'), 'light tokens are the default');
+    $assert(str_contains($theme, '--sv-bg: #fff8f1'), 'default surface is warm white');
+    $assert(str_contains($theme, '--sv-orange: #ef6a1c'), 'SVIET orange is the brand accent');
+    $assert(str_contains($theme, '--sv-bg: #051519'), 'dark mode is deep water, not navy');
+    $assert(str_contains($theme, '--sv-drop:'), 'the dock droplet has a watery fill per theme');
+    $assert(str_contains($theme, 'html[data-theme="light"] body.recruiter-portal'));
+    $assert(str_contains($theme, 'html[data-theme="light"] body.admin-portal'));
+    $assert(str_contains($theme, 'html[data-theme="dark"] body.recruiter-portal'));
+
+    $script = file_get_contents($root . '/public/assets/js/theme.js');
+    $assert(str_contains($script, "localStorage.setItem(STORAGE_KEY, next)"));
+    $assert(str_contains($script, "data-theme-toggle"));
+    $assert(str_contains($script, "root.dataset.theme"));
+    $assert(str_contains($script, 'prefers-color-scheme: dark'));
+
+    foreach (['public/index.php', 'public/career.php', 'public/views/recruiter/layout-start.php', 'public/views/admin/layout-start.php'] as $file) {
+        $contents = file_get_contents($root . '/' . $file);
+        $assert(str_contains($contents, 'assets/css/theme.css'), "theme.css missing in {$file}");
+        $assert(str_contains($contents, "saved === 'dark'"), "pre-paint bootstrap missing in {$file}");
+    }
+    foreach (['public/index.php', 'public/views/recruiter/layout-start.php', 'public/views/admin/layout-start.php'] as $file) {
+        $assert(str_contains(file_get_contents($root . '/' . $file), 'data-theme-toggle'), "toggle missing in {$file}");
+    }
+});
+
+$test('One sign-in routes each role to its own workspace', static function () use ($assert, $root): void {
+    $index = file_get_contents($root . '/public/index.php');
+    $assert(str_contains($index, "'recruiter' => 'recruiter.php'"));
+    $assert(str_contains($index, "'tpo', 'admin' => 'admin.php'"));
+    $assert(str_contains($index, "default => 'index.php?page=dashboard'"));
+    $assert(str_contains($index, 'header(\'Location: \' . $landing, true, 303)'), 'role redirect must be a 303');
+    $assert(str_contains($index, 'We read your role from your account'), 'the login page explains the unified sign-in');
+    $assert(str_contains($index, 'auth-role-note'), 'the login page names the three audiences');
+    // The login form must not ask the visitor to pick a role; registration still does.
+    $loginForm = substr($index, strpos($index, "\$page === 'login' || \$page === 'register'"), 5200);
+    $assert(substr_count($loginForm, 'name="role"') === 1, 'only the registration form exposes a role field');
+});
+
+$test('Students can upload, replace, download and remove a PDF resume', static function () use ($assert, $root): void {
+    $index = file_get_contents($root . '/public/index.php');
+    $assert(str_contains($index, "=== 'upload_resume'"));
+    $assert(str_contains($index, "=== 'delete_resume'"));
+    $assert(str_contains($index, "\$magic !== '%PDF-'"), 'uploads are checked against the PDF signature');
+    $assert(str_contains($index, '5 \\* 1024 \\* 1024') || str_contains($index, '5 * 1024 * 1024'), 'resume cap is 5 MB');
+    $assert(str_contains($index, 'preg_match(\'/\\.pdf$/i\''), 'the file name must end in .pdf');
+    $assert(str_contains($index, 'storage/uploads/resumes'), 'uploads land outside the document root');
+    $assert(str_contains($index, 'application/pdf'), 'downloads are served as PDFs');
+    $assert(str_contains($index, 'X-Content-Type-Options: nosniff'));
+    $assert(str_contains($index, 'AND r.student_id = ?'), 'students only download their own resume');
+    $assert(str_contains($index, 'enctype="multipart/form-data"'));
+    $assert(str_contains($index, 'accept="application/pdf,.pdf"'));
+});
+
+$test('Student workspace adds strength, notifications and an application timeline', static function () use ($assert, $root): void {
+    $index = file_get_contents($root . '/public/index.php');
+    $assert(str_contains($index, 'profileStrength'));
+    $assert(str_contains($index, "'PDF resume' => \$resume !== null"));
+    $assert(str_contains($index, "=== 'notifications'"));
+    $assert(str_contains($index, 'mark_notifications_read'));
+    $assert(str_contains($index, 'application_status_history'));
+    $assert(str_contains($index, 'sv-timeline'));
+    $assert(str_contains($index, 'read_at IS NULL'), 'the dock badge counts unread notices');
+    $assert(str_contains($index, 'function sviet_student_dock'));
+    $assert(str_contains($index, 'index.php?page=notifications'));
+});
+
+$test('Student dock is a draggable water capsule, not five separate buttons', static function () use ($assert, $root): void {
+    $styles = file_get_contents($root . '/public/assets/css/water-dock.css');
+    $script = file_get_contents($root . '/public/assets/js/student-nav.js');
+    foreach (['sv-dock-liquid', 'sv-dock-rim', 'sv-dock-caustic'] as $layer) {
+        $assert(str_contains($styles, $layer), "missing dock layer {$layer}");
+    }
+    $assert(str_contains($styles, 'var(--sv-drop)'), 'the droplet uses the theme colour');
+    $assert(str_contains($styles, '--sv-slosh'));
+    $assert(str_contains($styles, 'mask-composite: exclude'));
+    $assert(str_contains($styles, 'prefers-reduced-motion'));
+    $assert(str_contains($styles, 'body:has(.sv-dock)'));
+
+    $assert(str_contains($script, 'MOVE_SPRING'));
+    $assert(str_contains($script, 'DRAG_SPRING'));
+    $assert(str_contains($script, 'setPointerCapture'));
+    $assert(str_contains($script, 'scrollLeft'), 'dragging pans the rail');
+    $assert(str_contains($script, 'sessionStorage'), 'the capsule flows in from the previous workspace');
+    $assert(!str_contains($script, 'setInterval'));
+    $assert(str_contains($script, 'prefers-reduced-motion'));
+});
+
+$test('Recruiters can record a CTC when a candidate is selected', static function () use ($assert, $root): void {
+    $recruiter = file_get_contents($root . '/public/recruiter.php');
+    $view = file_get_contents($root . '/public/views/recruiter/applicants.php');
+    $assert(str_contains($view, 'name="ctc_lpa"'), 'the applicant form collects a CTC');
+    $assert(str_contains($view, 'CTC in LPA (on selection)'));
+    $assert(str_contains($recruiter, "\$ctcRaw = recruiter_post('ctc_lpa')"));
+    $assert(str_contains($recruiter, "'Enter the offered CTC in LPA, between 0 and 500.'"));
+    $assert(str_contains($recruiter, "$nextStatus === 'selected'"));
+    $assert(str_contains($recruiter, 'INSERT INTO offers (application_id, ctc_lpa, offer_date, status, created_by)'));
+    $assert(str_contains($recruiter, 'recruiter_table_exists($db, \'offers\')'), 'a missing offers table must not break the pipeline');
+    $assert(str_contains($recruiter, 'offer.created'));
+});
+
+$test('All three docks use the larger droplet geometry', static function () use ($assert, $root): void {
+    $admin = file_get_contents($root . '/public/assets/js/admin-nav.js');
+    $recruiter = file_get_contents($root . '/public/assets/js/recruiter-nav.js');
+    $student = file_get_contents($root . '/public/assets/js/student-nav.js');
+    foreach (['admin' => $admin, 'recruiter' => $recruiter, 'student' => $student] as $name => $script) {
+        $assert(str_contains($script, 'narrowest * 0.045'), "{$name} dock still uses the small inset");
+        $assert(str_contains($script, 'Math.max(46') || str_contains($script, 'Math.max(bubble.minWidth'), "{$name} droplet is not enlarged");
+    }
+});
+
 $test('No merge-conflict markers remain in key project files', static function () use ($assert, $root): void {
     foreach (['README.md', 'scripts/create-admin.php', 'tests/run.php'] as $file) {
         $contents = file_get_contents($root . '/' . $file);

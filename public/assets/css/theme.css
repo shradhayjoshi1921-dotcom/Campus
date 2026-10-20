@@ -1,0 +1,522 @@
+/*
+ * SVIET portal — shared appearance layer.
+ * Light (default): warm orange and white, watery peach glass.
+ * Dark: deep water teal with ember-orange accents.
+ * Every portal loads this before its own stylesheet; `data-theme` is set on
+ * <html> before first paint by the inline bootstrap in each layout.
+ */
+
+:root {
+  color-scheme: light;
+  --sv-bg: #fff8f1;
+  --sv-bg-deep: #ffeddd;
+  --sv-bg-glow: #ffe2c9;
+  --sv-surface: #fffdfa;
+  --sv-surface-2: #fff4e9;
+  --sv-glass: rgba(255, 255, 255, .76);
+  --sv-glass-strong: rgba(255, 255, 255, .92);
+  --sv-ink: #2c1a10;
+  --sv-ink-soft: #4a3224;
+  --sv-muted: #7c6353;
+  --sv-dim: #9c8272;
+  --sv-line: rgba(154, 88, 44, .16);
+  --sv-line-strong: rgba(154, 88, 44, .3);
+  --sv-orange: #ef6a1c;
+  --sv-orange-deep: #c94c09;
+  --sv-orange-soft: #ffe1cc;
+  --sv-apricot: #ffb784;
+  --sv-honey: #ffcf9c;
+  --sv-ok: #1f7a4d;
+  --sv-ok-soft: #d9f6e3;
+  --sv-warn: #9c5a12;
+  --sv-warn-soft: #ffedcd;
+  --sv-bad: #b02a1d;
+  --sv-bad-soft: #ffe0da;
+  --sv-shadow: 0 26px 64px rgba(150, 80, 32, .16);
+  --sv-shadow-soft: 0 12px 32px rgba(150, 80, 32, .1);
+  --sv-water: linear-gradient(180deg, rgba(255, 255, 255, .88), rgba(255, 226, 202, .7));
+  --sv-water-strong: linear-gradient(160deg, rgba(255, 255, 255, .96), rgba(255, 197, 152, .62));
+  --sv-water-ink: #8a4318;
+  --sv-drop: linear-gradient(180deg, rgba(255, 214, 180, .72), rgba(255, 150, 88, .46) 54%, rgba(255, 186, 132, .66));
+  --sv-drop-rim: rgba(255, 255, 255, .95);
+  --sv-drop-shadow: rgba(210, 110, 44, .32);
+  --sv-dock-shell: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(255, 227, 203, .82));
+  --sv-dock-line: rgba(206, 128, 72, .32);
+  --sv-dock-ink: #5b3722;
+  --sv-dock-muted: #956f57;
+  --sv-dock-active: #8d3f0d;
+  --sv-dock-badge: linear-gradient(150deg, #ffd9c6, #ff9f6e);
+  --sv-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --sv-bg: #051519;
+  --sv-bg-deep: #031013;
+  --sv-bg-glow: #0a2d2f;
+  --sv-surface: #0b2327;
+  --sv-surface-2: #103037;
+  --sv-glass: rgba(10, 33, 37, .78);
+  --sv-glass-strong: rgba(9, 29, 33, .94);
+  --sv-ink: #eef8f6;
+  --sv-ink-soft: #d3e7e3;
+  --sv-muted: #9fbdb8;
+  --sv-dim: #7b9a97;
+  --sv-line: rgba(190, 232, 228, .14);
+  --sv-line-strong: rgba(190, 232, 228, .26);
+  --sv-orange: #ff8a4b;
+  --sv-orange-deep: #ff6f2b;
+  --sv-orange-soft: rgba(255, 138, 75, .18);
+  --sv-apricot: #ffb27a;
+  --sv-honey: #f5d3a0;
+  --sv-ok: #8fe4bc;
+  --sv-ok-soft: rgba(80, 200, 150, .16);
+  --sv-warn: #f4cd92;
+  --sv-warn-soft: rgba(244, 205, 146, .14);
+  --sv-bad: #ffb2a8;
+  --sv-bad-soft: rgba(255, 150, 140, .14);
+  --sv-shadow: 0 30px 72px rgba(0, 0, 0, .5);
+  --sv-shadow-soft: 0 14px 36px rgba(0, 0, 0, .32);
+  --sv-water: linear-gradient(180deg, rgba(24, 62, 66, .88), rgba(7, 28, 32, .82));
+  --sv-water-strong: linear-gradient(160deg, rgba(38, 92, 94, .9), rgba(6, 24, 28, .9));
+  --sv-water-ink: #d8f2ee;
+  --sv-drop: linear-gradient(180deg, rgba(126, 214, 208, .34), rgba(24, 96, 100, .44) 52%, rgba(12, 58, 64, .6));
+  --sv-drop-rim: rgba(214, 250, 246, .82);
+  --sv-drop-shadow: rgba(0, 10, 12, .6);
+  --sv-dock-shell: linear-gradient(180deg, rgba(17, 50, 54, .92), rgba(5, 22, 26, .96));
+  --sv-dock-line: rgba(168, 226, 220, .22);
+  --sv-dock-ink: #e6f6f3;
+  --sv-dock-muted: #9dbdb9;
+  --sv-dock-active: #fff3e8;
+  --sv-dock-badge: linear-gradient(150deg, #ffd9c6, #ff9f6e);
+}
+
+html { background: var(--sv-bg); }
+html[data-theme="dark"] { background: var(--sv-bg-deep); }
+
+body {
+  color: var(--sv-ink);
+}
+
+/* ------------------------------------------------------------ theme switch */
+.theme-toggle {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 4px 12px 4px 5px;
+  border: 1px solid var(--sv-line-strong);
+  border-radius: 999px;
+  color: var(--sv-ink-soft);
+  background: var(--sv-water);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .7), 0 6px 18px rgba(180, 104, 52, .12);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  backdrop-filter: blur(10px) saturate(160%);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+html[data-theme="dark"] .theme-toggle {
+  box-shadow: inset 0 1px rgba(255, 255, 255, .14), 0 8px 22px rgba(0, 0, 0, .38);
+}
+.theme-toggle:hover { border-color: var(--sv-orange); transform: translateY(-1px); }
+.theme-toggle:active { transform: translateY(0); }
+.theme-toggle__track {
+  position: relative;
+  display: grid;
+  width: 30px;
+  height: 28px;
+  place-items: center;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 24%, rgba(255, 255, 255, .9), rgba(255, 175, 120, .5) 62%, rgba(238, 106, 28, .36));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .8), 0 3px 10px rgba(196, 96, 34, .28);
+  overflow: hidden;
+}
+html[data-theme="dark"] .theme-toggle__track {
+  background: radial-gradient(circle at 30% 24%, rgba(198, 246, 240, .5), rgba(30, 104, 104, .6) 58%, rgba(4, 26, 30, .8));
+  box-shadow: inset 0 1px rgba(228, 252, 248, .34), 0 3px 12px rgba(0, 0, 0, .45);
+}
+.theme-toggle__icon {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  transition: opacity .24s ease, transform .32s cubic-bezier(.2, .8, .25, 1);
+}
+.theme-toggle__icon--sun { color: #a5470d; }
+.theme-toggle__icon--moon { color: #d9fbf6; opacity: 0; transform: rotate(-40deg) scale(.7); }
+html[data-theme="dark"] .theme-toggle__icon--sun { opacity: 0; transform: rotate(40deg) scale(.7); }
+html[data-theme="dark"] .theme-toggle__icon--moon { opacity: 1; transform: rotate(0) scale(1); }
+.theme-toggle__label { white-space: nowrap; }
+@media (max-width: 640px) {
+  .theme-toggle { padding: 4px; }
+  .theme-toggle__label { display: none; }
+}
+
+/* -------------------------------------------------------------- water decor */
+.water-veil {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.water-blob {
+  position: absolute;
+  display: block;
+  border-radius: 46% 54% 52% 48% / 52% 46% 54% 48%;
+  background: radial-gradient(circle at 32% 24%, rgba(255, 255, 255, .85), rgba(255, 186, 138, .45) 44%, rgba(239, 106, 28, .16) 76%);
+  box-shadow: inset 6px 10px 26px rgba(255, 255, 255, .5), 0 24px 60px rgba(196, 104, 44, .18);
+  filter: blur(.3px);
+  opacity: .8;
+  animation: sv-float 15s ease-in-out infinite;
+}
+html[data-theme="dark"] .water-blob {
+  background: radial-gradient(circle at 32% 24%, rgba(170, 236, 230, .4), rgba(28, 104, 108, .4) 46%, rgba(4, 26, 30, .2) 78%);
+  box-shadow: inset 6px 10px 26px rgba(190, 248, 240, .18), 0 26px 64px rgba(0, 0, 0, .42);
+}
+@keyframes sv-float {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(0, -12px, 0) scale(1.03); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .water-blob { animation: none; }
+}
+
+/* ================================================================ RECRUITER
+ * Light theme rebuild of the dark-first recruiter stylesheet. Only the
+ * surfaces that carry text or controls are remapped; the dark palette stays
+ * untouched for html[data-theme="dark"].
+ */
+html[data-theme="light"] body.recruiter-portal {
+  --rec-bg: var(--sv-bg);
+  --rec-ink: var(--sv-ink);
+  --rec-muted: var(--sv-muted);
+  --rec-dim: var(--sv-dim);
+  --rec-line: var(--sv-line);
+  --rec-line-strong: var(--sv-line-strong);
+  --rec-glass: var(--sv-glass);
+  --rec-glass-strong: var(--sv-glass-strong);
+  --rec-mint: #c4510f;
+  --rec-mint-ink: #fff6ee;
+  --rec-green: #1f7a4d;
+  --rec-blue: #1f5f86;
+  --rec-violet: #5b4b9c;
+  --rec-amber: #9c5a12;
+  --rec-red: var(--sv-bad);
+  color-scheme: light;
+  color: var(--sv-ink);
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(255, 186, 132, .3), transparent 34rem),
+    radial-gradient(ellipse at 94% 6%, rgba(255, 214, 176, .34), transparent 38rem),
+    linear-gradient(180deg, var(--sv-bg) 0%, var(--sv-bg-deep) 100%);
+}
+html[data-theme="light"] body.recruiter-portal .rec-orb {
+  border-color: rgba(238, 140, 74, .22);
+  background: radial-gradient(circle at 30% 24%, rgba(255, 255, 255, .9), rgba(255, 190, 146, .34) 40%, rgba(255, 255, 255, .02) 74%);
+  box-shadow: inset 5px 7px 20px rgba(255, 255, 255, .7), 0 16px 38px rgba(196, 104, 44, .12);
+  opacity: .55;
+}
+html[data-theme="light"] body.recruiter-portal .rec-topbar,
+html[data-theme="light"] body.recruiter-portal .rec-dock {
+  border-color: var(--sv-dock-line);
+  background: var(--sv-dock-shell);
+  box-shadow: 0 18px 44px rgba(180, 100, 48, .16), inset 0 1px rgba(255, 255, 255, .9);
+}
+html[data-theme="light"] body.recruiter-portal .rec-brand-mark {
+  color: #fff8f2;
+  background: linear-gradient(150deg, #ffa15f, #e35a12);
+  box-shadow: 0 6px 18px rgba(214, 96, 32, .3), inset 0 1px rgba(255, 255, 255, .5);
+}
+html[data-theme="light"] body.recruiter-portal .rec-brand-copy strong { color: var(--sv-ink); }
+html[data-theme="light"] body.recruiter-portal .rec-brand-copy small { color: var(--sv-muted); }
+html[data-theme="light"] body.recruiter-portal .rec-company-state,
+html[data-theme="light"] body.recruiter-portal .rec-status-pill {
+  border-color: var(--sv-line-strong);
+  color: var(--sv-ink-soft);
+  background: var(--sv-water);
+}
+html[data-theme="light"] body.recruiter-portal .rec-company-state--approved { color: #17603c; background: var(--sv-ok-soft); border-color: rgba(31, 122, 77, .28); }
+html[data-theme="light"] body.recruiter-portal .rec-company-state--pending { color: #8a5210; background: var(--sv-warn-soft); border-color: rgba(156, 90, 18, .26); }
+html[data-theme="light"] body.recruiter-portal .rec-company-state--rejected { color: #8f2318; background: var(--sv-bad-soft); border-color: rgba(176, 42, 29, .26); }
+html[data-theme="light"] body.recruiter-portal .rec-account,
+html[data-theme="light"] body.recruiter-portal .rec-signout {
+  color: var(--sv-ink-soft);
+}
+html[data-theme="light"] body.recruiter-portal .rec-signout {
+  border-color: var(--sv-line-strong);
+  background: var(--sv-water);
+}
+html[data-theme="light"] body.recruiter-portal .rec-avatar,
+html[data-theme="light"] body.recruiter-portal .rec-applicant-avatar,
+html[data-theme="light"] body.recruiter-portal .rec-activity-avatar {
+  color: #8a3d0d;
+  border-color: rgba(214, 120, 60, .28);
+  background: var(--sv-water-strong);
+}
+html[data-theme="light"] body.recruiter-portal .rec-card,
+html[data-theme="light"] body.recruiter-portal .rec-stat-card,
+html[data-theme="light"] body.recruiter-portal .rec-attention-card,
+html[data-theme="light"] body.recruiter-portal .rec-recent-card,
+html[data-theme="light"] body.recruiter-portal .rec-privacy-note {
+  border-color: var(--sv-line);
+  background: linear-gradient(158deg, rgba(255, 255, 255, .96), rgba(255, 245, 236, .9));
+  box-shadow: 0 18px 44px rgba(180, 100, 48, .1), inset 0 1px rgba(255, 255, 255, .95);
+  color: var(--sv-ink);
+}
+html[data-theme="light"] body.recruiter-portal .rec-stat-card::after {
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, .9), rgba(255, 186, 138, .22) 46%, transparent 72%);
+}
+html[data-theme="light"] body.recruiter-portal .rec-stat-card p,
+html[data-theme="light"] body.recruiter-portal .rec-page-description,
+html[data-theme="light"] body.recruiter-portal .rec-muted,
+html[data-theme="light"] body.recruiter-portal .rec-form-note,
+html[data-theme="light"] body.recruiter-portal .rec-form-intro { color: var(--sv-muted); }
+html[data-theme="light"] body.recruiter-portal .rec-eyebrow { color: var(--sv-orange-deep); }
+html[data-theme="light"] body.recruiter-portal .rec-page-heading h1,
+html[data-theme="light"] body.recruiter-portal .rec-section-heading h2,
+html[data-theme="light"] body.recruiter-portal .rec-card > h2 { color: var(--sv-ink); }
+html[data-theme="light"] body.recruiter-portal .rec-activity-list li { border-color: var(--sv-line); }
+html[data-theme="light"] body.recruiter-portal .rec-activity-copy small,
+html[data-theme="light"] body.recruiter-portal .rec-activity-list time { color: var(--sv-dim); }
+html[data-theme="light"] body.recruiter-portal .rec-text-link { color: #c4510f; }
+html[data-theme="light"] body.recruiter-portal .rec-button {
+  border-color: var(--sv-line-strong);
+  color: var(--sv-ink-soft);
+  background: var(--sv-water);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .9);
+}
+html[data-theme="light"] body.recruiter-portal .rec-button--primary {
+  color: #fff8f2;
+  border-color: rgba(214, 96, 32, .46);
+  background: linear-gradient(150deg, #ff9350, #df540f);
+  box-shadow: 0 12px 26px rgba(214, 96, 32, .28), inset 0 1px rgba(255, 255, 255, .4);
+}
+html[data-theme="light"] body.recruiter-portal .rec-button--secondary {
+  color: #8a3d0d;
+  border-color: rgba(214, 120, 60, .34);
+  background: rgba(255, 255, 255, .8);
+}
+html[data-theme="light"] body.recruiter-portal .rec-alert {
+  border-color: var(--sv-line-strong);
+  background: var(--sv-water);
+  color: var(--sv-ink-soft);
+}
+html[data-theme="light"] body.recruiter-portal .rec-alert--error { border-color: rgba(176, 42, 29, .3); background: var(--sv-bad-soft); color: #7c1d14; }
+html[data-theme="light"] body.recruiter-portal .rec-alert--success { border-color: rgba(31, 122, 77, .28); background: var(--sv-ok-soft); color: #14563a; }
+html[data-theme="light"] body.recruiter-portal .rec-alert--info { border-color: rgba(196, 81, 15, .26); background: var(--sv-warn-soft); color: #7a3f0c; }
+html[data-theme="light"] body.recruiter-portal input,
+html[data-theme="light"] body.recruiter-portal select,
+html[data-theme="light"] body.recruiter-portal textarea {
+  border-color: var(--sv-line-strong);
+  color: var(--sv-ink);
+  background: rgba(255, 255, 255, .9);
+  box-shadow: inset 0 1px 2px rgba(150, 80, 32, .06);
+}
+html[data-theme="light"] body.recruiter-portal input::placeholder,
+html[data-theme="light"] body.recruiter-portal textarea::placeholder { color: var(--sv-dim); }
+html[data-theme="light"] body.recruiter-portal .rec-table { color: var(--sv-ink); }
+html[data-theme="light"] body.recruiter-portal .rec-table th {
+  color: var(--sv-muted);
+  border-color: var(--sv-line-strong);
+  background: rgba(255, 236, 222, .6);
+}
+html[data-theme="light"] body.recruiter-portal .rec-table td { border-color: var(--sv-line); }
+html[data-theme="light"] body.recruiter-portal .rec-table tbody tr:hover { background: rgba(255, 226, 202, .42); }
+html[data-theme="light"] body.recruiter-portal .rec-chip {
+  border-color: var(--sv-line-strong);
+  color: var(--sv-ink-soft);
+  background: rgba(255, 255, 255, .78);
+}
+html[data-theme="light"] body.recruiter-portal .rec-chip.is-active {
+  color: #fff8f2;
+  border-color: rgba(214, 96, 32, .5);
+  background: linear-gradient(150deg, #ff9350, #df540f);
+}
+html[data-theme="light"] body.recruiter-portal .rec-dock-link { color: var(--sv-dock-muted); }
+html[data-theme="light"] body.recruiter-portal .rec-dock-link.is-active { color: var(--sv-dock-active); }
+html[data-theme="light"] body.recruiter-portal .rec-footer { color: var(--sv-muted); }
+
+/* ==================================================================== ADMIN */
+html[data-theme="light"] body.admin-portal {
+  --adm-bg: var(--sv-bg);
+  --adm-ink: var(--sv-ink);
+  --adm-muted: var(--sv-muted);
+  --adm-dim: var(--sv-dim);
+  --adm-line: var(--sv-line);
+  --adm-line-strong: var(--sv-line-strong);
+  --adm-mint: #c4510f;
+  --adm-amber: #9c5a12;
+  --adm-red: var(--sv-bad);
+  color-scheme: light;
+  color: var(--sv-ink);
+  background:
+    radial-gradient(ellipse at 6% 0%, rgba(255, 186, 132, .3), transparent 34rem),
+    radial-gradient(ellipse at 96% 6%, rgba(255, 214, 176, .34), transparent 36rem),
+    linear-gradient(180deg, var(--sv-bg) 0%, var(--sv-bg-deep) 100%);
+}
+html[data-theme="light"] body.admin-portal .admin-orb {
+  border-color: rgba(238, 140, 74, .22);
+  background: radial-gradient(circle at 30% 24%, rgba(255, 255, 255, .9), rgba(255, 190, 146, .32) 40%, rgba(255, 255, 255, .02) 74%);
+  box-shadow: inset 5px 7px 20px rgba(255, 255, 255, .7), 0 16px 38px rgba(196, 104, 44, .12);
+  opacity: .55;
+}
+html[data-theme="light"] body.admin-portal .admin-topbar,
+html[data-theme="light"] body.admin-portal .admin-dock {
+  border-color: var(--sv-dock-line);
+  background: var(--sv-dock-shell);
+  box-shadow: 0 18px 44px rgba(180, 100, 48, .16), inset 0 1px rgba(255, 255, 255, .9);
+}
+html[data-theme="light"] body.admin-portal .admin-brand-mark {
+  color: #fff8f2;
+  background: linear-gradient(150deg, #ffa15f, #e35a12);
+  box-shadow: 0 6px 18px rgba(214, 96, 32, .3), inset 0 1px rgba(255, 255, 255, .5);
+}
+html[data-theme="light"] body.admin-portal .admin-brand-copy strong { color: var(--sv-ink); }
+html[data-theme="light"] body.admin-portal .admin-brand-copy small,
+html[data-theme="light"] body.admin-portal .admin-account-name { color: var(--sv-muted); }
+html[data-theme="light"] body.admin-portal .admin-role-pill,
+html[data-theme="light"] body.admin-portal .admin-account,
+html[data-theme="light"] body.admin-portal .admin-signout {
+  border-color: var(--sv-line-strong);
+  color: var(--sv-ink-soft);
+  background: var(--sv-water);
+}
+html[data-theme="light"] body.admin-portal .admin-avatar {
+  color: #8a3d0d;
+  border-color: rgba(214, 120, 60, .28);
+  background: var(--sv-water-strong);
+}
+html[data-theme="light"] body.admin-portal .admin-card,
+html[data-theme="light"] body.admin-portal .admin-stat,
+html[data-theme="light"] body.admin-portal .admin-metrics > div,
+html[data-theme="light"] body.admin-portal .admin-queue li {
+  border-color: var(--sv-line);
+  background: linear-gradient(158deg, rgba(255, 255, 255, .96), rgba(255, 245, 236, .9));
+  box-shadow: 0 18px 44px rgba(180, 100, 48, .1), inset 0 1px rgba(255, 255, 255, .95);
+  color: var(--sv-ink);
+}
+html[data-theme="light"] body.admin-portal .admin-card h2,
+html[data-theme="light"] body.admin-portal .admin-card h3,
+html[data-theme="light"] body.admin-portal .admin-page-heading h1,
+html[data-theme="light"] body.admin-portal .admin-section-heading h2,
+html[data-theme="light"] body.admin-portal .admin-stat strong { color: var(--sv-ink); }
+html[data-theme="light"] body.admin-portal .admin-muted,
+html[data-theme="light"] body.admin-portal .admin-page-description,
+html[data-theme="light"] body.admin-portal .admin-stat p,
+html[data-theme="light"] body.admin-portal .admin-metrics dt,
+html[data-theme="light"] body.admin-portal .admin-cell-sub { color: var(--sv-muted); }
+html[data-theme="light"] body.admin-portal .admin-eyebrow { color: var(--sv-orange-deep); }
+html[data-theme="light"] body.admin-portal .admin-table { color: var(--sv-ink); }
+html[data-theme="light"] body.admin-portal .admin-table th {
+  color: var(--sv-muted);
+  border-color: var(--sv-line-strong);
+  background: rgba(255, 236, 222, .6);
+}
+html[data-theme="light"] body.admin-portal .admin-table th,
+html[data-theme="light"] body.admin-portal .admin-table td { border-color: var(--sv-line); }
+html[data-theme="light"] body.admin-portal .admin-table tbody tr:hover { background: rgba(255, 226, 202, .42); }
+html[data-theme="light"] body.admin-portal .admin-table tr.is-invalid { background: rgba(255, 214, 206, .5); }
+html[data-theme="light"] body.admin-portal .admin-pill {
+  border-color: var(--sv-line-strong);
+  color: var(--sv-ink-soft);
+  background: rgba(255, 255, 255, .78);
+}
+html[data-theme="light"] body.admin-portal .admin-pill--ok { color: #17603c; background: var(--sv-ok-soft); border-color: rgba(31, 122, 77, .26); }
+html[data-theme="light"] body.admin-portal .admin-pill--warn { color: #8a5210; background: var(--sv-warn-soft); border-color: rgba(156, 90, 18, .26); }
+html[data-theme="light"] body.admin-portal .admin-pill--bad { color: #8f2318; background: var(--sv-bad-soft); border-color: rgba(176, 42, 29, .26); }
+html[data-theme="light"] body.admin-portal .admin-chip {
+  border-color: var(--sv-line-strong);
+  color: var(--sv-ink-soft);
+  background: rgba(255, 255, 255, .78);
+}
+html[data-theme="light"] body.admin-portal .admin-chip.is-active {
+  color: #fff8f2;
+  border-color: rgba(214, 96, 32, .5);
+  background: linear-gradient(150deg, #ff9350, #df540f);
+}
+html[data-theme="light"] body.admin-portal .admin-bar { background: rgba(196, 118, 62, .16); }
+html[data-theme="light"] body.admin-portal .admin-bar > span {
+  background: linear-gradient(90deg, #ffb27a, #e35a12);
+}
+html[data-theme="light"] body.admin-portal input,
+html[data-theme="light"] body.admin-portal select,
+html[data-theme="light"] body.admin-portal textarea {
+  border-color: var(--sv-line-strong);
+  color: var(--sv-ink);
+  background: rgba(255, 255, 255, .92);
+  box-shadow: inset 0 1px 2px rgba(150, 80, 32, .06);
+}
+html[data-theme="light"] body.admin-portal input::placeholder,
+html[data-theme="light"] body.admin-portal textarea::placeholder { color: var(--sv-dim); }
+html[data-theme="light"] body.admin-portal .admin-button {
+  border-color: var(--sv-line-strong);
+  color: var(--sv-ink-soft);
+  background: var(--sv-water);
+}
+html[data-theme="light"] body.admin-portal .admin-button:hover { border-color: var(--sv-orange); }
+html[data-theme="light"] body.admin-portal .admin-alert {
+  border-color: var(--sv-line-strong);
+  background: var(--sv-water);
+  color: var(--sv-ink-soft);
+}
+html[data-theme="light"] body.admin-portal .admin-alert--success { border-color: rgba(31, 122, 77, .28); background: var(--sv-ok-soft); color: #14563a; }
+html[data-theme="light"] body.admin-portal .admin-alert--error { border-color: rgba(176, 42, 29, .3); background: var(--sv-bad-soft); color: #7c1d14; }
+html[data-theme="light"] body.admin-portal .admin-alert--warn { border-color: rgba(156, 90, 18, .28); background: var(--sv-warn-soft); color: #7a3f0c; }
+html[data-theme="light"] body.admin-portal .admin-details,
+html[data-theme="light"] body.admin-portal .admin-pre,
+html[data-theme="light"] body.admin-portal .admin-import-form { background: rgba(255, 246, 238, .8); border-color: var(--sv-line); }
+html[data-theme="light"] body.admin-portal .admin-dock-link { color: var(--sv-dock-muted); }
+html[data-theme="light"] body.admin-portal .admin-dock-link.is-active { color: var(--sv-dock-active); }
+html[data-theme="light"] body.admin-portal .admin-footer { color: var(--sv-muted); }
+
+/* ------------------------------------------------------- dark water retint */
+html[data-theme="dark"] body.recruiter-portal,
+html[data-theme="dark"] body.admin-portal {
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(46, 156, 150, .18), transparent 34rem),
+    radial-gradient(ellipse at 94% 6%, rgba(214, 122, 52, .12), transparent 36rem),
+    linear-gradient(180deg, #071c20 0%, #041416 58%, #05171a 100%);
+}
+html[data-theme="dark"] body.recruiter-portal .rec-dock,
+html[data-theme="dark"] body.admin-portal .admin-dock {
+  border-color: var(--sv-dock-line);
+  background: var(--sv-dock-shell);
+}
+html[data-theme="dark"] body.recruiter-portal .rec-dock-link.is-active,
+html[data-theme="dark"] body.admin-portal .admin-dock-link.is-active { color: var(--sv-dock-active); }
+html[data-theme="dark"] body.recruiter-portal .rec-dock-link,
+html[data-theme="dark"] body.admin-portal .admin-dock-link { color: var(--sv-dock-muted); }
+
+/* ------------------------------------------- watery dock glass (both themes) */
+body.recruiter-portal .rec-dock-indicator,
+body.admin-portal .admin-dock-indicator {
+  border-radius: 999px;
+  background: var(--sv-drop);
+  box-shadow:
+    0 14px 30px -10px var(--sv-drop-shadow),
+    0 4px 10px -4px rgba(0, 0, 0, .35),
+    0 0 0 .5px rgba(120, 62, 26, .28),
+    inset 0 2px 3px var(--sv-drop-rim),
+    inset 0 -2px 3px rgba(255, 255, 255, .38),
+    inset 1px 0 2px rgba(255, 255, 255, .5),
+    inset -1px 0 2px rgba(255, 255, 255, .45);
+  -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.03);
+  backdrop-filter: blur(14px) saturate(190%) brightness(1.03);
+}
+html[data-theme="dark"] body.recruiter-portal .rec-dock,
+html[data-theme="dark"] body.admin-portal .admin-dock { box-shadow: 0 22px 54px rgba(0, 0, 0, .55), inset 0 1px rgba(220, 250, 246, .16); }
+
+/* Dock ticks read as water pressure marks rather than separate buttons. */
+body.recruiter-portal .rec-dock-link.is-active,
+body.recruiter-portal .rec-dock-link.is-preview,
+body.admin-portal .admin-dock-link.is-active,
+body.admin-portal .admin-dock-link.is-preview { text-shadow: 0 1px 2px rgba(255, 255, 255, .5); }
+html[data-theme="dark"] body.recruiter-portal .rec-dock-link.is-active,
+html[data-theme="dark"] body.recruiter-portal .rec-dock-link.is-preview,
+html[data-theme="dark"] body.admin-portal .admin-dock-link.is-active,
+html[data-theme="dark"] body.admin-portal .admin-dock-link.is-preview { text-shadow: 0 1px 2px rgba(0, 12, 14, .55); }

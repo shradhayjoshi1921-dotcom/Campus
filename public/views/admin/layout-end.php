@@ -43,6 +43,7 @@
     <span>Swami Vivekanand Institute of Engineering and Technology</span>
     <span>All state-changing actions are CSRF-protected and audited</span>
 </footer>
+<script src="assets/js/theme.js?v=<?= admin_h($adminNavJsVersion) ?>" defer></script>
 <script src="assets/js/admin-nav.js?v=<?= admin_h($adminNavJsVersion) ?>" defer></script>
 </body>
 </html>
