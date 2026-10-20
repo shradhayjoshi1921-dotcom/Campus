@@ -669,11 +669,13 @@ function sviet_student_dock(string $active, int $unread): void
         'profile' => ['label' => 'Profile', 'href' => 'index.php?page=profile', 'icon' => '<circle cx="12" cy="8.2" r="3.7"/><path d="M4.8 20.6a7.2 7.2 0 0 1 14.4 0"/>'],
     ];
     ?>
-    <nav class="sv-dock" aria-label="Student workspace">
-        <span class="sv-dock-indicator" aria-hidden="true">
-            <span class="sv-dock-liquid"></span>
-            <span class="sv-dock-rim"></span>
-            <span class="sv-dock-caustic"></span>
+    <nav class="sv-dock" data-glass-dock aria-label="Student workspace">
+        <span class="lg-indicator" aria-hidden="true">
+            <span class="lg-smoke"></span>
+            <span class="lg-specular"></span>
+            <span class="lg-rim"></span>
+            <span class="lg-caustic"></span>
+            <span class="lg-glint"></span>
         </span>
         <div class="sv-dock-track" id="sv-dock-track">
             <?php foreach ($tabs as $key => $tab): ?>
@@ -745,6 +747,7 @@ $pageTitle = match ($page) {
     <?php if ($user && $user['role'] === 'student' && in_array($page, ['dashboard', 'profile', 'jobs', 'applications', 'notifications'], true)): ?>
         <link rel="stylesheet" href="assets/css/water-dock.css?v=<?= e($appCssVersion) ?>">
     <?php endif; ?>
+    <link rel="stylesheet" href="assets/css/liquid-glass.css?v=<?= e($appCssVersion) ?>">
 </head>
 <body class="<?= $page === 'home' ? 'homepage' : '' ?>">
 <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -1556,6 +1559,7 @@ $pageTitle = match ($page) {
 <?php endif; ?>
 <?php if ($user && $user['role'] === 'student' && in_array($page, ['dashboard', 'profile', 'jobs', 'applications', 'notifications'], true)): ?>
     <?php sviet_student_dock($page, (int) $unreadNotifications); ?>
+    <script src="assets/js/liquid-glass.js?v=<?= e($appCssVersion) ?>" defer></script>
     <script src="assets/js/student-nav.js?v=<?= e($appCssVersion) ?>" defer></script>
 <?php endif; ?>
 <script src="assets/js/theme.js?v=<?= e($appCssVersion) ?>" defer></script>

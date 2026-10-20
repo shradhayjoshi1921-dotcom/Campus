@@ -24,10 +24,17 @@ $acceptRate = $offeredStudents > 0 ? round(($totalPlaced / $offeredStudents) * 1
         <span class="admin-pill"><?= $reportYear !== '' ? 'Class of ' . admin_h($reportYear) : 'All students' ?></span>
     </div>
 
-    <nav class="admin-chips" aria-label="Filter by graduation year">
-        <a class="admin-chip <?= $reportYear === '' ? 'is-active' : '' ?>" href="admin.php?section=reports">All years</a>
+    <nav class="admin-chips lg-group" data-glass-group aria-label="Filter by graduation year">
+        <span class="lg-indicator" aria-hidden="true">
+            <span class="lg-smoke"></span>
+            <span class="lg-specular"></span>
+            <span class="lg-rim"></span>
+            <span class="lg-caustic"></span>
+            <span class="lg-glint"></span>
+        </span>
+        <a class="admin-chip lg-option <?= $reportYear === '' ? 'is-active' : '' ?>" data-lg-option href="admin.php?section=reports">All years</a>
         <?php foreach ($graduationYears as $year): ?>
-            <a class="admin-chip <?= (string) $reportYear === (string) $year ? 'is-active' : '' ?>"
+            <a class="admin-chip lg-option <?= (string) $reportYear === (string) $year ? 'is-active' : '' ?>" data-lg-option
                href="admin.php?section=reports&amp;year=<?= (int) $year ?>"
                <?= (string) $reportYear === (string) $year ? 'aria-current="page"' : '' ?>><?= (int) $year ?></a>
         <?php endforeach; ?>

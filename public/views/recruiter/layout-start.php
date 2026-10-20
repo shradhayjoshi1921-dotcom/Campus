@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="assets/css/theme.css?v=<?= recruiter_h($appCssVersion) ?>">
     <link rel="stylesheet" href="assets/css/app.css?v=<?= recruiter_h($appCssVersion) ?>">
     <link rel="stylesheet" href="assets/css/recruiter.css?v=<?= recruiter_h($recruiterCssVersion) ?>">
+    <link rel="stylesheet" href="assets/css/liquid-glass.css?v=<?= recruiter_h($recruiterCssVersion) ?>">
 </head>
 <body class="recruiter-portal">
 <a class="skip-link" href="#main-content">Skip to main content</a>
