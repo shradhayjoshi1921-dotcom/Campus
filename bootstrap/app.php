@@ -7,6 +7,11 @@ use App\Core\Security;
 
 require_once dirname(__DIR__) . '/app/Core/Env.php';
 Env::load(dirname(__DIR__) . '/.env');
+$appTimezone = Env::get('APP_TIMEZONE', 'Asia/Kolkata') ?? 'Asia/Kolkata';
+if (!in_array($appTimezone, timezone_identifiers_list(), true)) {
+    throw new RuntimeException('APP_TIMEZONE must be a recognized timezone identifier.');
+}
+date_default_timezone_set($appTimezone);
 require_once dirname(__DIR__) . '/app/Core/Database.php';
 require_once dirname(__DIR__) . '/app/Core/Security.php';
 require_once dirname(__DIR__) . '/app/Services/EligibilityService.php';

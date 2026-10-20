@@ -86,6 +86,15 @@ $schema = file_get_contents($root . '/database/schema.sql');
 $front = file_get_contents($root . '/public/index.php');
 $admin = file_get_contents($root . '/public/admin.php');
 $career = file_get_contents($root . '/public/career.php');
+$recruiter = file_get_contents($root . '/public/recruiter.php');
+$recruiterLayout = file_get_contents($root . '/public/views/recruiter/layout-end.php');
+$recruiterJobs = file_get_contents($root . '/public/views/recruiter/jobs.php');
+$recruiterApplicants = file_get_contents($root . '/public/views/recruiter/applicants.php');
+$recruiterInterviews = file_get_contents($root . '/public/views/recruiter/interviews.php');
+$recruiterStyles = file_get_contents($root . '/public/assets/css/recruiter.css');
+$database = file_get_contents($root . '/app/Core/Database.php');
+$bootstrap = file_get_contents($root . '/bootstrap/app.php');
+$environmentExample = file_get_contents($root . '/.env.example');
 $adminSetup = file_get_contents($root . '/scripts/create-admin.php');
 
 $test('Schema seeds no fake placement records', static function () use ($assert, $schema): void {
@@ -182,10 +191,79 @@ $test('Homepage uses local assets, avoids unverified campus photography, and kee
 });
 
 $test('Workspace sign-out forms submit a CSRF-protected POST', static function () use ($assert, $root): void {
-    foreach (['public/index.php', 'public/career.php', 'public/recruiter.php', 'public/admin.php'] as $file) {
+    foreach (['public/index.php', 'public/career.php', 'public/admin.php'] as $file) {
         $contents = file_get_contents($root . '/' . $file);
         $assert(str_contains($contents, 'name="action" value="logout"'), "logout action missing in {$file}");
         $assert(str_contains($contents, 'name="_csrf"'), "CSRF token missing in {$file}");
+    }
+    $recruiterLayout = file_get_contents($root . '/public/views/recruiter/layout-start.php');
+    $assert(str_contains($recruiterLayout, 'name="action" value="logout"'), 'logout action missing in recruiter layout');
+    $assert(str_contains($recruiterLayout, 'name="_csrf"'), 'CSRF token missing in recruiter layout');
+});
+
+$test('Recruiter workspace is role-guarded and mutations use CSRF-protected PRG', static function () use ($assert, $recruiter): void {
+    $assert(str_contains($recruiter, "Security::requireRole(['recruiter'])"));
+    $assert(str_contains($recruiter, 'Security::verifyCsrf'));
+    $assert(str_contains($recruiter, "true, 303"));
+    $assert(str_contains($recruiter, 'WHERE id = ? AND company_id = ?'));
+    $assert(str_contains($recruiter, 'j.company_id = ?'));
+});
+
+$test('Approved recruiters can publish directly while company approval is checked under lock', static function () use ($assert, $recruiter, $recruiterJobs, $admin): void {
+    $assert(str_contains($recruiter, 'SELECT c.approval_status FROM recruiter_profiles rp JOIN companies c'));
+    $assert(str_contains($recruiter, 'if ($status === \'published\' && $companyApprovalStatus !== \'approved\')'));
+    $assert(str_contains($recruiterJobs, 'Approved companies can publish roles directly'));
+    $assert(str_contains($recruiterJobs, 'locked until approval'));
+    $assert(str_contains($admin, "'pause'=>'paused'"));
+    $assert(str_contains($admin, "'close'=>'closed'"));
+});
+
+$test('Company profile edits preserve approval only when material details are unchanged', static function () use ($assert, $recruiter): void {
+    $assert(str_contains($recruiter, 'SELECT company_id FROM recruiter_profiles WHERE user_id = ? FOR UPDATE'));
+    $assert(str_contains($recruiter, 'SELECT name AS company_name, website, industry, description, approval_status FROM companies WHERE id = ? FOR UPDATE'));
+    $assert(str_contains($recruiter, '($currentCompany[\'approval_status\'] ?? \'\') === \'approved\' && !$materialChange'));
+    $assert(str_contains($recruiter, 'designation = VALUES(designation)'));
+});
+
+$test('Recruiter applicant pipeline validates transitions, records history, and notifies students', static function () use ($assert, $recruiter, $recruiterApplicants): void {
+    $assert(str_contains($recruiter, "'submitted' => ['under_review', 'rejected']"));
+    $assert(str_contains($recruiter, 'INSERT INTO application_status_history'));
+    $assert(str_contains($recruiter, 'Application status updated'));
+    $assert(str_contains($recruiterApplicants, 'Recent stage history'));
+    $assert(str_contains($recruiterApplicants, 'mailto:'));
+    $assert(str_contains($recruiter, 'application_id IN ('));
+});
+
+$test('Interview workflow supports scheduling, rescheduling, cancellation, and completion', static function () use ($assert, $recruiter, $recruiterInterviews, $schema): void {
+    foreach (['schedule_interview', 'reschedule_interview', 'cancel_interview', 'complete_interview'] as $action) {
+        $assert(str_contains($recruiter, "'{$action}'"), "missing recruiter interview action {$action}");
+    }
+    $assert(str_contains($recruiter, 'Interview rescheduled'));
+    $assert(str_contains($recruiter, 'Interview cancelled'));
+    $assert(str_contains($recruiterInterviews, 'rec-reschedule-details'));
+    $assert(str_contains($recruiterInterviews, 'Open meeting link'));
+    $assert(str_contains($schema, 'CREATE TABLE IF NOT EXISTS interviews'));
+});
+
+$test('Portal date handling defaults consistently to SVIET India Standard Time', static function () use ($assert, $bootstrap, $database, $environmentExample): void {
+    $assert(str_contains($bootstrap, "Env::get('APP_TIMEZONE', 'Asia/Kolkata')"));
+    $assert(str_contains($bootstrap, 'date_default_timezone_set($appTimezone)'));
+    $assert(str_contains($database, "Env::get('DB_TIMEZONE', '+05:30')"));
+    $assert(str_contains($database, 'SET time_zone = '));
+    $assert(str_contains($database, '->quote($databaseTimezone)'));
+    $assert(str_contains($environmentExample, 'APP_TIMEZONE=Asia/Kolkata'));
+    $assert(str_contains($environmentExample, 'DB_TIMEZONE=+05:30'));
+});
+
+$test('Recruiter views provide the responsive glass bottom dock and reduced-motion support', static function () use ($assert, $recruiterLayout, $recruiterStyles, $root): void {
+    $assert(str_contains($recruiterLayout, 'class="rec-bottom-nav"'));
+    $assert(str_contains($recruiterLayout, 'aria-label="Recruiter workspace"'));
+    $assert(str_contains($recruiterStyles, 'backdrop-filter: blur(30px)'));
+    $assert(str_contains($recruiterStyles, '.rec-nav-link.is-active::before'));
+    $assert(str_contains($recruiterStyles, 'env(safe-area-inset-bottom'));
+    $assert(str_contains($recruiterStyles, '@media (prefers-reduced-motion: reduce)'));
+    foreach (['overview', 'company', 'jobs', 'applicants', 'interviews'] as $view) {
+        $assert(is_file($root . '/public/views/recruiter/' . $view . '.php'), "missing recruiter view {$view}");
     }
 });
 

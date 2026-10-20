@@ -4,14 +4,14 @@
 
 Campus is a server-rendered placement portal for students, recruiters, and placement teams. The interface uses an institute-focused navy-and-emerald design, responsive navigation, restrained frosted-glass accents, and reduced-motion-aware transitions. The homepage uses a CSS-built abstract hero rather than unverified campus photography. The website does not depend on remote font, Bootstrap, icon, or hero-image CDNs.
 
-The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
+The recruiter workspace uses a responsive frosted-glass bottom dock with a subtle iOS-inspired active bubble, while keeping job and candidate information readable on compact screens. The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
 
 ## Run on Windows with XAMPP
 
 1. Download and extract `Campus-XAMPP-v2.0.0.zip` into `C:\xampp\htdocs\Campus`. The archive includes a top-level `Campus` folder.
 2. Start **Apache** and **MySQL** in the XAMPP Control Panel.
 3. Open `http://localhost/phpmyadmin/` and import `Campus\database\schema.sql`. It creates the `ai_campus_portal` database and its tables. It does not migrate existing columns; back up an existing database before importing or changing the schema.
-4. Copy `Campus\.env.example` to `Campus\.env`. Check the database settings and set a unique `APP_KEY`. The `.env` file is intentionally not included in the ZIP or Git.
+4. Copy `Campus\.env.example` to `Campus\.env`. Check the database settings and set a unique `APP_KEY`. Keep `APP_TIMEZONE` and `DB_TIMEZONE` aligned with the campus time zone so interview and job-deadline times display consistently. The `.env` file is intentionally not included in the ZIP or Git.
 5. Open Command Prompt in `C:\xampp\htdocs\Campus` and create the first administrator, if one does not already exist:
 
    ```bat
@@ -33,14 +33,14 @@ For deployment, set the Apache document root to `Campus/public/`. If using the l
 - Sign in / register: `http://localhost/Campus/public/index.php?page=login` / `?page=register`
 - Student profile, jobs, and applications: available after student sign-in
 - Career insights: `http://localhost/Campus/public/career.php` (student sign-in required)
-- Recruiter workspace: `http://localhost/Campus/public/recruiter.php` (approved recruiter sign-in required)
+- Recruiter workspace: `http://localhost/Campus/public/recruiter.php` (recruiter sign-in required)
 - TPO/Admin workspace: `http://localhost/Campus/public/admin.php` (TPO or admin sign-in required)
 
 ## Current scope
 
 - Student and recruiter registration/sign-in, session security, and CLI-only first-admin setup.
 - Student profile and skills editing; published job browsing, eligibility checks, applications, and application tracking.
-- Recruiter company review, company-owned job management, applicant status updates, and interview scheduling.
+- Recruiter company review, approved-company direct job publishing with T&P moderation, company-owned job management, an applicant pipeline with history/notifications, and interview scheduling, rescheduling, cancellation, and completion.
 - TPO/Admin account and company decisions, job moderation, summaries, reports, announcements, notifications, and audit activity.
 - Rule-based career-fit estimates, skill-gap views, roadmap suggestions, and what-if skill simulation. These are explainable heuristics, **not trained AI or hiring probabilities**.
 - Empty states are used instead of fabricated portal data.
