@@ -3,11 +3,13 @@
     </main>
 </div>
 
-<nav class="rec-bottom-nav" aria-label="Recruiter workspace">
-    <span class="rec-nav-indicator" aria-hidden="true">
-        <span class="rec-nav-bubble-liquid"></span>
-        <span class="rec-nav-bubble-rim"></span>
-        <span class="rec-nav-bubble-caustic"></span>
+<nav class="rec-bottom-nav" data-glass-dock aria-label="Recruiter workspace">
+    <span class="lg-indicator" aria-hidden="true">
+        <span class="lg-smoke"></span>
+        <span class="lg-specular"></span>
+        <span class="lg-rim"></span>
+        <span class="lg-caustic"></span>
+        <span class="lg-glint"></span>
     </span>
     <a class="rec-nav-link <?= $section === 'overview' ? 'is-active' : '' ?>" data-rec-section="overview" href="recruiter.php?section=overview" <?= $section === 'overview' ? 'aria-current="page"' : '' ?>>
         <span class="rec-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg></span>
@@ -36,6 +38,7 @@
     <span>SVIET Training &amp; Placement Portal</span>
 </footer>
 <script src="assets/js/theme.js?v=<?= recruiter_h($recruiterNavJsVersion) ?>" defer></script>
+<script src="assets/js/liquid-glass.js?v=<?= recruiter_h($recruiterNavJsVersion) ?>" defer></script>
 <script src="assets/js/recruiter-nav.js?v=<?= recruiter_h($recruiterNavJsVersion) ?>" defer></script>
 </body>
 </html>

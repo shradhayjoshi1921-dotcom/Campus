@@ -3,11 +3,13 @@
     </main>
 </div>
 
-<nav class="admin-dock" aria-label="Admin workspace">
-    <span class="admin-dock-indicator" aria-hidden="true">
-        <span class="admin-dock-liquid"></span>
-        <span class="admin-dock-rim"></span>
-        <span class="admin-dock-caustic"></span>
+<nav class="admin-dock" data-glass-dock aria-label="Admin workspace">
+    <span class="lg-indicator" aria-hidden="true">
+        <span class="lg-smoke"></span>
+        <span class="lg-specular"></span>
+        <span class="lg-rim"></span>
+        <span class="lg-caustic"></span>
+        <span class="lg-glint"></span>
     </span>
     <div class="admin-dock-track" id="admin-dock-track">
         <?php
@@ -44,6 +46,7 @@
     <span>All state-changing actions are CSRF-protected and audited</span>
 </footer>
 <script src="assets/js/theme.js?v=<?= admin_h($adminNavJsVersion) ?>" defer></script>
+<script src="assets/js/liquid-glass.js?v=<?= admin_h($adminNavJsVersion) ?>" defer></script>
 <script src="assets/js/admin-nav.js?v=<?= admin_h($adminNavJsVersion) ?>" defer></script>
 </body>
 </html>

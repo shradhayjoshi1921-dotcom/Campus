@@ -76,13 +76,20 @@
             <a class="admin-text-link" href="admin.php?section=reports&export=offers">Export CSV</a>
         </div>
 
-        <nav class="admin-chips" aria-label="Filter offers by state">
+        <nav class="admin-chips lg-group" data-glass-group aria-label="Filter offers by state">
+        <span class="lg-indicator" aria-hidden="true">
+            <span class="lg-smoke"></span>
+            <span class="lg-specular"></span>
+            <span class="lg-rim"></span>
+            <span class="lg-caustic"></span>
+            <span class="lg-glint"></span>
+        </span>
             <?php
             $offerFilters = ['' => 'All', 'offered' => 'Sent', 'accepted' => 'Accepted', 'declined' => 'Declined', 'joined' => 'Joined', 'revoked' => 'Revoked'];
             foreach ($offerFilters as $value => $label):
                 $href = 'admin.php?section=placements' . ($value !== '' ? '&offer_status=' . $value : '');
                 ?>
-                <a class="admin-chip <?= $offerStatusFilter === $value ? 'is-active' : '' ?>" href="<?= admin_h($href) ?>"
+                <a class="admin-chip lg-option <?= $offerStatusFilter === $value ? 'is-active' : '' ?>" data-lg-option href="<?= admin_h($href) ?>"
                    <?= $offerStatusFilter === $value ? 'aria-current="page"' : '' ?>><?= admin_h($label) ?></a>
             <?php endforeach; ?>
         </nav>

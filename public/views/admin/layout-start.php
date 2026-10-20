@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="assets/css/theme.css?v=<?= admin_h($appCssVersion) ?>">
     <link rel="stylesheet" href="assets/css/app.css?v=<?= admin_h($appCssVersion) ?>">
     <link rel="stylesheet" href="assets/css/admin.css?v=<?= admin_h($adminCssVersion) ?>">
+    <link rel="stylesheet" href="assets/css/liquid-glass.css?v=<?= admin_h($adminCssVersion) ?>">
 </head>
 <body class="admin-portal">
 <a class="skip-link" href="#admin-main">Skip to main content</a>

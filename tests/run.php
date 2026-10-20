@@ -102,6 +102,8 @@ $adminLayoutEnd = file_get_contents($root . '/public/views/admin/layout-end.php'
 $adminStyles = file_get_contents($root . '/public/assets/css/admin.css');
 $adminNavScript = file_get_contents($root . '/public/assets/js/admin-nav.js');
 $adminImportScript = file_get_contents($root . '/app/Services/AdminImportService.php');
+$liquidGlassStyles = file_get_contents($root . '/public/assets/css/liquid-glass.css');
+$liquidGlassScript = file_get_contents($root . '/public/assets/js/liquid-glass.js');
 $database = file_get_contents($root . '/app/Core/Database.php');
 $bootstrap = file_get_contents($root . '/bootstrap/app.php');
 $environmentExample = file_get_contents($root . '/.env.example');
@@ -272,17 +274,18 @@ $test('Portal date handling defaults consistently to SVIET India Standard Time',
 });
 
 $test('Recruiter views provide a responsive liquid-glass dock with a persistent sliding bubble', static function () use ($assert, $recruiterLayout, $recruiterStyles, $recruiterNavScript, $root): void {
-    $assert(str_contains($recruiterLayout, 'class="rec-bottom-nav"'));
-    $assert(str_contains($recruiterLayout, 'class="rec-nav-indicator"'));
+    $assert(str_contains($recruiterLayout, 'class="rec-bottom-nav" data-glass-dock'));
+    $assert(str_contains($recruiterLayout, 'class="lg-indicator"'));
     $assert(str_contains($recruiterLayout, 'aria-label="Recruiter workspace"'));
+    $assert(str_contains($recruiterLayout, 'assets/js/liquid-glass.js?v='));
     $assert(str_contains($recruiterLayout, 'assets/js/recruiter-nav.js?v='));
     $assert(str_contains($recruiterStyles, 'backdrop-filter: blur(30px)'));
-    $assert(str_contains($recruiterStyles, '.rec-nav-indicator.is-stretched') || str_contains($recruiterNavScript, 'is-stretched'));
     $assert(!str_contains($recruiterStyles, 'rec-liquid-wobble'));
     $assert(str_contains($recruiterStyles, 'env(safe-area-inset-bottom'));
     $assert(str_contains($recruiterStyles, '@media (prefers-reduced-motion: reduce)'));
-    $assert(str_contains($recruiterNavScript, 'sessionStorage'));
-    $assert(str_contains($recruiterNavScript, 'translate3d('));
+    $assert(str_contains($recruiterNavScript, 'LiquidGlass.mount'));
+    $assert(str_contains($recruiterNavScript, 'restoreKey'), 'the capsule flows in from the previous tab');
+    $assert(str_contains($recruiterNavScript, 'liquidglass:activate'));
     $assert(str_contains($recruiterNavScript, 'prefers-reduced-motion'));
     foreach (['overview', 'company', 'jobs', 'applicants', 'interviews'] as $view) {
         $assert(is_file($root . '/public/views/recruiter/' . $view . '.php'), "missing recruiter view {$view}");
@@ -294,21 +297,12 @@ $test('Recruiter navigation is a gesture-driven liquid dock wired for safe clien
     $assert(str_contains($recruiterLayoutStart, 'id="recruiter-section-content"'));
     $assert(str_contains($recruiterLayout, 'id="recruiter-nav-status"'));
     $assert(str_contains($recruiterLayout, 'aria-live="polite"'));
-    $assert(str_contains($recruiterNavScript, "addEventListener('pointerdown'"));
-    $assert(str_contains($recruiterNavScript, "addEventListener('pointermove'"));
-    $assert(str_contains($recruiterNavScript, "addEventListener('pointerup'"));
-    $assert(str_contains($recruiterNavScript, "addEventListener('pointercancel'"));
-    $assert(str_contains($recruiterNavScript, 'setPointerCapture'));
-    $assert(str_contains($recruiterNavScript, 'requestAnimationFrame'));
-    $assert(!str_contains($recruiterNavScript, 'setInterval'));
-    $assert(str_contains($recruiterNavScript, 'suppressClickUntil'));
-    $assert(str_contains($recruiterNavScript, 'is-preview'));
     $assert(str_contains($recruiterNavScript, 'window.history.pushState'));
     $assert(str_contains($recruiterNavScript, "'popstate'"));
     $assert(str_contains($recruiterNavScript, "addEventListener('submit'"));
     $assert(str_contains($recruiterNavScript, 'DOMParser'));
     $assert(str_contains($recruiterNavScript, 'prefers-reduced-motion'));
-    $assert(str_contains($recruiterNavScript, 'ArrowRight'));
+    $assert(str_contains($recruiterNavScript, 'is-pending'));
     $assert(str_contains($recruiterStyles, '.rec-page-content.is-pending[data-direction="forward"]'));
     $assert(str_contains($recruiterStyles, '.rec-page-content.is-entering[data-direction="backward"]'));
     $assert(str_contains($recruiterStyles, '.rec-page-content.is-swiping { transition: none; }'));
@@ -319,41 +313,83 @@ $test('Recruiter navigation is a gesture-driven liquid dock wired for safe clien
     $assert(str_contains($recruiterStyles, 'user-select: none'));
 });
 
-$test('Recruiter dock renders a dimensional glass capsule driven by a spring', static function () use ($assert, $recruiterLayout, $recruiterStyles, $recruiterNavScript): void {
-    // Layered 3D material, not a flat pill.
-    foreach (['rec-nav-bubble-liquid', 'rec-nav-bubble-rim', 'rec-nav-bubble-caustic'] as $layer) {
-        $assert(str_contains($recruiterLayout, $layer), "missing glass layer {$layer}");
-    }
-    $assert(str_contains($recruiterStyles, 'border-radius: 999px'));
-    $assert(str_contains($recruiterStyles, '.rec-nav-indicator::before'));
-    $assert(str_contains($recruiterStyles, '.rec-nav-indicator::after'));
-    $assert(str_contains($recruiterStyles, 'mask-composite: exclude'));
-    $assert(str_contains($recruiterStyles, '-webkit-mask-composite: xor'));
-    $assert(str_contains($recruiterStyles, 'backdrop-filter: blur(12px) saturate(185%)'));
-    $assert(str_contains($recruiterStyles, 'box-shadow:'));
-
-    // One tab wide, not the whole bar, and re-sized from the tab box.
-    $assert(str_contains($recruiterNavScript, 'bubble.baseWidth'));
-    $assert(str_contains($recruiterNavScript, 'getBoundingClientRect'));
-    $assert(str_contains($recruiterNavScript, 'narrowest - inset'));
-    $assert(!str_contains($recruiterStyles, '.rec-nav-indicator { width: 100%'));
-
-    // Real spring motion with stretch, squash and interior slosh.
-    $assert(str_contains($recruiterNavScript, 'MOVE_SPRING'));
-    $assert(str_contains($recruiterNavScript, 'DRAG_SPRING'));
-    $assert(str_contains($recruiterNavScript, 'FIXED_STEP'));
-    $assert(str_contains($recruiterNavScript, '--rec-slosh'));
-    $assert(str_contains($recruiterNavScript, '--rec-stretch'));
-    $assert(str_contains($recruiterNavScript, 'scaleY('));
-    $assert(str_contains($recruiterNavScript, 'bubble.dragging'));
-    $assert(str_contains($recruiterNavScript, 'has-sliding-indicator'));
-    $assert(!str_contains($recruiterStyles, 'transition: transform .36s'));
-
-    // Degradation + accessibility.
-    $assert(str_contains($recruiterStyles, '@supports not ((backdrop-filter: blur(1px))'));
-    $assert(str_contains($recruiterStyles, ':not(.has-sliding-indicator) .rec-nav-link.is-active::before'));
-    $assert(str_contains($recruiterLayout, 'aria-hidden="true"'));
+$test('Company profile edits preserve approval only when material details are unchanged', static function () use ($assert, $recruiter): void {
+    $assert(str_contains($recruiter, 'SELECT company_id FROM recruiter_profiles WHERE user_id = ? FOR UPDATE'));
+    $assert(str_contains($recruiter, 'SELECT name AS company_name, website, industry, description, approval_status FROM companies WHERE id = ? FOR UPDATE'));
+    $assert(str_contains($recruiter, '($currentCompany[\'approval_status\'] ?? \'\') === \'approved\' && !$materialChange'));
+    $assert(str_contains($recruiter, 'designation = VALUES(designation)'));
 });
+
+$test('Recruiter applicant pipeline validates transitions, records history, and notifies students', static function () use ($assert, $recruiter, $recruiterApplicants): void {
+    $assert(str_contains($recruiter, "'submitted' => ['under_review', 'rejected']"));
+    $assert(str_contains($recruiter, 'INSERT INTO application_status_history'));
+    $assert(str_contains($recruiter, 'Application status updated'));
+    $assert(str_contains($recruiterApplicants, 'Recent stage history'));
+    $assert(str_contains($recruiterApplicants, 'mailto:'));
+    $assert(str_contains($recruiter, 'application_id IN ('));
+});
+
+$test('Interview workflow supports scheduling, rescheduling, cancellation, and completion', static function () use ($assert, $recruiter, $recruiterInterviews, $schema): void {
+    foreach (['schedule_interview', 'reschedule_interview', 'cancel_interview', 'complete_interview'] as $action) {
+        $assert(str_contains($recruiter, "'{$action}'"), "missing recruiter interview action {$action}");
+    }
+    $assert(str_contains($recruiter, 'Interview rescheduled'));
+    $assert(str_contains($recruiter, 'Interview cancelled'));
+    $assert(str_contains($recruiterInterviews, 'rec-reschedule-details'));
+    $assert(str_contains($recruiterInterviews, 'Open meeting link'));
+    $assert(str_contains($schema, 'CREATE TABLE IF NOT EXISTS interviews'));
+});
+
+$test('Portal date handling defaults consistently to SVIET India Standard Time', static function () use ($assert, $bootstrap, $database, $environmentExample): void {
+    $assert(str_contains($bootstrap, "Env::get('APP_TIMEZONE', 'Asia/Kolkata')"));
+    $assert(str_contains($bootstrap, 'date_default_timezone_set($appTimezone)'));
+    $assert(str_contains($database, "Env::get('DB_TIMEZONE', '+05:30')"));
+    $assert(str_contains($database, 'SET time_zone = '));
+    $assert(str_contains($database, '->quote($databaseTimezone)'));
+    $assert(str_contains($environmentExample, 'APP_TIMEZONE=Asia/Kolkata'));
+    $assert(str_contains($environmentExample, 'DB_TIMEZONE=+05:30'));
+});
+
+$test('Recruiter views provide a responsive liquid-glass dock with a persistent sliding bubble', static function () use ($assert, $recruiterLayout, $recruiterStyles, $recruiterNavScript, $root): void {
+    $assert(str_contains($recruiterLayout, 'class="rec-bottom-nav" data-glass-dock'));
+    $assert(str_contains($recruiterLayout, 'class="lg-indicator"'));
+    $assert(str_contains($recruiterLayout, 'aria-label="Recruiter workspace"'));
+    $assert(str_contains($recruiterLayout, 'assets/js/liquid-glass.js?v='));
+    $assert(str_contains($recruiterLayout, 'assets/js/recruiter-nav.js?v='));
+    $assert(str_contains($recruiterStyles, 'backdrop-filter: blur(30px)'));
+    $assert(!str_contains($recruiterStyles, 'rec-liquid-wobble'));
+    $assert(str_contains($recruiterStyles, 'env(safe-area-inset-bottom'));
+    $assert(str_contains($recruiterStyles, '@media (prefers-reduced-motion: reduce)'));
+    $assert(str_contains($recruiterNavScript, 'LiquidGlass.mount'));
+    $assert(str_contains($recruiterNavScript, 'restoreKey'), 'the capsule flows in from the previous tab');
+    $assert(str_contains($recruiterNavScript, 'liquidglass:activate'));
+    $assert(str_contains($recruiterNavScript, 'prefers-reduced-motion'));
+    foreach (['overview', 'company', 'jobs', 'applicants', 'interviews'] as $view) {
+        $assert(is_file($root . '/public/views/recruiter/' . $view . '.php'), "missing recruiter view {$view}");
+        $assert(str_contains($recruiterLayout, 'data-rec-section="' . $view . '"'));
+    }
+});
+
+$test('Recruiter navigation is a gesture-driven liquid dock wired for safe client-side sections', static function () use ($assert, $recruiterLayout, $recruiterLayoutStart, $recruiterStyles, $recruiterNavScript): void {
+    $assert(str_contains($recruiterLayoutStart, 'id="recruiter-section-content"'));
+    $assert(str_contains($recruiterLayout, 'id="recruiter-nav-status"'));
+    $assert(str_contains($recruiterLayout, 'aria-live="polite"'));
+    $assert(str_contains($recruiterNavScript, 'window.history.pushState'));
+    $assert(str_contains($recruiterNavScript, "'popstate'"));
+    $assert(str_contains($recruiterNavScript, "addEventListener('submit'"));
+    $assert(str_contains($recruiterNavScript, 'DOMParser'));
+    $assert(str_contains($recruiterNavScript, 'prefers-reduced-motion'));
+    $assert(str_contains($recruiterNavScript, 'is-pending'));
+    $assert(str_contains($recruiterStyles, '.rec-page-content.is-pending[data-direction="forward"]'));
+    $assert(str_contains($recruiterStyles, '.rec-page-content.is-entering[data-direction="backward"]'));
+    $assert(str_contains($recruiterStyles, '.rec-page-content.is-swiping { transition: none; }'));
+    $assert(str_contains($recruiterStyles, '.rec-bottom-nav.is-dragging'));
+    $assert(str_contains($recruiterStyles, 'touch-action: pan-y'));
+    $assert(str_contains($recruiterStyles, '@keyframes rec-section-enter-forward'));
+    $assert(str_contains($recruiterStyles, '@keyframes rec-section-enter-backward'));
+    $assert(str_contains($recruiterStyles, 'user-select: none'));
+});
+
 
 $test('Admin import parses a CSV and separates ready rows from invalid ones', static function () use ($assert): void {
     $service = new AdminImportService();
@@ -458,23 +494,19 @@ $test('Admin portal has eight routed sections with all views on disk', static fu
 });
 
 $test('Admin dock is a scrollable rail with the liquid glass capsule', static function () use ($assert, $adminLayoutEnd, $adminStyles, $adminNavScript): void {
-    foreach (['admin-dock-liquid', 'admin-dock-rim', 'admin-dock-caustic'] as $layer) {
-        $assert(str_contains($adminLayoutEnd, $layer), "missing dock layer {$layer}");
+    foreach (['lg-smoke', 'lg-specular', 'lg-rim', 'lg-caustic', 'lg-glint'] as $layer) {
+        $assert(str_contains($adminLayoutEnd, $layer), "missing glass layer {$layer}");
     }
+    $assert(str_contains($adminLayoutEnd, 'data-glass-dock'));
     $assert(str_contains($adminStyles, 'overflow-x: auto'), 'the rail must scroll');
     $assert(str_contains($adminStyles, 'scrollbar-width: none'));
     $assert(str_contains($adminStyles, 'border-radius: 999px'));
-    $assert(str_contains($adminStyles, 'mask-composite: exclude'));
-    $assert(str_contains($adminStyles, 'backdrop-filter: blur(12px) saturate(185%)'));
     $assert(str_contains($adminStyles, '@media (prefers-reduced-motion: reduce)'));
-    $assert(str_contains($adminStyles, '@supports not ((backdrop-filter: blur(1px))'));
 
     $assert(str_contains($adminNavScript, 'admin-dock-track'));
-    $assert(str_contains($adminNavScript, 'scrollLeft'), 'dragging pans the rail');
-    $assert(str_contains($adminNavScript, 'MOVE_SPRING'));
-    $assert(str_contains($adminNavScript, 'DRAG_SPRING'));
-    $assert(str_contains($adminNavScript, 'setPointerCapture'));
-    $assert(str_contains($adminNavScript, 'requestAnimationFrame'));
+    $assert(str_contains($adminNavScript, 'LiquidGlass.mount'));
+    $assert(str_contains($adminNavScript, 'liquidglass:activate'));
+    $assert(str_contains($adminNavScript, 'syncBadge'), 'the approvals badge follows partial loads');
     $assert(!str_contains($adminNavScript, 'setInterval'));
     $assert(str_contains($adminNavScript, "url.searchParams.has('export')"), 'CSV downloads must stay native');
     $assert(str_contains($adminNavScript, 'window.history.pushState'));
@@ -582,22 +614,14 @@ $test('Student workspace adds strength, notifications and an application timelin
 $test('Student dock is a draggable water capsule, not five separate buttons', static function () use ($assert, $root): void {
     $styles = file_get_contents($root . '/public/assets/css/water-dock.css');
     $script = file_get_contents($root . '/public/assets/js/student-nav.js');
-    foreach (['sv-dock-liquid', 'sv-dock-rim', 'sv-dock-caustic'] as $layer) {
-        $assert(str_contains($styles, $layer), "missing dock layer {$layer}");
-    }
-    $assert(str_contains($styles, 'var(--sv-drop)'), 'the droplet uses the theme colour');
-    $assert(str_contains($styles, '--sv-slosh'));
-    $assert(str_contains($styles, 'mask-composite: exclude'));
+    $assert(str_contains($styles, '.sv-dock'), 'the dock shell keeps its layout');
+    $assert(str_contains($styles, 'body:has(.sv-dock)'), 'content makes room for the dock');
     $assert(str_contains($styles, 'prefers-reduced-motion'));
-    $assert(str_contains($styles, 'body:has(.sv-dock)'));
 
-    $assert(str_contains($script, 'MOVE_SPRING'));
-    $assert(str_contains($script, 'DRAG_SPRING'));
-    $assert(str_contains($script, 'setPointerCapture'));
-    $assert(str_contains($script, 'scrollLeft'), 'dragging pans the rail');
-    $assert(str_contains($script, 'sessionStorage'), 'the capsule flows in from the previous workspace');
+    $assert(str_contains($script, 'LiquidGlass.mount'));
+    $assert(str_contains($script, 'sv-dock-track'), 'the rail is handed to the shared engine');
+    $assert(str_contains($script, 'sviet-student-dock-index'), 'the capsule flows in from the previous workspace');
     $assert(!str_contains($script, 'setInterval'));
-    $assert(str_contains($script, 'prefers-reduced-motion'));
 });
 
 $test('Recruiters can record a CTC when a candidate is selected', static function () use ($assert, $root): void {
@@ -607,22 +631,11 @@ $test('Recruiters can record a CTC when a candidate is selected', static functio
     $assert(str_contains($view, 'CTC in LPA (on selection)'));
     $assert(str_contains($recruiter, "\$ctcRaw = recruiter_post('ctc_lpa')"));
     $assert(str_contains($recruiter, "'Enter the offered CTC in LPA, between 0 and 500.'"));
-    $assert(str_contains($recruiter, "$nextStatus === 'selected'"));
+    $assert(str_contains($recruiter, "\$nextStatus === 'selected'"));
     $assert(str_contains($recruiter, 'INSERT INTO offers (application_id, ctc_lpa, offer_date, status, created_by)'));
     $assert(str_contains($recruiter, 'recruiter_table_exists($db, \'offers\')'), 'a missing offers table must not break the pipeline');
     $assert(str_contains($recruiter, 'offer.created'));
 });
-
-$test('All three docks use the larger droplet geometry', static function () use ($assert, $root): void {
-    $admin = file_get_contents($root . '/public/assets/js/admin-nav.js');
-    $recruiter = file_get_contents($root . '/public/assets/js/recruiter-nav.js');
-    $student = file_get_contents($root . '/public/assets/js/student-nav.js');
-    foreach (['admin' => $admin, 'recruiter' => $recruiter, 'student' => $student] as $name => $script) {
-        $assert(str_contains($script, 'narrowest * 0.045'), "{$name} dock still uses the small inset");
-        $assert(str_contains($script, 'dropHeight'), "{$name} droplet has no protrusion geometry");
-    }
-});
-
 
 $test('Top navigation is a floating bubble cluster with a watery sheet', static function () use ($assert, $root): void {
     $theme = file_get_contents($root . '/public/assets/css/theme.css');
@@ -652,24 +665,68 @@ $test('Top navigation is a floating bubble cluster with a watery sheet', static 
     }
 });
 
-$test('Docks bulge above the bar with water, on every portal', static function () use ($assert, $root): void {
-    $theme = file_get_contents($root . '/public/assets/css/theme.css');
-    $assert(str_contains($theme, 'border-radius: 48% 48% 44% 44%'), 'the drop has its own geometry');
-    $assert(str_contains($theme, '48% 48% 44% 44% / 34% 34% 66% 66%'), 'droplet is teardrop shaped');
-    $assert(str_contains($theme, '.sv-dock-indicator'), 'student droplet styles');
-    $assert(str_contains($theme, '.rec-bottom-nav .rec-nav-indicator'), 'recruiter droplet styles');
-    $assert(str_contains($theme, 'overflow: visible'), 'dock shells must not clip the drop');
-
-    $student = file_get_contents($root . '/public/assets/js/student-nav.js');
-    $admin = file_get_contents($root . '/public/assets/js/admin-nav.js');
-    $recruiter = file_get_contents($root . '/public/assets/js/recruiter-nav.js');
-    foreach (['student' => $student, 'admin' => $admin, 'recruiter' => $recruiter] as $name => $script) {
-        $assert(str_contains($script, 'dropHeight'), "{$name} dock drop is not larger than the bar");
+$test('One shared liquid-glass capsule drives every dock and option group', static function () use ($assert, $liquidGlassStyles, $liquidGlassScript, $adminLayoutEnd, $recruiterLayout, $root): void {
+    // Material layers: transmission, smoke, specular cap, masked rim, caustic.
+    foreach (['.lg-smoke', '.lg-specular', '.lg-rim', '.lg-caustic', '.lg-glint'] as $layer) {
+        $assert(str_contains($liquidGlassStyles, $layer), "missing material layer {$layer}");
     }
-    $assert(str_contains($student, 'track.scrollLeft'), 'student drop follows the rail scroll');
-    $assert(str_contains($admin, 'track.scrollLeft'), 'admin drop follows the rail scroll');
-    $assert(str_contains($admin, "dock.querySelector('.admin-dock-indicator')"), 'admin indicator lives outside the rail');
-    $assert(str_contains($student, "dock.querySelector('.sv-dock-indicator')"), 'student indicator lives outside the rail');
+    $assert(str_contains($liquidGlassStyles, 'mask-composite: exclude'));
+    $assert(str_contains($liquidGlassStyles, 'backdrop-filter: blur(11px) saturate(190%)'));
+    $assert(str_contains($liquidGlassStyles, 'mix-blend-mode: screen'), 'highlights are additive light');
+    $assert(str_contains($liquidGlassStyles, 'filter: url(#lg-refract)'), 'a small displacement filter adds refraction');
+    $assert(str_contains($liquidGlassStyles, '--lg-slosh'));
+    $assert(str_contains($liquidGlassStyles, '@supports not ((backdrop-filter: blur(1px))'));
+
+    // Neutral glass: no warm or orange tint in the capsule itself.
+    $assert(!preg_match('/\.lg-[a-z]+[^{]*\{[^}]*#(?:[fF][0-9a-fA-F]{5}|[eE][0-9a-fA-F]{5})/s', $liquidGlassStyles), 'the capsule must not carry an orange fill');
+
+    // One engine, shared by all portals.
+    $assert(str_contains($liquidGlassScript, 'window.LiquidGlass'));
+    $assert(str_contains($liquidGlassScript, 'MOVE_SPRING'));
+    $assert(str_contains($liquidGlassScript, 'DRAG_SPRING'));
+    $assert(str_contains($liquidGlassScript, 'const STEP = 1 / 240'));
+    $assert(str_contains($liquidGlassScript, 'setPointerCapture'));
+    $assert(str_contains($liquidGlassScript, 'is-preview'));
+    $assert(str_contains($liquidGlassScript, 'suppressClickUntil'));
+    $assert(str_contains($liquidGlassScript, 'ArrowRight'));
+    $assert(str_contains($liquidGlassScript, 'sessionStorage'));
+    $assert(str_contains($liquidGlassScript, 'prefers-reduced-motion'));
+    $assert(!str_contains($liquidGlassScript, 'setInterval'));
+    $assert(str_contains($liquidGlassScript, "layout = 'dock'"));
+    $assert(str_contains($liquidGlassScript, 'data-glass-group'));
+
+    // Compact, one-tab-wide geometry rather than the full bar.
+    $assert(str_contains($liquidGlassScript, 'metrics[0].width - insetX'));
+    $assert(str_contains($liquidGlassScript, 'Math.max(isGroup ? 40 : 46'));
+    $assert(str_contains($liquidGlassScript, 'Math.min(18, insetX)'), 'the stretch budget never exceeds the tab inset');
+    $assert(str_contains($liquidGlassScript, 'persist(activeIndex)'), 'the rendered tab becomes the next hand-off point');
+    $assert(str_contains($liquidGlassScript, 'const handled = !emit('), 'a canceled activate event keeps routing in the page');
+    $assert(!preg_match('/\.lg-indicator\s*\{[^}]*\bwidth:\s*100%/s', $liquidGlassStyles), 'the capsule must never span the whole bar');
+
+    // Every portal dock is wired to the same component.
+    foreach ([$adminLayoutEnd, $recruiterLayout] as $layout) {
+        $assert(str_contains($layout, 'data-glass-dock'));
+        $assert(str_contains($layout, 'class="lg-indicator"'));
+    }
+    $index = file_get_contents($root . '/public/index.php');
+    $assert(str_contains($index, 'data-glass-dock'));
+    $assert(str_contains($index, 'assets/js/liquid-glass.js'));
+
+    // Segmented option groups use the same material.
+    foreach (['jobs', 'placements', 'reports'] as $view) {
+        $markup = file_get_contents($root . '/public/views/admin/' . $view . '.php');
+        $assert(str_contains($markup, 'data-glass-group'), "{$view} filters are not a glass group");
+        $assert(str_contains($markup, 'lg-option'));
+    }
+});
+
+$test('Header chips, dock labels and icons stay legible on the glass', static function () use ($assert, $root): void {
+    $styles = file_get_contents($root . '/public/assets/css/liquid-glass.css');
+    $assert(str_contains($styles, '.lg-option.is-active'));
+    $assert(str_contains($styles, '.lg-option:focus-visible'), 'focus stays visible on the glass');
+    $assert(str_contains($styles, '.lg-option[disabled]'));
+    $assert(str_contains($styles, 'color: var(--sv-ink)'), 'the selected label uses full-contrast ink');
+    $assert(str_contains($styles, 'isolation: isolate'), 'blend layers are contained per capsule');
 });
 
 $test('Page shifts use view transitions and frame-rate independent motion', static function () use ($assert, $root): void {

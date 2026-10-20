@@ -4,7 +4,7 @@
 
 Campus is a server-rendered placement portal for students, recruiters, and placement teams. The interface uses an institute-focused navy-and-emerald design, responsive navigation, restrained frosted-glass accents, and reduced-motion-aware transitions. The homepage uses a CSS-built abstract hero rather than unverified campus photography. The website does not depend on remote font, Bootstrap, icon, or hero-image CDNs.
 
-The recruiter workspace uses a compact liquid-glass bottom dock whose active indicator is a translucent 3D glass capsule — one tab wide, with layered specular highlights, a refractive rim and a smoky centre — driven by a spring simulation, while keeping job and candidate information readable on compact screens. The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
+All three workspaces share one liquid-glass system: a translucent, neutrally tinted 3D glass capsule that sits behind the active destination in every dock and behind the active option in every segmented filter group. It is one shared component (`assets/css/liquid-glass.css` + `assets/js/liquid-glass.js`), one tab wide, driven by a fixed-step spring. The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
 
 ### Recruiter navigation interaction
 
@@ -16,7 +16,7 @@ The recruiter workspace uses a compact liquid-glass bottom dock whose active ind
 - Sections load in place over `recruiter.php?section=…`, so browser back/forward, direct links, and GET filters keep working. Any failed or unexpected request falls back to a normal page load.
 - `prefers-reduced-motion: reduce` disables the spring, stretch, deform, and section slide while keeping every destination reachable.
 
-The capsule is built from stacked CSS layers rather than an image: a translucent body with `backdrop-filter`, a specular band and hot spot (`::before`), a masked 1px refraction ring (`::after`), and three inner spans for the meniscus, lower-rim bounce light and a caustic blob. `recruiter-nav.js` owns its width, position and two custom properties (`--rec-slosh`, `--rec-stretch`); no filter or backdrop animation runs per frame, and the blur is reduced while dragging. Browsers without `backdrop-filter` get a denser glass fill so labels keep their contrast.
+The capsule is built from stacked CSS layers rather than an image: a smoky translucent body with `backdrop-filter`, an additive specular cap, a masked 1px refraction ring, a lower caustic and a travelling glint. A small SVG turbulence/displacement filter gives the interior its optical wobble and is dropped while the capsule moves, so no filter work happens on spring frames. `liquid-glass.js` owns the width, position and `--lg-slosh` / `--lg-stretch` custom properties; no layout property and no image is written per frame. Browsers without `backdrop-filter` get a denser glass fill so labels keep their contrast.
 
 ### Appearance: orange water, light and dark
 
@@ -31,7 +31,7 @@ The whole portal now runs on one appearance layer, `public/assets/css/theme.css`
 
 - **Palette:** warm ivory paper (`#faf7f3`), slate ink (`#1f2429`) and a single ember accent (`#cf5a17`); success/warning/danger are desaturated to sit quietly beside the accent. Dark mode is a cold slate pool (`#0d1114`) with the same ember. All values live as tokens in `theme.css`, so both themes come from one source.
 - **No top bar anywhere.** Public pages, the recruiter workspace and the control centre now render a `bubble-top` cluster: a brand bubble on the left and a right-hand cluster of circular glass bubbles (appearance, account, sign-out). Public pages add one Menu bubble that opens a watery sheet; the sheet traps nothing, closes on Escape/backdrop, restores focus and locks body scroll.
-- **Bottom water dock on all three portals.** The active capsule is now taller than the bar (bar height + 28–36 px) and hangs from the bar's underside, so it crowns visibly above the dock — a drop of water sitting in the glass, not a highlight inside a button. It is a child of the dock shell rather than the scrolling rail, so nothing clips it; the rail's `scrollLeft` is subtracted on every frame and scroll event. Recruiter, admin and student docks share the geometry and the teardrop radius (`48% 48% 44% 44% / 34% 34% 66% 66%`) with a wet cap, slosh offset, lower rim bounce and caustic blob.
+- **One liquid-glass capsule on all three portals.** The capsule is one tab wide (inset 4–8 px from the tab), a rounded capsule rather than a teardrop, and sits behind the icon and label instead of covering neighbours. It is a child of the dock shell rather than the scrolling rail, so nothing clips it; the rail's `scrollLeft` is subtracted on every frame and scroll event. The shell stays its own subtle translucent container — the whole bar is never made into one bubble. The same capsule geometry and material drive the admin job/placement/report filter chips through `.lg-group`.
 - **Motion tuned for high-refresh screens.** Springs integrate on a fixed 1/240 s step so 60 Hz, 120 Hz and 240 Hz panels resolve the same curve; only `transform`, `opacity` and two custom properties are written per frame, never layout properties. Page shifts use the View Transitions API where available (`@view-transition { navigation: auto; }`) with a short eased fade/rise fallback via `sv-page-in`. Shared easing tokens (`--sv-ease`, `--sv-dur-*`) replace ad-hoc curves, and every transition collapses under `prefers-reduced-motion`.
 
 ### One sign-in for every role
@@ -50,9 +50,14 @@ The whole portal now runs on one appearance layer, `public/assets/css/theme.css`
 
 When a recruiter moves an application to **selected**, the applicant form now accepts an optional CTC in LPA (0–500, validated). The server upserts the matching `offers` row (`status = offered`, `offer_date = CURDATE()`, `created_by`), audits `offer.created` / `offer.updated`, and the student's notification names the recorded CTC. If the `offers` table has not been migrated the pipeline still works and no offer row is written.
 
-### Docks on all three portals
+### Liquid Glass system (shared)
 
-Admin, recruiter and student docks share the same geometry change: the capsule now fills almost the whole tab (inset 2–5 px horizontally, 2–3 px vertically), so the active indicator reads as a large water drop rather than a small highlight. Dock colours come from the theme: peach water in light mode, dark water in dark mode.
+- **One engine, three docks, three filter groups.** `public/assets/js/liquid-glass.js` exports `LiquidGlass.mount({ bar, track, links, indicator, restoreKey })`, `mountGroup(element)` for `[data-glass-group]`, `refresh(scope)` after a DOM swap and `controller(element)`. `student-nav.js` is a mount shim; `admin-nav.js` and `recruiter-nav.js` keep their own fetch-based section routing, form/filter handling and swipe gestures, and simply listen for `liquidglass:activate` when a drag or keyboard selection asks the page to navigate.
+- **Neutral material, both themes.** The glass is smoky neutral — pale transmission and a white rim in light mode, blue-grey smoke over dark slate in dark mode — with no orange or brown tint. Labels keep full-contrast ink and every highlight is a white/blue-white light, not a colour wash.
+- **One-tab geometry.** The capsule is trimmed by the tab inset and its stretch budget is capped at that inset, so even mid-flight it stays inside a single tab and never paints over a neighbouring label (links render above it). Docks keep their five / eight / five destinations; option groups keep their real filters.
+- **Motion.** Springs integrate on a fixed 1/240 s step, so 60, 120 and 240 Hz panels resolve the same curve. The capsule leads with its leading edge, squashes slightly, sloshes its internal highlights and settles without overshoot flicker; rapid switches retarget the same spring instead of restarting it. Click, keyboard (arrows/Home/End), pointer drag and touch swipe all move the one object; `prefers-reduced-motion` moves it instantly with no stretch.
+- **State survives navigation.** Active state comes from server-rendered `aria-current="page"`, and the last visited index is stored per portal in `sessionStorage` (`sviet-student-dock-index`, `sviet-admin-nav-index`, `sviet-recruiter-nav-index`) so the capsule flows in from the previous workspace and settles on the route after refresh, back or forward.
+- **Degradations.** Without JavaScript the active destination keeps a quiet glass-tint fallback pill and navigation is plain links; without `backdrop-filter` the capsule gets a denser fill. Ordinary buttons, forms and destructive actions are untouched.
 
 ### Admin / TPO control centre
 
@@ -135,15 +140,17 @@ C:\xampp\php\php.exe tests\run.php
 
 The included automated suite covers pure service rules and static security/workflow checks. Complete `PHASE-7-TEST-CHECKLIST.md` on the target XAMPP/MySQL installation for live workflow acceptance; passing static tests alone does not verify a production deployment.
 
-The recruiter dock's gesture logic has an optional Node check. It uses jsdom with stubbed geometry, so it verifies behaviour rather than pixels:
+The shared capsule's gesture and spring logic has an optional Node check. It boots `liquid-glass.js` plus `recruiter-nav.js` in jsdom with stubbed geometry, so it verifies behaviour rather than pixels:
 
 ```bat
 npm install --no-save --no-package-lock jsdom
-node tests\js\recruiter-nav.test.js
+node tests\js\liquid-glass.test.js
 ```
+
+It covers 13 scenarios: boot geometry, click flight, one-tab width, drag and release, reversal/cancel, vertical gestures, synthetic-click suppression, GET filters and history, rapid switching, reduced motion, keyboard preview, cross-page handoff and option groups.
 
 Manual interaction check in a desktop browser and a phone-sized viewport: drag the dock slowly across all five tabs (the bubble should follow the pointer and stretch), reverse direction mid-drag (it should compress), release between tabs (it should settle on the nearest one), swipe the section content sideways on touch, use the GET filters on Jobs and Applicants, then use browser Back and Forward. Enable "reduce motion" in the OS to confirm transitions stop.
 
-The admin rail has no Node test yet; `tests/run.php` asserts the section routes, dock layers, spring constants, CSV-download exemptions and import limits. A static render of the real views with fixture data is available for design review at `preview/admin-portal.html` (served by any static file server; forms are disabled there because the pages are pre-rendered).
+The admin rail and the student dock share the same engine and Node harness; `tests/run.php` additionally asserts the routed sections, shared material layers, spring constants, restore keys, glass groups, CSV-download exemptions and import limits.
 
-The new student dock has no Node test yet; `tests/run.php` covers the theme tokens, the unified sign-in redirect, resume validation, the notification and timeline queries, the recruiter CTC path and the larger droplet geometry. Static previews of the reworked home, login and registration pages are written to `preview/index-*.html` for design review (regenerate them after markup changes).
+Static checks cannot judge how the glass looks, how the spring feels or how touch scrolling behaves; review the three workspaces in a real browser at desktop, tablet and phone widths before accepting a visual change. The Node harness stubs layout, so it verifies geometry and gesture state, not pixels.

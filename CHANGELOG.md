@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Updated
+- Replaced the per-portal indicator scripts and styles with one shared Liquid Glass engine (`assets/css/liquid-glass.css`, `assets/js/liquid-glass.js`): a neutral, one-tab-wide capsule with a smoky body, additive specular cap, masked refraction rim, lower caustic and travelling glint.
+- Student, recruiter and admin docks now only mount the shared engine; each portal keeps its own routing, history, filters and swipe gestures and hands navigation back through `liquidglass:activate`.
+- Admin job, placement and report status/year filters are `[data-glass-group]` option groups using the same material.
+- The capsule stretches only within its own tab (stretch budget equals the tab inset), retargets a fixed 1/240 s spring on rapid switches, persists the last visited tab per portal and settles on the server-rendered destination after refresh, back or forward.
+- Added `tests/js/liquid-glass.test.js` (13 jsdom scenarios) and extended `tests/run.php`; removed the obsolete per-portal dock test.
+
 ## 2.0.0 — 2026-10-19
 
 ### Updated
