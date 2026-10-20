@@ -4,17 +4,19 @@
 
 Campus is a server-rendered placement portal for students, recruiters, and placement teams. The interface uses an institute-focused navy-and-emerald design, responsive navigation, restrained frosted-glass accents, and reduced-motion-aware transitions. The homepage uses a CSS-built abstract hero rather than unverified campus photography. The website does not depend on remote font, Bootstrap, icon, or hero-image CDNs.
 
-The recruiter workspace uses a responsive liquid-glass bottom dock with a gesture-driven, iOS-inspired bubble indicator, while keeping job and candidate information readable on compact screens. The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
+The recruiter workspace uses a compact liquid-glass bottom dock whose active indicator is a translucent 3D glass capsule — one tab wide, with layered specular highlights, a refractive rim and a smoky centre — driven by a spring simulation, while keeping job and candidate information readable on compact screens. The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
 
 ### Recruiter navigation interaction
 
-- Tap or click a tab (Overview, Company, Jobs, Applicants, Interviews) to glide the bubble to it.
-- On desktop, press and drag horizontally anywhere on the dock: the bubble follows the pointer, stretches with travel, and compresses when you reverse direction. Release over a tab to open it. A plain click still opens the tab normally.
+- Tap or click a tab (Overview, Company, Jobs, Applicants, Interviews) to glide the capsule to it.
+- On desktop, press and drag horizontally anywhere on the dock: the capsule follows the pointer, stretches into the direction of travel, squashes slightly to conserve volume, and settles with a short spring. Release over a tab to open it. A plain click still opens the tab normally.
 - On touch screens, swipe the dock left or right, or swipe the section content horizontally, to move to the next or previous section. Vertical scrolling is unaffected.
 - A horizontal trackpad swipe over the section content also moves one section at a time.
 - Arrow keys move focus between the five tabs; Enter opens the focused tab.
 - Sections load in place over `recruiter.php?section=…`, so browser back/forward, direct links, and GET filters keep working. Any failed or unexpected request falls back to a normal page load.
-- `prefers-reduced-motion: reduce` disables the stretch, deform, and section slide while keeping every destination reachable.
+- `prefers-reduced-motion: reduce` disables the spring, stretch, deform, and section slide while keeping every destination reachable.
+
+The capsule is built from stacked CSS layers rather than an image: a translucent body with `backdrop-filter`, a specular band and hot spot (`::before`), a masked 1px refraction ring (`::after`), and three inner spans for the meniscus, lower-rim bounce light and a caustic blob. `recruiter-nav.js` owns its width, position and two custom properties (`--rec-slosh`, `--rec-stretch`); no filter or backdrop animation runs per frame, and the blur is reduced while dragging. Browsers without `backdrop-filter` get a denser glass fill so labels keep their contrast.
 
 ## Run on Windows with XAMPP
 

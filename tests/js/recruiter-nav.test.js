@@ -1,7 +1,8 @@
 // Simulated-DOM regression harness for public/assets/js/recruiter-nav.js.
-// jsdom has no layout engine, so link/indicator geometry is stubbed. This exercises the
-// gesture state machine, not pixels; run it after installing jsdom:
-//   npm install --no-save jsdom && node tests/js/recruiter-nav.test.js
+// jsdom has no layout engine, so tab geometry is stubbed with fixed rectangles.
+// This exercises the spring/gesture state machine, not pixels. Run after:
+//   npm install --no-save --no-package-lock jsdom
+//   node tests/js/recruiter-nav.test.js
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -10,6 +11,11 @@ const { JSDOM } = require('jsdom');
 const root = path.join(__dirname, '..', '..');
 const SCRIPT = fs.readFileSync(path.join(root, 'public/assets/js/recruiter-nav.js'), 'utf8');
 const SECTIONS = ['overview', 'company', 'jobs', 'applicants', 'interviews'];
+const TAB_WIDTH = 144;
+const TAB_HEIGHT = 56;
+const INSET = Math.min(13, Math.max(6, TAB_WIDTH * 0.09));
+const BASE_WIDTH = TAB_WIDTH - INSET;
+const INSET_Y = Math.max(3, Math.min(4, TAB_HEIGHT * 0.06));
 
 const page = (activeIndex) => `<!doctype html><html><head><title>${SECTIONS[activeIndex]}</title></head><body class="recruiter-portal">
 <div class="rec-topbar"><span class="rec-company-state">Approved</span></div>
@@ -20,12 +26,16 @@ const page = (activeIndex) => `<!doctype html><html><head><title>${SECTIONS[acti
   <p class="sr-only" id="recruiter-nav-status" aria-live="polite"></p>
 </main>
 <nav class="rec-bottom-nav">
-  <span class="rec-nav-indicator"></span>
-  ${SECTIONS.map((section, index) => `<a class="rec-nav-link${index === activeIndex ? ' is-active' : ''}" data-rec-section="${section}" href="recruiter.php?section=${section}"${index === activeIndex ? ' aria-current="page"' : ''}><span class="rec-nav-label">${section}</span></a>`).join('\n  ')}
+  <span class="rec-nav-indicator">
+    <span class="rec-nav-bubble-liquid"></span>
+    <span class="rec-nav-bubble-rim"></span>
+    <span class="rec-nav-bubble-caustic"></span>
+  </span>
+  ${SECTIONS.map((section, index) => `<a class="rec-nav-link${index === activeIndex ? ' is-active' : ''}" data-rec-section="${section}" href="recruiter.php?section=${section}"${index === activeIndex ? ' aria-current="page"' : ''}><span class="rec-nav-icon"></span><span class="rec-nav-label">${section}</span></a>`).join('\n  ')}
 </nav>
 </body></html>`;
 
-function build({ activeIndex = 0, storedIndex = null, reducedMotion = false, linkWidth = 144, indicatorWidth = 42 } = {}) {
+function build({ activeIndex = 0, storedIndex = null, reducedMotion = false, tabWidth = TAB_WIDTH } = {}) {
   const dom = new JSDOM(page(activeIndex), {
     url: `https://portal.test/recruiter.php?section=${SECTIONS[activeIndex]}`,
     runScripts: 'outside-only',
@@ -47,19 +57,23 @@ function build({ activeIndex = 0, storedIndex = null, reducedMotion = false, lin
   const nav = document.querySelector('.rec-bottom-nav');
   const indicator = document.querySelector('.rec-nav-indicator');
   const links = Array.from(document.querySelectorAll('.rec-nav-link'));
-  const geometry = { left: 0, top: 0, indicatorWidth };
+
   links.forEach((link, index) => {
-    const width = typeof linkWidth === 'function' ? linkWidth(index) : linkWidth;
-    const left = typeof linkWidth === 'function'
-      ? [0, 152, 300, 448, 600][index]
-      : index * width;
+    const left = index * tabWidth;
     Object.defineProperty(link, 'offsetLeft', { get: () => left });
-    Object.defineProperty(link, 'offsetWidth', { get: () => width });
+    Object.defineProperty(link, 'offsetWidth', { get: () => tabWidth });
+    Object.defineProperty(link, 'offsetTop', { get: () => 7 });
+    Object.defineProperty(link, 'offsetHeight', { get: () => TAB_HEIGHT });
+    link.getBoundingClientRect = () => ({ left, top: 7, width: tabWidth, height: TAB_HEIGHT, right: left + tabWidth, bottom: 7 + TAB_HEIGHT });
   });
-  Object.defineProperty(indicator, 'offsetWidth', { get: () => geometry.indicatorWidth });
-  indicator.getBoundingClientRect = () => ({ width: geometry.indicatorWidth, left: 0, top: 0 });
-  nav.getBoundingClientRect = () => ({ left: geometry.left, top: geometry.top, width: 720, height: 75 });
+
+  nav.getBoundingClientRect = () => ({ left: 0, top: 0, width: tabWidth * 5 + 20, height: TAB_HEIGHT + 14 });
   Object.defineProperty(nav, 'clientLeft', { get: () => 0 });
+  window.getComputedStyle = (element) => ({
+    borderLeftWidth: '1px',
+    borderTopWidth: '1px',
+    getPropertyValue: () => '',
+  });
 
   const captures = new Set();
   nav.setPointerCapture = (id) => captures.add(id);
@@ -87,7 +101,7 @@ function build({ activeIndex = 0, storedIndex = null, reducedMotion = false, lin
   };
 
   window.eval(SCRIPT);
-  return { dom, window, document, nav, indicator, links, store, requests, pushes, geometry };
+  return { dom, window, document, nav, indicator, links, store, requests, pushes };
 }
 
 const pointer = (window, type, { x, y = 30, id = 1, pointerType = 'mouse', button = 0 } = {}) => {
@@ -97,121 +111,156 @@ const pointer = (window, type, { x, y = 30, id = 1, pointerType = 'mouse', butto
   Object.defineProperty(event, 'isPrimary', { value: true });
   return event;
 };
-
-const down = (env, x) => {
-  const link = env.links.reduce((best, candidate) => {
-    const center = candidate.offsetLeft + (candidate.offsetWidth / 2);
-    const distance = Math.abs(center - x);
-    return distance < best.distance ? { link: candidate, distance } : best;
-  }, { link: env.links[0], distance: Infinity }).link;
-  link.dispatchEvent(pointer(env.window, 'pointerdown', { x }));
+const tabCenter = (index, tabWidth = TAB_WIDTH) => (index * tabWidth) + tabWidth / 2;
+// Nav has a 1px border, so the absolutely positioned capsule's origin sits 1px in.
+const expectedLeft = (index) => tabCenter(index) - (BASE_WIDTH / 2) - 1;
+const down = (env, x, extra = {}) => {
+  const index = env.links.reduce((best, link, i) => (Math.abs(tabCenter(i) - x) < Math.abs(tabCenter(best) - x) ? i : best), 0);
+  env.links[index].dispatchEvent(pointer(env.window, 'pointerdown', { x, ...extra }));
 };
-
-const frame = (window) => new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const number = (value, fallback = NaN) => {
+  const match = /-?[\d.]+/.exec(value || '');
+  return match ? Number(match[0]) : fallback;
+};
 const translateX = (indicator) => {
   const match = /translate3d\((-?[\d.]+)px/.exec(indicator.style.transform || '');
-  return match ? Number(match[1]) : null;
+  return match ? Number(match[1]) : NaN;
 };
+const width = (indicator) => number(indicator.style.width);
 
 (async () => {
-  // 1. Static positioning + storage.
-  {
-    const env = build({ activeIndex: 0, storedIndex: 2 });
-    assert.equal(translateX(env.indicator), 339, 'indicator primes at the stored previous tab');
-    await new Promise((resolve) => setTimeout(resolve, 40));
-    assert.equal(translateX(env.indicator), 51, 'indicator glides from the stored tab to the active tab');
-    assert.equal(env.store.get('sviet-recruiter-nav-index'), '0');
-    env.dom.window.close();
-  }
-
-  // 2. Dragging follows the pointer, stretches, and commits the destination.
+  // 1. Boot: capsule is one tab wide, centred on the active tab, hidden until ready.
   {
     const env = build({ activeIndex: 0 });
-    assert.equal(translateX(env.indicator), 51, 'indicator is centred on overview');
-    down(env, 72);
-    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: 120 }));
-    await frame(env.window);
-    assert(env.nav.classList.contains('is-dragging'), 'drag state engages after the horizontal threshold');
-    const stretched = env.indicator.getBoundingClientRect().width;
-    assert(Number(env.indicator.style.width.replace('px', '')) > 42, 'indicator stretches while dragging');
-    const firstFollow = translateX(env.indicator);
-    assert(firstFollow > 0, 'indicator follows the pointer');
-
-    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: 216 }));
-    await frame(env.window);
-    assert(translateX(env.indicator) > firstFollow, 'indicator keeps following the pointer horizontally');
-    assert(env.links[1].classList.contains('is-preview'), 'neighbouring tab previews while dragging');
-
-    env.nav.dispatchEvent(pointer(env.window, 'pointerup', { x: 216 }));
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    assert.equal(env.requests.length, 1, 'drag release requests the destination section once');
-    assert(env.requests[0].url.includes('section=company'), 'drag release targets the tab under the pointer');
-    assert.equal(env.pushes.length, 1, 'drag release pushes one history entry');
-    assert.equal(env.store.get('sviet-recruiter-nav-index'), '1', 'active index is remembered');
-    assert.equal(env.indicator.style.width, '', 'indicator returns to its pill width on release');
-    assert(!env.nav.classList.contains('is-dragging'));
-    assert.equal(env.links[1].getAttribute('aria-current'), 'page');
-    assert.equal(env.links[0].getAttribute('aria-current'), null);
-    assert.equal(env.document.title, 'company', 'document title follows the section');
-    assert.equal(env.document.querySelector('#recruiter-nav-status').textContent, 'company section loaded');
-    assert.equal(env.document.querySelector('#recruiter-section-content .rec-page-heading h1').textContent, 'company');
-    await new Promise((resolve) => setTimeout(resolve, 30));
-    assert.equal(translateX(env.indicator), 195, 'indicator settles on the newly active tab');
-    assert(stretched > 0);
+    assert.equal(width(env.indicator), Number(BASE_WIDTH.toFixed(2)), 'capsule is inset from the full tab width');
+    assert(Math.abs(translateX(env.indicator) - expectedLeft(0)) < 0.2, 'capsule is centred on the active tab');
+    assert.equal(env.indicator.style.height, `${(TAB_HEIGHT - INSET_Y * 2).toFixed(1)}px`, 'capsule height follows the tab');
+    assert.equal(env.indicator.style.top, `${(7 - 1 + INSET_Y).toFixed(1)}px`, 'capsule is vertically centred');
+    assert.equal(env.store.get('sviet-recruiter-nav-index'), '0');
+    await wait(40);
+    assert(env.nav.classList.contains('has-sliding-indicator'), 'capsule is revealed after the first frame');
+    assert.equal(env.indicator.style.getPropertyValue('--rec-slosh'), '0.000', 'interior is level at rest');
     env.dom.window.close();
   }
 
-  // 3. Direction reversal compresses the bubble.
+  // 2. Click: the bubble glides (not jumps) and the section swaps in place.
+  {
+    const env = build({ activeIndex: 0 });
+    await wait(30);
+    env.links[3].dispatchEvent(new env.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1 }));
+    await wait(70);
+    const midX = translateX(env.indicator);
+    assert(midX > tabCenter(0) - BASE_WIDTH / 2 && midX < tabCenter(3) - BASE_WIDTH / 2, 'capsule is mid-flight between tabs');
+    assert(width(env.indicator) > BASE_WIDTH, 'capsule stretches while travelling');
+    assert(Math.abs(number(env.indicator.style.getPropertyValue('--rec-slosh'))) > 0, 'interior liquid sloshes while travelling');
+    assert(env.indicator.classList.contains('is-stretched'), 'stretched state is published for styling');
+
+    await wait(700);
+    assert(Math.abs(translateX(env.indicator) - expectedLeft(3)) < 0.2, 'capsule settles exactly on the destination tab');
+    assert.equal(width(env.indicator), Number(BASE_WIDTH.toFixed(2)), 'capsule returns to its pill width');
+    assert.equal(env.indicator.classList.contains('is-stretched'), false);
+    assert.equal(env.indicator.style.getPropertyValue('--rec-slosh'), '0.000', 'liquid levels out after settling');
+
+    assert.equal(env.requests.length, 1, 'one section request per tab change');
+    assert(env.requests[0].url.includes('section=applicants'));
+    assert.equal(env.pushes.length, 1);
+    assert.equal(env.store.get('sviet-recruiter-nav-index'), '3');
+    assert.equal(env.links[3].getAttribute('aria-current'), 'page');
+    assert.equal(env.links[0].getAttribute('aria-current'), null);
+    assert.equal(env.document.title, 'applicants');
+    env.dom.window.close();
+  }
+
+  // 3. The capsule never leaves its lane: width stays a single tab wide.
+  {
+    const env = build({ activeIndex: 0 });
+    env.links[4].dispatchEvent(new env.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1 }));
+    let widest = 0;
+    for (let frame = 0; frame < 20; frame += 1) {
+      await wait(16);
+      widest = Math.max(widest, width(env.indicator));
+    }
+    assert(widest <= TAB_WIDTH + INSET * 0.5 + 0.01, `capsule stays under one tab wide (was ${widest})`);
+    assert(widest > BASE_WIDTH, 'but it still deforms measurably');
+    env.dom.window.close();
+  }
+
+  // 4. Dragging: the capsule follows the pointer continuously and commits on release.
+  {
+    const env = build({ activeIndex: 0 });
+    await wait(30);
+    down(env, tabCenter(0));
+    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: tabCenter(0) + 8 }));
+    await wait(50);
+    assert(env.nav.classList.contains('is-dragging'), 'vertical-safe horizontal drag engages');
+    assert(width(env.indicator) > BASE_WIDTH, 'capsule stretches under the finger');
+
+    const before = translateX(env.indicator);
+    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: tabCenter(1) }));
+    await wait(90);
+    const after = translateX(env.indicator);
+    assert(after > before, 'capsule follows the pointer across tabs');
+    assert(env.links[1].classList.contains('is-preview'), 'the hovered tab previews while dragging');
+    const dragWidth = width(env.indicator);
+    assert(dragWidth > BASE_WIDTH, 'dragging keeps the liquid stretch');
+
+    env.nav.dispatchEvent(pointer(env.window, 'pointerup', { x: tabCenter(1) }));
+    await wait(700);
+    assert(Math.abs(translateX(env.indicator) - expectedLeft(1)) < 0.2, 'release settles on the nearest tab');
+    assert.equal(env.requests.length, 1);
+    assert(env.requests[0].url.includes('section=company'));
+    assert.equal(env.links[1].getAttribute('aria-current'), 'page');
+    assert.equal(env.links[1].classList.contains('is-preview'), false);
+    assert.equal(env.nav.classList.contains('is-dragging'), false);
+    env.dom.window.close();
+  }
+
+  // 5. Reversal: the capsule compresses rather than ballooning.
   {
     const env = build({ activeIndex: 2 });
-    down(env, 360);
-    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: 420 }));
-    await frame(env.window);
-    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: 470 }));
-    await frame(env.window);
-    const widthForward = Number(env.indicator.style.width.replace('px', ''));
-    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: 466 }));
-    await frame(env.window);
-    const widthReversed = Number(env.indicator.style.width.replace('px', ''));
-    assert(widthReversed < widthForward, 'reversing direction compresses the indicator');
-    env.nav.dispatchEvent(pointer(env.window, 'pointercancel', { x: 466 }));
-    assert(!env.nav.classList.contains('is-dragging'), 'pointercancel clears drag state');
-    assert.equal(env.indicator.style.width, '', 'pointercancel restores the pill');
+    down(env, tabCenter(2));
+    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: tabCenter(2) + 60 }));
+    await wait(200);
+    const fastWidth = width(env.indicator);
+    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: tabCenter(2) + 58 }));
+    await wait(220);
+    const reversedWidth = width(env.indicator);
+    assert(reversedWidth < fastWidth, 'interior drag compresses the capsule after the burst');
+    env.nav.dispatchEvent(pointer(env.window, 'pointercancel', { x: tabCenter(2) + 58 }));
+    await wait(700);
     assert.equal(env.requests.length, 0, 'pointercancel never navigates');
+    assert(Math.abs(translateX(env.indicator) - expectedLeft(2)) < 0.2, 'pointercancel returns to the active tab');
     env.dom.window.close();
   }
 
-  // 4. Vertical movement stays a scroll, and taps still navigate.
+  // 6. Vertical gestures stay page scrolls.
   {
     const env = build({ activeIndex: 0 });
-    down(env, 72);
-    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: 74, y: 90 }));
-    await frame(env.window);
-    assert(!env.nav.classList.contains('is-dragging'), 'vertical gestures never start a drag');
-    env.nav.dispatchEvent(pointer(env.window, 'pointerup', { x: 74, y: 90 }));
-
-    env.links[3].dispatchEvent(new env.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1 }));
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    assert.equal(env.requests.length, 1);
-    assert(env.requests[0].url.includes('section=applicants'), 'tap navigates to the tapped tab');
-    assert.equal(translateX(env.indicator), 483);
+    down(env, tabCenter(0));
+    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: tabCenter(0) + 2, y: 90 }));
+    await wait(60);
+    assert.equal(env.nav.classList.contains('is-dragging'), false, 'vertical movement never engages the drag');
+    env.nav.dispatchEvent(pointer(env.window, 'pointerup', { x: tabCenter(0) + 2, y: 90 }));
+    await wait(60);
+    assert.equal(env.requests.length, 0);
     env.dom.window.close();
   }
 
-  // 5. A suppressed click after a drag does not double-navigate.
+  // 7. A drag suppresses the synthetic click underneath.
   {
     const env = build({ activeIndex: 0 });
-    down(env, 72);
-    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: 216 }));
-    await frame(env.window);
-    env.nav.dispatchEvent(pointer(env.window, 'pointerup', { x: 216 }));
+    down(env, tabCenter(0));
+    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: tabCenter(1) }));
+    await wait(60);
+    env.nav.dispatchEvent(pointer(env.window, 'pointerup', { x: tabCenter(1) }));
     env.links[1].dispatchEvent(new env.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1 }));
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    assert.equal(env.requests.length, 1, 'the synthetic click after a drag is ignored');
+    await wait(80);
+    assert.equal(env.requests.length, 1, 'the synthetic click is ignored');
     env.dom.window.close();
   }
 
-  // 6. GET filter forms and history navigation reuse the client-side section swap.
+  // 8. GET filters and history keep using the in-place section swap.
   {
     const env = build({ activeIndex: 0 });
     const form = env.document.createElement('form');
@@ -220,30 +269,49 @@ const translateX = (indicator) => {
     form.innerHTML = '<input name="section" value="jobs"><input name="status" value="published">';
     env.document.querySelector('#recruiter-section-content').appendChild(form);
     form.dispatchEvent(new env.window.Event('submit', { bubbles: true, cancelable: true }));
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await wait(60);
     assert.equal(env.pushes.length, 1);
-    assert(env.pushes[0].includes('section=jobs') && env.pushes[0].includes('status=published'), 'filter submits keep their query');
+    assert(env.pushes[0].includes('section=jobs') && env.pushes[0].includes('status=published'));
 
     env.window.history.pushState({}, '', '/recruiter.php?section=overview');
     env.window.dispatchEvent(new env.window.PopStateEvent('popstate', { state: {} }));
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await wait(60);
     assert.equal(env.requests.length, 2, 'popstate restores the previous section');
-    assert(env.requests[1].url.includes('section=overview'), 'popstate fetches the history destination');
+    assert(env.requests[1].url.includes('section=overview'));
+    await wait(700);
+    assert(Math.abs(translateX(env.indicator) - expectedLeft(0)) < 0.2, 'capsule follows history navigation');
     env.dom.window.close();
   }
 
-  // 7. Reduced motion keeps the bubble compact.
+  // 9. Rapid tab switching stays stable and lands on the last choice.
   {
-    const env = build({ activeIndex: 1, reducedMotion: true });
-    down(env, 216);
-    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: 420 }));
-    await frame(env.window);
-    assert.equal(env.indicator.style.borderRadius, '', 'no liquid deformation with reduced motion');
-    assert.equal(Number(env.indicator.style.width.replace('px', '')), 42, 'no stretch with reduced motion');
+    const env = build({ activeIndex: 0 });
+    for (const index of [4, 1, 3, 2]) {
+      env.links[index].dispatchEvent(new env.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1 }));
+      await wait(35);
+    }
+    await wait(800);
+    assert(Math.abs(translateX(env.indicator) - expectedLeft(2)) < 0.2, 'the capsule lands on the final tab');
+    assert.equal(env.links[2].getAttribute('aria-current'), 'page');
+    assert.equal(env.document.querySelectorAll('[aria-current="page"]').length, 1, 'exactly one active tab');
+    assert(width(env.indicator) <= TAB_WIDTH + INSET * 0.5 + 0.01, 'no runaway stretch after rapid switching');
     env.dom.window.close();
   }
 
-  // 8. Keyboard focus moves between tabs with arrow keys.
+  // 10. Reduced motion: instant, undeformed, still functional.
+  {
+    const env = build({ activeIndex: 0, reducedMotion: true });
+    await wait(30);
+    env.links[4].dispatchEvent(new env.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1 }));
+    await wait(30);
+    assert(Math.abs(translateX(env.indicator) - expectedLeft(4)) < 0.2, 'reduced motion moves instantly');
+    assert.equal(width(env.indicator), Number(BASE_WIDTH.toFixed(2)), 'no stretch under reduced motion');
+    assert.equal(env.indicator.style.getPropertyValue('--rec-slosh'), '0.000');
+    assert.equal(env.requests.length, 1, 'sections still change');
+    env.dom.window.close();
+  }
+
+  // 11. Keyboard support is unchanged.
   {
     const env = build({ activeIndex: 0 });
     env.links[0].focus();
@@ -259,29 +327,16 @@ const translateX = (indicator) => {
     env.dom.window.close();
   }
 
-  // 9. Unknown routes fall back to full navigation.
+  // 12. Cross-page handoff starts from the previously visited tab.
   {
-    const env = build({ activeIndex: 0 });
-    env.window.history.pushState({}, '', '/recruiter.php?section=overview&mode=create');
-    env.links[2].dispatchEvent(new env.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1 }));
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    assert.equal(env.requests.length, 1, 'job creation links use the same section route');
+    const env = build({ activeIndex: 0, storedIndex: 3 });
+    assert(Math.abs(translateX(env.indicator) - expectedLeft(3)) < 0.2, 'capsule boots where the visitor came from');
+    await wait(700);
+    assert(Math.abs(translateX(env.indicator) - expectedLeft(0)) < 0.2, 'then glides to the rendered section');
     env.dom.window.close();
   }
 
-  // 10. Grabbing a tab off-centre never makes the bubble jump.
-  {
-    const env = build({ activeIndex: 0 });
-    const resting = translateX(env.indicator);
-    down(env, 102);
-    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: 110 }));
-    await frame(env.window);
-    const afterFirstFrame = translateX(env.indicator);
-    assert(afterFirstFrame - resting < 16, 'bubble tracks the drag without jumping to the pointer');
-    env.dom.window.close();
-  }
-
-  console.log('PASS recruiter nav gesture suite (10 scenarios, simulated DOM)');
+  console.log('PASS recruiter nav liquid-glass suite (12 scenarios, simulated DOM)');
 })().catch((error) => {
   console.error(error);
   process.exit(1);
