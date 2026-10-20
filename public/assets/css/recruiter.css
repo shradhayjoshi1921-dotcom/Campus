@@ -385,6 +385,7 @@ body.recruiter-portal :focus-visible { outline: 3px solid #a9e8c5; outline-offse
 }
 .rec-nav-link {
   position: relative;
+  z-index: 1;
   display: grid;
   min-width: 0;
   min-height: 59px;
@@ -410,7 +411,7 @@ body.recruiter-portal :focus-visible { outline: 3px solid #a9e8c5; outline-offse
   background: transparent;
   content: "";
   transform: scale(.76);
-  transition: transform .24s cubic-bezier(.2,.8,.25,1), background .24s ease, border-color .24s ease, box-shadow .24s ease;
+  transition: transform .24s cubic-bezier(.2,.8,.25,1), opacity .18s ease, background .24s ease, border-color .24s ease, box-shadow .24s ease;
 }
 .rec-nav-link:hover { color: #dce9ed; }
 .rec-nav-link.is-active { color: #d7f6e3; }
@@ -421,6 +422,43 @@ body.recruiter-portal :focus-visible { outline: 3px solid #a9e8c5; outline-offse
   transform: scale(1);
   animation: rec-active-bubble 3.4s ease-in-out infinite;
 }
+.rec-nav-indicator {
+  position: absolute;
+  z-index: 0;
+  top: 12px;
+  left: 0;
+  display: block;
+  width: 42px;
+  height: 37px;
+  border: 1px solid rgba(217,255,232,.33);
+  border-radius: 15px;
+  opacity: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(19px 8px at 31% 9%, rgba(255,255,255,.43), transparent 100%),
+    radial-gradient(circle at 31% 23%, rgba(250,255,252,.23), rgba(120,208,159,.25) 45%, rgba(37,99,72,.32));
+  box-shadow: inset 1px 2px 7px rgba(255,255,255,.22), inset 0 -5px 11px rgba(28,88,60,.14), 0 6px 19px rgba(29,119,74,.2), 0 0 13px rgba(186,246,210,.1);
+  -webkit-backdrop-filter: blur(18px) saturate(175%);
+  backdrop-filter: blur(18px) saturate(175%);
+  transform: translate3d(0,0,0);
+  transition: transform .68s cubic-bezier(.2,.82,.22,1), opacity .18s ease, box-shadow .28s ease;
+  will-change: transform;
+}
+.rec-nav-indicator::before {
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  width: 18px;
+  height: 4px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, rgba(255,255,255,.08), rgba(255,255,255,.58), rgba(255,255,255,.08));
+  content: "";
+  filter: blur(.3px);
+}
+.rec-bottom-nav.has-sliding-indicator .rec-nav-indicator { opacity: 1; }
+.rec-bottom-nav.has-sliding-indicator .rec-nav-link.is-active::before { opacity: 0; animation: none; }
+.rec-bottom-nav.is-priming .rec-nav-indicator { transition: none !important; }
+.rec-nav-indicator.is-moving { animation: rec-liquid-wobble .68s cubic-bezier(.18,.84,.24,1) both; }
 .rec-nav-icon { position: relative; z-index: 1; display: grid; width: 23px; height: 22px; place-items: center; }
 .rec-nav-icon svg { width: 19px; height: 19px; }
 .rec-nav-label { position: relative; z-index: 1; overflow: hidden; max-width: 100%; text-overflow: ellipsis; white-space: nowrap; }
@@ -431,6 +469,11 @@ body.recruiter-portal :focus-visible { outline: 3px solid #a9e8c5; outline-offse
 
 @keyframes rec-orbit { from { transform: translate3d(0, 0, 0) scale(.98); } to { transform: translate3d(-10px, 13px, 0) scale(1.03); } }
 @keyframes rec-active-bubble { 0%, 100% { box-shadow: inset 2px 3px 10px rgba(255,255,255,.1), 0 5px 18px rgba(42,129,82,.13); } 50% { box-shadow: inset 2px 3px 12px rgba(255,255,255,.15), 0 7px 21px rgba(42,129,82,.2); } }
+@keyframes rec-liquid-wobble {
+  0%, 100% { border-radius: 15px; }
+  34% { border-radius: 48% 36% 43% 54% / 43% 58% 42% 60%; }
+  68% { border-radius: 38% 54% 56% 42% / 53% 42% 58% 46%; }
+}
 @keyframes rec-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 [data-reveal] { animation: rec-rise .45s ease both; }
 .rec-stat-card:nth-child(2) { animation-delay: 45ms; }
@@ -496,6 +539,8 @@ body.recruiter-portal :focus-visible { outline: 3px solid #a9e8c5; outline-offse
   .rec-bottom-nav { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: calc(100% - 18px); gap: 0; padding: 6px; border-radius: 22px; }
   .rec-nav-link { min-height: 56px; gap: 3px; border-radius: 16px; font-size: 8px; }
   .rec-nav-link::before { top: 1px; width: 34px; height: 34px; border-radius: 13px; }
+  .rec-nav-indicator { top: 8px; width: 34px; height: 34px; border-radius: 13px; }
+  .rec-nav-indicator::before { left: 5px; width: 15px; }
   .rec-nav-icon { width: 21px; height: 20px; }
   .rec-nav-icon svg { width: 18px; height: 18px; }
   .rec-footer { flex-direction: column; gap: 3px; margin-top: -94px; padding: 0 18px 20px; font-size: 8px; }
@@ -507,6 +552,7 @@ body.recruiter-portal :focus-visible { outline: 3px solid #a9e8c5; outline-offse
   .rec-stat-card { padding: 11px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .rec-orb, .rec-nav-link.is-active::before, [data-reveal] { animation: none !important; }
-  .rec-button, .rec-signout, .rec-nav-link, .rec-nav-link::before, .rec-job-card { transition: none !important; }
+  .rec-orb, .rec-nav-link.is-active::before, .rec-nav-indicator, [data-reveal] { animation: none !important; }
+  .rec-button, .rec-signout, .rec-nav-link, .rec-nav-link::before, .rec-nav-indicator, .rec-job-card { transition: none !important; }
+  .rec-nav-indicator { will-change: auto; }
 }

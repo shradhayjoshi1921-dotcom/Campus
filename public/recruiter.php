@@ -845,6 +845,7 @@ $pageTitles = [
 [$pageTitle, $pageDescription] = $pageTitles[$section];
 $appCssVersion = (string) (filemtime(__DIR__ . '/assets/css/app.css') ?: 1);
 $recruiterCssVersion = (string) (filemtime(__DIR__ . '/assets/css/recruiter.css') ?: 1);
+$recruiterNavJsVersion = (string) (filemtime(__DIR__ . '/assets/js/recruiter-nav.js') ?: 1);
 
 require __DIR__ . '/views/recruiter/layout-start.php';
 require __DIR__ . '/views/recruiter/' . $section . '.php';
