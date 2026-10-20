@@ -1,93 +1,97 @@
 /*
- * SVIET portal — shared appearance layer.
- * Light (default): warm orange and white, watery peach glass.
- * Dark: deep water teal with ember-orange accents.
- * Every portal loads this before its own stylesheet; `data-theme` is set on
- * <html> before first paint by the inline bootstrap in each layout.
+ * SVIET portal — shared appearance layer, "Ember & Slate".
+ * A restrained professional palette: warm ivory paper, slate ink, ember accent,
+ * and real water glass. Dark mode is a cold slate pool with the same ember.
  */
 
 :root {
   color-scheme: light;
-  --sv-bg: #fff8f1;
-  --sv-bg-deep: #ffeddd;
-  --sv-bg-glow: #ffe2c9;
+  --sv-bg: #faf7f3;
+  --sv-bg-deep: #f2ece5;
+  --sv-bg-glow: #f6e3d3;
   --sv-surface: #fffdfa;
-  --sv-surface-2: #fff4e9;
-  --sv-glass: rgba(255, 255, 255, .76);
-  --sv-glass-strong: rgba(255, 255, 255, .92);
-  --sv-ink: #2c1a10;
-  --sv-ink-soft: #4a3224;
-  --sv-muted: #7c6353;
-  --sv-dim: #9c8272;
-  --sv-line: rgba(154, 88, 44, .16);
-  --sv-line-strong: rgba(154, 88, 44, .3);
-  --sv-orange: #ef6a1c;
-  --sv-orange-deep: #c94c09;
-  --sv-orange-soft: #ffe1cc;
-  --sv-apricot: #ffb784;
-  --sv-honey: #ffcf9c;
-  --sv-ok: #1f7a4d;
-  --sv-ok-soft: #d9f6e3;
-  --sv-warn: #9c5a12;
-  --sv-warn-soft: #ffedcd;
-  --sv-bad: #b02a1d;
-  --sv-bad-soft: #ffe0da;
-  --sv-shadow: 0 26px 64px rgba(150, 80, 32, .16);
-  --sv-shadow-soft: 0 12px 32px rgba(150, 80, 32, .1);
-  --sv-water: linear-gradient(180deg, rgba(255, 255, 255, .88), rgba(255, 226, 202, .7));
-  --sv-water-strong: linear-gradient(160deg, rgba(255, 255, 255, .96), rgba(255, 197, 152, .62));
-  --sv-water-ink: #8a4318;
-  --sv-drop: linear-gradient(180deg, rgba(255, 214, 180, .72), rgba(255, 150, 88, .46) 54%, rgba(255, 186, 132, .66));
-  --sv-drop-rim: rgba(255, 255, 255, .95);
-  --sv-drop-shadow: rgba(210, 110, 44, .32);
-  --sv-dock-shell: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(255, 227, 203, .82));
-  --sv-dock-line: rgba(206, 128, 72, .32);
-  --sv-dock-ink: #5b3722;
-  --sv-dock-muted: #956f57;
-  --sv-dock-active: #8d3f0d;
+  --sv-surface-2: #f9f3ec;
+  --sv-glass: rgba(255, 253, 250, .78);
+  --sv-glass-strong: rgba(255, 253, 250, .93);
+  --sv-ink: #1f2429;
+  --sv-ink-soft: #3d454e;
+  --sv-muted: #69727d;
+  --sv-dim: #8b939d;
+  --sv-line: rgba(31, 36, 41, .12);
+  --sv-line-strong: rgba(31, 36, 41, .22);
+  --sv-orange: #cf5a17;
+  --sv-orange-deep: #a9430a;
+  --sv-orange-soft: #f7e4d5;
+  --sv-apricot: #e8a066;
+  --sv-honey: #e9c08a;
+  --sv-ok: #1c6a45;
+  --sv-ok-soft: #dfefe5;
+  --sv-warn: #8a5714;
+  --sv-warn-soft: #f7ecd8;
+  --sv-bad: #a52a1d;
+  --sv-bad-soft: #f8e2dd;
+  --sv-shadow: 0 28px 68px rgba(46, 38, 32, .13);
+  --sv-shadow-soft: 0 12px 32px rgba(46, 38, 32, .08);
+  --sv-water: linear-gradient(180deg, rgba(255, 253, 250, .9), rgba(246, 231, 217, .74));
+  --sv-water-strong: linear-gradient(160deg, rgba(255, 255, 255, .97), rgba(242, 220, 200, .72));
+  --sv-water-ink: #7a3d13;
+  --sv-drop: linear-gradient(180deg, rgba(255, 250, 244, .95), rgba(240, 197, 163, .78) 46%, rgba(214, 139, 88, .82) 82%, rgba(190, 110, 60, .86));
+  --sv-drop-rim: rgba(255, 255, 255, .96);
+  --sv-drop-shadow: rgba(120, 68, 34, .3);
+  --sv-dock-shell: linear-gradient(180deg, rgba(255, 253, 250, .93), rgba(246, 231, 217, .84));
+  --sv-dock-line: rgba(31, 36, 41, .14);
+  --sv-dock-ink: #3b2a1d;
+  --sv-dock-muted: #7d7468;
+  --sv-dock-active: #7a3d13;
   --sv-dock-badge: linear-gradient(150deg, #ffd9c6, #ff9f6e);
+  --sv-radius: 20px;
+  --sv-ease: cubic-bezier(.22, 1, .36, 1);
+  --sv-ease-out: cubic-bezier(.16, .84, .3, 1);
+  --sv-dur-fast: 120ms;
+  --sv-dur: 220ms;
+  --sv-dur-slow: 340ms;
   --sv-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 html[data-theme="dark"] {
   color-scheme: dark;
-  --sv-bg: #051519;
-  --sv-bg-deep: #031013;
-  --sv-bg-glow: #0a2d2f;
-  --sv-surface: #0b2327;
-  --sv-surface-2: #103037;
-  --sv-glass: rgba(10, 33, 37, .78);
-  --sv-glass-strong: rgba(9, 29, 33, .94);
-  --sv-ink: #eef8f6;
-  --sv-ink-soft: #d3e7e3;
-  --sv-muted: #9fbdb8;
-  --sv-dim: #7b9a97;
-  --sv-line: rgba(190, 232, 228, .14);
-  --sv-line-strong: rgba(190, 232, 228, .26);
-  --sv-orange: #ff8a4b;
+  --sv-bg: #0d1114;
+  --sv-bg-deep: #080b0e;
+  --sv-bg-glow: #131b20;
+  --sv-surface: #151b20;
+  --sv-surface-2: #1a2229;
+  --sv-glass: rgba(20, 27, 33, .82);
+  --sv-glass-strong: rgba(18, 24, 29, .94);
+  --sv-ink: #eef2f5;
+  --sv-ink-soft: #d2dae1;
+  --sv-muted: #9aa6b2;
+  --sv-dim: #7c8894;
+  --sv-line: rgba(214, 228, 238, .13);
+  --sv-line-strong: rgba(214, 228, 238, .24);
+  --sv-orange: #f08a4b;
   --sv-orange-deep: #ff6f2b;
-  --sv-orange-soft: rgba(255, 138, 75, .18);
-  --sv-apricot: #ffb27a;
-  --sv-honey: #f5d3a0;
-  --sv-ok: #8fe4bc;
-  --sv-ok-soft: rgba(80, 200, 150, .16);
-  --sv-warn: #f4cd92;
-  --sv-warn-soft: rgba(244, 205, 146, .14);
-  --sv-bad: #ffb2a8;
-  --sv-bad-soft: rgba(255, 150, 140, .14);
-  --sv-shadow: 0 30px 72px rgba(0, 0, 0, .5);
-  --sv-shadow-soft: 0 14px 36px rgba(0, 0, 0, .32);
-  --sv-water: linear-gradient(180deg, rgba(24, 62, 66, .88), rgba(7, 28, 32, .82));
-  --sv-water-strong: linear-gradient(160deg, rgba(38, 92, 94, .9), rgba(6, 24, 28, .9));
-  --sv-water-ink: #d8f2ee;
-  --sv-drop: linear-gradient(180deg, rgba(126, 214, 208, .34), rgba(24, 96, 100, .44) 52%, rgba(12, 58, 64, .6));
-  --sv-drop-rim: rgba(214, 250, 246, .82);
-  --sv-drop-shadow: rgba(0, 10, 12, .6);
-  --sv-dock-shell: linear-gradient(180deg, rgba(17, 50, 54, .92), rgba(5, 22, 26, .96));
-  --sv-dock-line: rgba(168, 226, 220, .22);
-  --sv-dock-ink: #e6f6f3;
-  --sv-dock-muted: #9dbdb9;
-  --sv-dock-active: #fff3e8;
+  --sv-orange-soft: rgba(240, 138, 75, .16);
+  --sv-apricot: #dda075;
+  --sv-honey: #e6c99f;
+  --sv-ok: #8fd9b3;
+  --sv-ok-soft: rgba(80, 190, 140, .14);
+  --sv-warn: #e9c894;
+  --sv-warn-soft: rgba(233, 200, 148, .12);
+  --sv-bad: #f3aca2;
+  --sv-bad-soft: rgba(243, 140, 128, .12);
+  --sv-shadow: 0 32px 74px rgba(0, 0, 0, .55);
+  --sv-shadow-soft: 0 14px 36px rgba(0, 0, 0, .38);
+  --sv-water: linear-gradient(180deg, rgba(28, 38, 45, .9), rgba(15, 22, 27, .86));
+  --sv-water-strong: linear-gradient(160deg, rgba(38, 51, 60, .94), rgba(13, 20, 25, .9));
+  --sv-water-ink: #f4d9c4;
+  --sv-drop: linear-gradient(180deg, rgba(255, 245, 236, .32), rgba(240, 138, 75, .42) 44%, rgba(146, 78, 42, .55) 82%, rgba(92, 52, 30, .6));
+  --sv-drop-rim: rgba(255, 236, 220, .72);
+  --sv-drop-shadow: rgba(0, 0, 0, .6);
+  --sv-dock-shell: linear-gradient(180deg, rgba(25, 34, 40, .94), rgba(11, 16, 20, .96));
+  --sv-dock-line: rgba(214, 228, 238, .16);
+  --sv-dock-ink: #eaf0f4;
+  --sv-dock-muted: #94a0ac;
+  --sv-dock-active: #ffd9c0;
   --sv-dock-badge: linear-gradient(150deg, #ffd9c6, #ff9f6e);
 }
 
@@ -520,3 +524,368 @@ html[data-theme="dark"] body.recruiter-portal .rec-dock-link.is-active,
 html[data-theme="dark"] body.recruiter-portal .rec-dock-link.is-preview,
 html[data-theme="dark"] body.admin-portal .admin-dock-link.is-active,
 html[data-theme="dark"] body.admin-portal .admin-dock-link.is-preview { text-shadow: 0 1px 2px rgba(0, 12, 14, .55); }
+
+/* ======================================================================
+ * Floating bubble chrome — replaces the full-width top bars.
+ * Bubbles are glass, not a bar: each one is its own sphere of water.
+ * ==================================================================== */
+.bubble-top {
+  position: sticky;
+  z-index: 120;
+  top: max(10px, env(safe-area-inset-top, 0px));
+  display: flex;
+  width: min(1180px, calc(100% - 20px));
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px auto 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+.bubble-top > * { pointer-events: auto; }
+
+.bubble-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.bubble {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--sv-line-strong);
+  border-radius: 999px;
+  color: var(--sv-ink);
+  background:
+    radial-gradient(120% 140% at 24% -20%, rgba(255, 255, 255, .95), rgba(255, 255, 255, .35) 46%, rgba(255, 255, 255, 0) 72%),
+    var(--sv-glass-strong);
+  box-shadow:
+    0 14px 30px -14px rgba(46, 38, 32, .4),
+    inset 0 1px rgba(255, 255, 255, .9),
+    inset 0 -8px 14px -12px rgba(120, 68, 34, .4);
+  -webkit-backdrop-filter: blur(18px) saturate(175%);
+  backdrop-filter: blur(18px) saturate(175%);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  cursor: pointer;
+  transition: transform .22s var(--sv-ease), box-shadow .22s var(--sv-ease), border-color .22s var(--sv-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+html[data-theme="dark"] .bubble {
+  background:
+    radial-gradient(120% 140% at 24% -20%, rgba(226, 240, 248, .22), rgba(226, 240, 248, .06) 46%, rgba(255, 255, 255, 0) 72%),
+    var(--sv-glass-strong);
+  box-shadow:
+    0 16px 32px -16px rgba(0, 0, 0, .6),
+    inset 0 1px rgba(255, 255, 255, .16),
+    inset 0 -10px 16px -14px rgba(240, 138, 75, .35);
+}
+.bubble:hover {
+  border-color: var(--sv-orange);
+  box-shadow:
+    0 18px 38px -16px rgba(120, 68, 34, .48),
+    inset 0 1px rgba(255, 255, 255, .95);
+  transform: translateY(-2px);
+}
+.bubble:active { transform: translateY(0) scale(.965); }
+.bubble:focus-visible { outline: 3px solid var(--sv-orange); outline-offset: 3px; }
+
+.bubble--icon {
+  width: 46px;
+  min-width: 46px;
+  padding: 0;
+  justify-content: center;
+}
+.bubble--icon svg { width: 19px; height: 19px; }
+
+.bubble--brand {
+  padding: 5px 18px 5px 6px;
+  border-radius: 999px;
+}
+.bubble-brand-mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fffaf5;
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(150deg, #ea9a5f, #c95313);
+  box-shadow: 0 4px 12px rgba(160, 78, 26, .34), inset 0 1px rgba(255, 255, 255, .5);
+  font-size: 13px;
+  font-weight: 800;
+}
+.bubble-brand-copy { display: grid; gap: 1px; line-height: 1.1; }
+.bubble-brand-copy strong { color: var(--sv-ink); font-size: 12.5px; letter-spacing: .1em; }
+.bubble-brand-copy small { color: var(--sv-muted); font-size: 8.5px; letter-spacing: .13em; text-transform: uppercase; }
+
+.bubble--cta {
+  color: #fff8f2;
+  border-color: rgba(169, 67, 10, .5);
+  background: linear-gradient(150deg, #f09a5c, #c95313);
+  box-shadow: 0 14px 28px -12px rgba(169, 67, 10, .55), inset 0 1px rgba(255, 255, 255, .4);
+}
+.bubble--cta:hover { color: #fff; border-color: #a9430a; }
+.bubble--account {
+  width: 46px;
+  min-width: 46px;
+  padding: 0;
+  justify-content: center;
+  font-size: 13px;
+  letter-spacing: .02em;
+}
+.bubble--state {
+  color: var(--sv-ink-soft);
+  font-size: 11px;
+  font-weight: 650;
+}
+.bubble--state .bubble-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sv-ok);
+  box-shadow: 0 0 0 3px var(--sv-ok-soft);
+}
+.bubble--state.is-pending .bubble-dot { background: var(--sv-warn); box-shadow: 0 0 0 3px var(--sv-warn-soft); }
+.bubble--state.is-rejected .bubble-dot { background: var(--sv-bad); box-shadow: 0 0 0 3px var(--sv-bad-soft); }
+.bubble-form { display: inline-flex; margin: 0; }
+.bubble-form .bubble { font: inherit; }
+
+/* Theme switch inside a bubble keeps its frosted track, loses the pill frame. */
+.bubble .theme-toggle,
+.bubble.theme-toggle {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.bubble .theme-toggle:hover,
+.bubble.theme-toggle:hover { border: 0; transform: none; }
+.bubble .theme-toggle__label { display: none; }
+
+/* -------------------------------------------------- watery navigation sheet */
+.bubble-sheet {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 14px 24px;
+  background: rgba(20, 17, 14, .34);
+  -webkit-backdrop-filter: blur(8px) saturate(130%);
+  backdrop-filter: blur(8px) saturate(130%);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--sv-dur) var(--sv-ease), visibility var(--sv-dur);
+}
+html[data-theme="dark"] .bubble-sheet { background: rgba(0, 0, 0, .55); }
+.bubble-sheet.is-open { opacity: 1; visibility: visible; }
+.bubble-sheet__panel {
+  width: min(430px, 100%);
+  padding: 16px;
+  border: 1px solid var(--sv-line-strong);
+  border-radius: 30px;
+  background:
+    radial-gradient(120% 90% at 20% -10%, rgba(255, 255, 255, .9), rgba(255, 255, 255, .2) 46%, rgba(255, 255, 255, 0) 70%),
+    var(--sv-water-strong);
+  box-shadow:
+    0 40px 90px -30px rgba(46, 38, 32, .6),
+    inset 0 1px rgba(255, 255, 255, .9);
+  -webkit-backdrop-filter: blur(26px) saturate(185%);
+  backdrop-filter: blur(26px) saturate(185%);
+  transform: translateY(-12px) scale(.97);
+  transform-origin: 70% -10%;
+  transition: transform var(--sv-dur-slow) var(--sv-ease);
+}
+html[data-theme="dark"] .bubble-sheet__panel {
+  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, .8), inset 0 1px rgba(255, 255, 255, .14);
+}
+.bubble-sheet.is-open .bubble-sheet__panel { transform: translateY(0) scale(1); }
+.bubble-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 2px 2px 0 8px;
+}
+.bubble-sheet__head strong { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--sv-muted); }
+.bubble-sheet__links { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.bubble-sheet__links a,
+.bubble-sheet__links button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  border: 0;
+  border-radius: 16px;
+  color: var(--sv-ink);
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--sv-dur-fast) var(--sv-ease), transform var(--sv-dur-fast) var(--sv-ease);
+}
+.bubble-sheet__links a:hover,
+.bubble-sheet__links button:hover { background: var(--sv-orange-soft); transform: translateX(2px); }
+.bubble-sheet__links .bubble-sheet__icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--sv-orange-deep);
+  background: var(--sv-surface-2);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .8);
+}
+.bubble-sheet__links svg { width: 16px; height: 16px; }
+.bubble-sheet__foot { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--sv-line); }
+body.sheet-open { overflow: hidden; }
+
+/* ======================================================================
+ * Water dock v3 — the active drop is larger than the bar and rises above it.
+ * The capsule lives outside the scrolling track so nothing clips it.
+ * ==================================================================== */
+.sv-dock,
+.admin-dock,
+.rec-dock {
+  overflow: visible;
+}
+.sv-dock-track,
+.admin-dock-track,
+.rec-dock-track {
+  position: relative;
+  z-index: 3;
+}
+.sv-dock-indicator,
+.admin-dock-indicator,
+.rec-dock-indicator {
+  z-index: 2;
+  border-radius: 48% 48% 44% 44% / 34% 34% 66% 66%;
+  transform-origin: 50% 78%;
+}
+.sv-dock-indicator::before,
+.admin-dock-indicator::before,
+.rec-dock-indicator::before {
+  /* Wet cap: the droplet catches light at its crown. */
+  border-radius: 50% 50% 40% 40% / 46% 46% 54% 54%;
+}
+.sv-dock-link.is-active .sv-dock-icon,
+.admin-dock-link.is-active .admin-dock-icon,
+.rec-dock-link.is-active .rec-dock-icon {
+  transform: translateY(-2px) scale(1.14);
+}
+.sv-dock-link.is-active .sv-dock-label,
+.admin-dock-link.is-active .admin-dock-label,
+.rec-dock-link.is-active .rec-dock-label {
+  transform: translateY(1px);
+}
+
+/* ======================================================================
+ * Motion system — frame-rate independent, GPU-only, and calm.
+ * ==================================================================== */
+@view-transition { navigation: auto; }
+::view-transition-old(root) {
+  animation: sv-vt-out 150ms var(--sv-ease) both;
+}
+::view-transition-new(root) {
+  animation: sv-vt-in 260ms var(--sv-ease) both;
+}
+@keyframes sv-vt-out {
+  to { opacity: 0; transform: translate3d(0, -6px, 0) scale(.995); }
+}
+@keyframes sv-vt-in {
+  from { opacity: 0; transform: translate3d(0, 10px, 0) scale(.998); }
+  to { opacity: 1; transform: none; }
+}
+
+body > main,
+.dashboard,
+.admin-main,
+.rec-main {
+  animation: sv-page-in 320ms var(--sv-ease) both;
+}
+@keyframes sv-page-in {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Interaction polish that reads as higher refresh rate: short, eased, GPU. */
+a, button, .bubble, .sv-dock-link, .admin-dock-link, .rec-dock-link {
+  transition-timing-function: var(--sv-ease);
+}
+button, a { touch-action: manipulation; }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  body > main,
+  .dashboard,
+  .admin-main,
+  .rec-main { animation: none !important; }
+  .bubble, .bubble-sheet__panel, .bubble-sheet { transition: none !important; }
+  .bubble:hover { transform: none; }
+}
+
+/* -------------------------------------------------- recruiter dock (real names)
+ * The recruiter rail uses .rec-bottom-nav / .rec-nav-indicator; give it the
+ * same water, the same protrusion and the same theme colours as the others.
+ */
+.rec-bottom-nav { overflow: visible; }
+.rec-bottom-nav .rec-nav-indicator {
+  z-index: 1;
+  border-radius: 48% 48% 44% 44% / 34% 34% 66% 66%;
+  transform-origin: 50% 78%;
+  background: var(--sv-drop);
+  box-shadow:
+    0 20px 38px -16px var(--sv-drop-shadow),
+    0 -8px 22px -14px rgba(255, 190, 150, .35),
+    0 0 0 .5px rgba(31, 36, 41, .16),
+    inset 0 3px 4px var(--sv-drop-rim),
+    inset 0 -3px 4px rgba(255, 255, 255, .35);
+  -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.03);
+  backdrop-filter: blur(14px) saturate(190%) brightness(1.03);
+}
+.rec-bottom-nav .rec-nav-link { z-index: 2; }
+html[data-theme="light"] .rec-bottom-nav {
+  border-color: var(--sv-dock-line);
+  background: var(--sv-dock-shell);
+  box-shadow: 0 22px 48px -18px rgba(46, 38, 32, .45), inset 0 1px rgba(255, 255, 255, .9);
+}
+html[data-theme="dark"] .rec-bottom-nav {
+  border-color: var(--sv-dock-line);
+  background: var(--sv-dock-shell);
+  box-shadow: 0 24px 54px rgba(0, 0, 0, .55), inset 0 1px rgba(255, 255, 255, .12);
+}
+html[data-theme="light"] .rec-nav-link { color: var(--sv-dock-muted); }
+html[data-theme="light"] .rec-nav-link.is-active { color: var(--sv-dock-active); }
+html[data-theme="dark"] .rec-nav-link { color: var(--sv-dock-muted); }
+html[data-theme="dark"] .rec-nav-link.is-active { color: var(--sv-dock-active); }
+
+/* The admin rail also needs to paint above its own shell. */
+.admin-dock .admin-dock-indicator { top: auto; }
+.admin-dock-track .admin-dock-link { z-index: 3; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rec-bottom-nav .rec-nav-indicator::before,
+  .admin-dock-indicator::before,
+  .sv-dock-indicator::before { animation: none !important; }
+}

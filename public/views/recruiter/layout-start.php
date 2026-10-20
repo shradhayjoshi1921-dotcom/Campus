@@ -31,35 +31,34 @@
     <span class="rec-orb rec-orb--three"></span>
 </div>
 
-<header class="rec-topbar">
-    <a class="rec-brand" href="index.php" aria-label="SVIET placement portal home">
-        <span class="rec-brand-mark" aria-hidden="true">S</span>
-        <span class="rec-brand-copy">
+<header class="bubble-top bubble-top--portal" aria-label="Recruiter workspace">
+    <a class="bubble bubble--brand" href="index.php" aria-label="SVIET placement portal home">
+        <span class="bubble-brand-mark" aria-hidden="true">S</span>
+        <span class="bubble-brand-copy">
             <strong>SVIET</strong>
-            <small>RECRUITER WORKSPACE</small>
+            <small>Recruiter</small>
         </span>
     </a>
-
-    <div class="rec-topbar-right">
-        <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch appearance">
+    <div class="bubble-cluster">
+        <button class="bubble bubble--icon" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch appearance">
             <span class="theme-toggle__track" aria-hidden="true">
                 <svg class="theme-toggle__icon theme-toggle__icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
                 <svg class="theme-toggle__icon theme-toggle__icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.4A8.2 8.2 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4Z"/></svg>
             </span>
-            <span class="theme-toggle__label">Light orange</span>
         </button>
-        <span class="rec-company-state rec-company-state--<?= recruiter_h(str_replace('_', '-', $companyStatus)) ?>">
-            <span class="rec-status-dot" aria-hidden="true"></span>
+        <span class="bubble bubble--state rec-company-state rec-company-state--<?= recruiter_h(str_replace('_', '-', $companyStatus)) ?>">
+            <span class="bubble-dot" aria-hidden="true"></span>
             <?= recruiter_h($companyStatusLabel) ?>
         </span>
-        <div class="rec-account">
-            <span class="rec-avatar" aria-hidden="true"><?= recruiter_h(strtoupper(mb_substr((string) $user['name'], 0, 1))) ?></span>
-            <span class="rec-account-name"><?= recruiter_h((string) $user['name']) ?></span>
-        </div>
-        <form method="post" action="index.php" class="rec-signout-form">
+        <span class="bubble bubble--account" title="<?= recruiter_h((string) $user['name']) ?>" aria-label="Signed in as <?= recruiter_h((string) $user['name']) ?>">
+            <?= recruiter_h(strtoupper(mb_substr((string) $user['name'], 0, 1))) ?>
+        </span>
+        <form method="post" action="index.php" class="bubble-form">
             <input type="hidden" name="_csrf" value="<?= recruiter_h($csrf) ?>">
             <input type="hidden" name="action" value="logout">
-            <button class="rec-signout" type="submit">Sign out</button>
+            <button class="bubble bubble--icon" type="submit" aria-label="Sign out" title="Sign out">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 8l4 4-4 4M14 12H3"/></svg>
+            </button>
         </form>
     </div>
 </header>

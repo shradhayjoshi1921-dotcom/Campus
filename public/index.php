@@ -670,12 +670,12 @@ function sviet_student_dock(string $active, int $unread): void
     ];
     ?>
     <nav class="sv-dock" aria-label="Student workspace">
+        <span class="sv-dock-indicator" aria-hidden="true">
+            <span class="sv-dock-liquid"></span>
+            <span class="sv-dock-rim"></span>
+            <span class="sv-dock-caustic"></span>
+        </span>
         <div class="sv-dock-track" id="sv-dock-track">
-            <span class="sv-dock-indicator" aria-hidden="true">
-                <span class="sv-dock-liquid"></span>
-                <span class="sv-dock-rim"></span>
-                <span class="sv-dock-caustic"></span>
-            </span>
             <?php foreach ($tabs as $key => $tab): ?>
                 <a class="sv-dock-link <?= $active === $key ? 'is-active' : '' ?>"
                    data-sv-section="<?= htmlspecialchars($key, ENT_QUOTES) ?>"
@@ -748,50 +748,76 @@ $pageTitle = match ($page) {
 </head>
 <body class="<?= $page === 'home' ? 'homepage' : '' ?>">
 <a class="skip-link" href="#main-content">Skip to main content</a>
-<header class="site-nav">
-    <a class="brand" href="index.php" aria-label="Swami Vivekanand Institute of Engineering and Technology home">
-        <span class="brand-copy">
+<header class="bubble-top" aria-label="SVIET Training and Placement">
+    <a class="bubble bubble--brand" href="index.php" aria-label="Swami Vivekanand Institute of Engineering and Technology home">
+        <span class="bubble-brand-mark" aria-hidden="true">S</span>
+        <span class="bubble-brand-copy">
             <strong>SVIET</strong>
-            <small>TRAINING &amp; PLACEMENT</small>
+            <small>Training &amp; Placement</small>
         </span>
     </a>
-    <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch appearance">
-        <span class="theme-toggle__track" aria-hidden="true">
-            <svg class="theme-toggle__icon theme-toggle__icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
-            <svg class="theme-toggle__icon theme-toggle__icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.4A8.2 8.2 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4Z"/></svg>
-        </span>
-        <span class="theme-toggle__label">Light orange</span>
-    </button>
-    <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open navigation" aria-controls="site-navigation" aria-expanded="false">
-        <span></span><span></span><span class="sr-only">Toggle navigation</span>
-    </button>
-    <nav class="nav-links" id="site-navigation" aria-label="Main navigation">
-        <a href="index.php#portal-workspaces">Portal</a>
-        <a href="index.php#how-it-works">How it works</a>
-        <a href="index.php#for-recruiters">For recruiters</a>
+    <div class="bubble-cluster">
+        <button class="bubble bubble--icon" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch appearance">
+            <span class="theme-toggle__track" aria-hidden="true">
+                <svg class="theme-toggle__icon theme-toggle__icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+                <svg class="theme-toggle__icon theme-toggle__icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.4A8.2 8.2 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4Z"/></svg>
+            </span>
+        </button>
         <?php if ($user): ?>
-            <a href="index.php?page=dashboard">Dashboard</a>
-            <?php if ($user['role'] === 'student'): ?>
-                <a href="index.php?page=profile">My profile</a>
-                <a href="index.php?page=jobs">Opportunities</a>
-                <a href="index.php?page=applications">Applications</a>
-                <a href="career.php">Career insights</a>
-            <?php elseif ($user['role'] === 'recruiter'): ?>
-                <a href="recruiter.php">Recruiter workspace</a>
-            <?php elseif (in_array($user['role'], ['admin', 'tpo'], true)): ?>
-                <a href="admin.php">TPO / Admin</a>
-            <?php endif; ?>
-            <form method="post" action="index.php" class="inline-form">
-                <input type="hidden" name="_csrf" value="<?= e($csrf) ?>">
-                <input type="hidden" name="action" value="logout">
-                <button class="nav-cta" type="submit">Sign out</button>
-            </form>
+            <span class="bubble bubble--account" title="<?= e((string) $user['name']) ?>" aria-label="Signed in as <?= e((string) $user['name']) ?>">
+                <?= e(strtoupper(mb_substr((string) $user['name'], 0, 1))) ?>
+            </span>
         <?php else: ?>
-            <a href="index.php?page=login">Portal sign in</a>
-            <a class="nav-cta" href="index.php?page=register">Create account <span aria-hidden="true">↗</span></a>
+            <a class="bubble bubble--cta" href="index.php?page=login">Sign in</a>
         <?php endif; ?>
-    </nav>
+        <button class="bubble bubble--icon" type="button" data-bubble-menu aria-expanded="false" aria-controls="bubble-menu" aria-label="Open menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        </button>
+    </div>
 </header>
+
+<div class="bubble-sheet" id="bubble-menu" data-bubble-sheet role="dialog" aria-modal="true" aria-labelledby="bubble-menu-title" hidden>
+    <div class="bubble-sheet__panel">
+        <div class="bubble-sheet__head">
+            <strong id="bubble-menu-title">Menu</strong>
+            <button class="bubble bubble--icon" type="button" data-bubble-close aria-label="Close menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+        </div>
+        <nav class="bubble-sheet__links" aria-label="Main navigation">
+            <a href="index.php#portal-workspaces"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></span>Portal workspaces</a>
+            <a href="index.php#how-it-works"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg></span>How it works</a>
+            <a href="index.php#for-recruiters"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>For recruiters</a>
+            <?php if ($user): ?>
+                <a href="index.php?page=dashboard"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11.2 12 4l8 7.2V20a1 1 0 0 1-1 1h-4.6v-5.6H9.6V21H5a1 1 0 0 1-1-1z"/></svg></span>Dashboard</a>
+                <?php if ($user['role'] === 'student'): ?>
+                    <a href="index.php?page=profile"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8.2" r="3.7"/><path d="M4.8 20.6a7.2 7.2 0 0 1 14.4 0"/></svg></span>My profile</a>
+                    <a href="index.php?page=jobs"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8.5 7V5.2A1.7 1.7 0 0 1 10.2 3.5h3.6a1.7 1.7 0 0 1 1.7 1.7V7"/></svg></span>Opportunities</a>
+                    <a href="index.php?page=applications"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h4"/></svg></span>Applications</a>
+                    <a href="career.php"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V9M10 19V4M16 19v-7M22 19H2"/></svg></span>Career insights</a>
+                <?php elseif ($user['role'] === 'recruiter'): ?>
+                    <a href="recruiter.php"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M3 12h18"/></svg></span>Recruiter workspace</a>
+                <?php elseif (in_array($user['role'], ['admin', 'tpo'], true)): ?>
+                    <a href="admin.php"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.4 7.5 9.5 4.4-1.1 7.5-4.9 7.5-9.5V6z"/></svg></span>TPO / Admin</a>
+                <?php endif; ?>
+            <?php endif; ?>
+        </nav>
+        <div class="bubble-sheet__foot">
+            <?php if ($user): ?>
+                <form method="post" action="index.php" class="inline-form w-100">
+                    <input type="hidden" name="_csrf" value="<?= e($csrf) ?>">
+                    <input type="hidden" name="action" value="logout">
+                    <button type="submit" class="w-100">Sign out</button>
+                </form>
+            <?php else: ?>
+                <nav class="bubble-sheet__links" aria-label="Account">
+                    <a href="index.php?page=login"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 8l4 4-4 4M14 12H3"/></svg></span>Portal sign in</a>
+                    <a href="index.php?page=register"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg></span>Create account</a>
+                </nav>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
 <?php if ($error || $success): ?>
     <div class="container pt-3">
         <div class="alert <?= $error

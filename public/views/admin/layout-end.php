@@ -4,12 +4,12 @@
 </div>
 
 <nav class="admin-dock" aria-label="Admin workspace">
+    <span class="admin-dock-indicator" aria-hidden="true">
+        <span class="admin-dock-liquid"></span>
+        <span class="admin-dock-rim"></span>
+        <span class="admin-dock-caustic"></span>
+    </span>
     <div class="admin-dock-track" id="admin-dock-track">
-        <span class="admin-dock-indicator" aria-hidden="true">
-            <span class="admin-dock-liquid"></span>
-            <span class="admin-dock-rim"></span>
-            <span class="admin-dock-caustic"></span>
-        </span>
         <?php
         $adminTabs = [
             'overview' => ['label' => 'Overview', 'icon' => '<path d="M4 4h7v7H4zm9 0h7v4h-7zM4 13h7v7H4zm9-3h7v12h-7z"/>'],
