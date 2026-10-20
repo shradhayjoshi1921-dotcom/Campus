@@ -11,7 +11,7 @@
   const track = document.querySelector('#sv-dock-track');
   if (!dock || !track) return;
 
-  const indicator = track.querySelector('.sv-dock-indicator');
+  const indicator = dock.querySelector('.sv-dock-indicator');
   const links = Array.from(track.querySelectorAll('.sv-dock-link'));
   if (!indicator || links.length < 2) return;
 
@@ -56,7 +56,9 @@
     const stretch = bubble.width - bubble.baseWidth;
     const direction = bubble.v > 0.5 ? 1 : bubble.v < -0.5 ? -1 : 0;
     const lead = direction * stretch * 0.42;
-    const left = bubble.x - bubble.width / 2 + lead;
+    // The droplet lives outside the scroller, so subtract the rail offset.
+    const offset = track.offsetLeft - track.scrollLeft;
+    const left = bubble.x + offset - bubble.width / 2 + lead;
     const speedRatio = Math.min(1, Math.abs(bubble.v) / 1500);
     const squash = 1 - speedRatio * 0.06;
     const slosh = Math.max(-1, Math.min(1, -bubble.v / 800)) * speedRatio;
@@ -71,11 +73,13 @@
     if (metrics.length === 0) return;
     const narrowest = metrics.reduce((min, metric) => Math.min(min, metric.width), Infinity);
     const inset = Math.max(2, Math.min(5, narrowest * 0.045));
-    const insetY = Math.max(2, Math.min(4, metrics[0].height * 0.05));
-    bubble.baseWidth = Math.max(46, narrowest - inset);
-    bubble.maxWidth = narrowest + inset * 0.6;
-    indicator.style.height = `${Math.max(38, metrics[0].height - insetY * 2).toFixed(1)}px`;
-    indicator.style.top = `${(metrics[0].top + insetY).toFixed(1)}px`;
+    bubble.baseWidth = Math.max(48, narrowest - inset);
+    bubble.maxWidth = narrowest + inset;
+    // Bigger than the bar: the active drop bulges above the dock edge.
+    const dropHeight = metrics[0].height + Math.max(30, Math.round(metrics[0].height * 0.62));
+    indicator.style.height = `${dropHeight.toFixed(1)}px`;
+    const originTop = metrics[0].top + track.offsetTop;
+    indicator.style.top = `${(originTop + metrics[0].height - dropHeight - 2).toFixed(1)}px`;
     if (!bubble.width) bubble.width = bubble.baseWidth;
     bubble.width = Math.min(bubble.width, bubble.baseWidth);
   };
@@ -194,6 +198,11 @@
   } catch (_) {
     /* Storage is optional. */
   }
+
+  // Panning changes the scroll offset, so the droplet is re-placed each frame.
+  track.addEventListener('scroll', () => {
+    if (!bubble.frame) render();
+  }, { passive: true });
 
   /* --------------------------------------------------------------- dragging */
   const nearestIndex = (viewportX) => {

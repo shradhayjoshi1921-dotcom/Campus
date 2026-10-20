@@ -7,7 +7,7 @@
   const content = document.querySelector('#admin-section-content');
   if (!dock || !track || !main || !content) return;
 
-  const indicator = track.querySelector('.admin-dock-indicator');
+  const indicator = dock.querySelector('.admin-dock-indicator');
   const links = Array.from(track.querySelectorAll('.admin-dock-link'));
   if (!indicator || links.length < 2) return;
 
@@ -58,7 +58,9 @@
     const stretch = bubble.width - bubble.baseWidth;
     const direction = bubble.v > 0.5 ? 1 : bubble.v < -0.5 ? -1 : 0;
     const lead = direction * stretch * 0.4;
-    const left = bubble.x - bubble.width / 2 + lead;
+    // Indicator sits in the dock, outside the scrolling rail.
+    const offset = track.offsetLeft - track.scrollLeft;
+    const left = bubble.x + offset - bubble.width / 2 + lead;
     const speedRatio = Math.min(1, Math.abs(bubble.v) / 1500);
     const squash = 1 - speedRatio * 0.055;
     const slosh = Math.max(-1, Math.min(1, -bubble.v / 800)) * speedRatio;
@@ -75,11 +77,12 @@
     // A larger droplet: the capsule owns almost the whole tab, so it reads as
     // one body of water rather than a highlight sitting inside a button.
     const inset = Math.max(2, Math.min(5, narrowest * 0.045));
-    const insetY = Math.max(2, Math.min(3, metrics[0].height * 0.045));
     bubble.baseWidth = Math.max(46, narrowest - inset);
-    bubble.maxWidth = narrowest + inset * 0.8;
-    indicator.style.height = `${Math.max(40, metrics[0].height - insetY * 2).toFixed(1)}px`;
-    indicator.style.top = `${(metrics[0].top + insetY).toFixed(1)}px`;
+    bubble.maxWidth = narrowest + inset;
+    const dropHeight = metrics[0].height + Math.max(28, Math.round(metrics[0].height * 0.58));
+    indicator.style.height = `${dropHeight.toFixed(1)}px`;
+    const originTop = metrics[0].top + track.offsetTop;
+    indicator.style.top = `${(originTop + metrics[0].height - dropHeight - 2).toFixed(1)}px`;
     if (!bubble.width) bubble.width = bubble.baseWidth;
     bubble.width = Math.min(bubble.width, bubble.baseWidth);
   };
@@ -320,6 +323,10 @@
       }
     }
   };
+
+  track.addEventListener('scroll', () => {
+    if (!bubble.frame) render();
+  }, { passive: true });
 
   /* ---------------------------------------------------------------------
    * Dragging: the capsule stays under the finger while the rail pans.

@@ -190,8 +190,10 @@ $test('Homepage uses local assets, avoids unverified campus photography, and kee
     $assert(!str_contains($front, 'campus-hero.jpg'));
     $assert(!str_contains($styles, 'campus-hero.jpg'));
     $assert(!str_contains($homepageStyles, 'campus-hero.jpg'));
-    $assert(str_contains($front, 'id="nav-toggle"'));
+    $assert(str_contains($front, 'data-bubble-menu'), 'the floating bubble menu replaces the top bar');
     $assert(str_contains($front, 'aria-expanded="false"'));
+    $assert(str_contains($front, 'class="bubble-top"'), 'navigation is a bubble cluster, not a full-width bar');
+    $assert(!str_contains($front, '<header class="site-nav">'), 'the old top bar must stay removed');
     $assert(str_contains($front, '<a class="skip-link" href="#main-content">Skip to main content</a>'));
     $assert((bool) preg_match('/\.skip-link\s*\{[^}]*opacity:\s*0;/s', $styles));
     $assert((bool) preg_match('/\.skip-link:focus-visible\s*\{[^}]*opacity:\s*1;/s', $styles));
@@ -512,9 +514,9 @@ $test('Admin import is file-limited, review-first and free of raw inserts from r
 $test('Every portal ships the same light-orange and dark-water appearance switch', static function () use ($assert, $root): void {
     $theme = file_get_contents($root . '/public/assets/css/theme.css');
     $assert(str_contains($theme, ':root {'), 'light tokens are the default');
-    $assert(str_contains($theme, '--sv-bg: #fff8f1'), 'default surface is warm white');
-    $assert(str_contains($theme, '--sv-orange: #ef6a1c'), 'SVIET orange is the brand accent');
-    $assert(str_contains($theme, '--sv-bg: #051519'), 'dark mode is deep water, not navy');
+    $assert(str_contains($theme, '--sv-bg: #faf7f3'), 'default surface is warm ivory');
+    $assert(str_contains($theme, '--sv-orange: #cf5a17'), 'Ember & Slate orange is the brand accent');
+    $assert(str_contains($theme, '--sv-bg: #0d1114'), 'dark mode is a slate pool, not navy');
     $assert(str_contains($theme, '--sv-drop:'), 'the dock droplet has a watery fill per theme');
     $assert(str_contains($theme, 'html[data-theme="light"] body.recruiter-portal'));
     $assert(str_contains($theme, 'html[data-theme="light"] body.admin-portal'));
@@ -617,8 +619,67 @@ $test('All three docks use the larger droplet geometry', static function () use 
     $student = file_get_contents($root . '/public/assets/js/student-nav.js');
     foreach (['admin' => $admin, 'recruiter' => $recruiter, 'student' => $student] as $name => $script) {
         $assert(str_contains($script, 'narrowest * 0.045'), "{$name} dock still uses the small inset");
-        $assert(str_contains($script, 'Math.max(46') || str_contains($script, 'Math.max(bubble.minWidth'), "{$name} droplet is not enlarged");
+        $assert(str_contains($script, 'dropHeight'), "{$name} droplet has no protrusion geometry");
     }
+});
+
+
+$test('Top navigation is a floating bubble cluster with a watery sheet', static function () use ($assert, $root): void {
+    $theme = file_get_contents($root . '/public/assets/css/theme.css');
+    $script = file_get_contents($root . '/public/assets/js/theme.js');
+    $front = file_get_contents($root . '/public/index.php');
+
+    $assert(str_contains($theme, '.bubble-top {'), 'missing bubble cluster layout');
+    $assert(str_contains($theme, '.bubble-sheet__panel'));
+    $assert(str_contains($theme, 'backdrop-filter: blur(26px) saturate(185%)'));
+    $assert(str_contains($theme, '.bubble-sheet.is-open'));
+    $assert(str_contains($script, 'data-bubble-sheet'));
+    $assert(str_contains($script, "event.key === 'Escape'"), 'the sheet closes with Escape');
+    $assert(str_contains($script, "document.body.classList.add('sheet-open')"));
+
+    $assert(!str_contains($front, 'class="site-nav"'), 'the public page must not render a top bar');
+    $assert(str_contains($front, 'class="bubble bubble--brand"'));
+    $assert(str_contains($front, 'data-bubble-menu'));
+    $assert(str_contains($front, 'bubble-sheet__links'));
+
+    foreach (['public/views/recruiter/layout-start.php', 'public/views/admin/layout-start.php'] as $file) {
+        $contents = file_get_contents($root . '/' . $file);
+        $assert(str_contains($contents, 'class="bubble-top bubble-top--portal"'), "{$file} still renders a top bar");
+        $assert(!str_contains($contents, 'class="rec-topbar"'));
+        $assert(!str_contains($contents, 'class="admin-topbar"'));
+        $assert(str_contains($contents, 'bubble--account'));
+        $assert(str_contains($contents, 'bubble--icon'), 'utility actions are bubbles');
+    }
+});
+
+$test('Docks bulge above the bar with water, on every portal', static function () use ($assert, $root): void {
+    $theme = file_get_contents($root . '/public/assets/css/theme.css');
+    $assert(str_contains($theme, 'border-radius: 48% 48% 44% 44%'), 'the drop has its own geometry');
+    $assert(str_contains($theme, '48% 48% 44% 44% / 34% 34% 66% 66%'), 'droplet is teardrop shaped');
+    $assert(str_contains($theme, '.sv-dock-indicator'), 'student droplet styles');
+    $assert(str_contains($theme, '.rec-bottom-nav .rec-nav-indicator'), 'recruiter droplet styles');
+    $assert(str_contains($theme, 'overflow: visible'), 'dock shells must not clip the drop');
+
+    $student = file_get_contents($root . '/public/assets/js/student-nav.js');
+    $admin = file_get_contents($root . '/public/assets/js/admin-nav.js');
+    $recruiter = file_get_contents($root . '/public/assets/js/recruiter-nav.js');
+    foreach (['student' => $student, 'admin' => $admin, 'recruiter' => $recruiter] as $name => $script) {
+        $assert(str_contains($script, 'dropHeight'), "{$name} dock drop is not larger than the bar");
+    }
+    $assert(str_contains($student, 'track.scrollLeft'), 'student drop follows the rail scroll');
+    $assert(str_contains($admin, 'track.scrollLeft'), 'admin drop follows the rail scroll');
+    $assert(str_contains($admin, "dock.querySelector('.admin-dock-indicator')"), 'admin indicator lives outside the rail');
+    $assert(str_contains($student, "dock.querySelector('.sv-dock-indicator')"), 'student indicator lives outside the rail');
+});
+
+$test('Page shifts use view transitions and frame-rate independent motion', static function () use ($assert, $root): void {
+    $theme = file_get_contents($root . '/public/assets/css/theme.css');
+    $assert(str_contains($theme, '@view-transition { navigation: auto; }'));
+    $assert(str_contains($theme, '::view-transition-new(root)'));
+    $assert(str_contains($theme, '--sv-ease: cubic-bezier(.22, 1, .36, 1)'));
+    $assert(str_contains($theme, 'sv-page-in'));
+    $assert(str_contains($theme, 'prefers-reduced-motion'));
+    $assert(str_contains($theme, 'body.sheet-open { overflow: hidden; }'));
 });
 
 $test('No merge-conflict markers remain in key project files', static function () use ($assert, $root): void {

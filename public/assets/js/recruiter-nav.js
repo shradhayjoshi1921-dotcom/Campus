@@ -95,11 +95,12 @@
     const narrowest = metrics.reduce((min, metric) => Math.min(min, metric.width), Infinity);
     // Larger droplet: nearly the full tab width and height.
     const inset = Math.max(2, Math.min(5, narrowest * 0.045));
-    const insetY = Math.max(2, Math.min(3, metrics[0].height * 0.045));
     bubble.baseWidth = Math.max(bubble.minWidth, narrowest - inset);
-    bubble.maxWidth = Math.max(bubble.baseWidth + 10, narrowest + inset * 0.8);
-    indicator.style.height = `${Math.max(40, metrics[0].height - insetY * 2).toFixed(1)}px`;
-    indicator.style.top = `${(metrics[0].top + insetY).toFixed(1)}px`;
+    bubble.maxWidth = Math.max(bubble.baseWidth + 10, narrowest + inset);
+    // The drop is taller than the bar and rises above its top edge.
+    const dropHeight = metrics[0].height + Math.max(30, Math.round(metrics[0].height * 0.6));
+    indicator.style.height = `${dropHeight.toFixed(1)}px`;
+    indicator.style.top = `${(metrics[0].top + metrics[0].height - dropHeight - 2).toFixed(1)}px`;
     if (!bubble.width) bubble.width = bubble.baseWidth;
     bubble.width = Math.min(bubble.width, bubble.baseWidth);
   };
