@@ -174,6 +174,7 @@ $test('Homepage uses local assets, avoids unverified campus photography, and kee
     $assert(str_contains($front, 'id="nav-toggle"'));
     $assert(str_contains($front, 'aria-expanded="false"'));
     $assert(str_contains($front, '<a class="skip-link" href="#main-content">Skip to main content</a>'));
+    $assert(str_contains($styles, '.skip-link:focus-visible'));
     $assert(str_contains($front, 'role="group" aria-label="Portal access'));
     $assert(!str_contains($front, 'cdn.jsdelivr.net'));
     $assert(!str_contains($front, 'unpkg.com'));
