@@ -383,13 +383,13 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
 .rec-bottom-nav {
   position: fixed;
   z-index: 100;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   display: grid;
-  width: min(760px, calc(100% - 24px));
+  width: min(820px, calc(100% - 32px));
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 2px;
-  padding: 8px;
+  gap: 4px;
+  padding: 9px;
   transform: translateX(-50%);
   touch-action: pan-y;
   -webkit-user-select: none;
@@ -403,11 +403,11 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
   z-index: 1;
   display: grid;
   min-width: 0;
-  min-height: 64px;
+  min-height: 66px;
   justify-items: center;
   align-content: center;
-  gap: 5px;
-  padding: 5px 8px;
+  gap: 6px;
+  padding: 6px 9px;
   border-radius: 999px;
   font-size: 10px;
   font-weight: 640;
@@ -420,11 +420,11 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
   position: relative;
   z-index: 1;
   display: grid;
-  width: 26px;
-  height: 26px;
+  width: 27px;
+  height: 27px;
   place-items: center;
 }
-.rec-nav-icon svg { width: 24px; height: 24px; }
+.rec-nav-icon svg { width: 25px; height: 25px; }
 .rec-nav-label {
   position: relative;
   z-index: 1;
@@ -508,7 +508,7 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
   .rec-reschedule-details { width: 100%; }
   .rec-reschedule-details summary { width: fit-content; }
   .rec-reschedule-form { right: auto; left: 0; }
-  .rec-bottom-nav { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); width: calc(100% - 14px); gap: 1px; padding: 6px; }
+  .rec-bottom-nav { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: calc(100% - 16px); gap: 2px; padding: 7px; }
   .rec-nav-link { min-height: 58px; gap: 4px; padding: 4px 5px; font-size: 9px; }
   .rec-nav-icon { width: 24px; height: 24px; }
   .rec-nav-icon svg { width: 22px; height: 22px; }

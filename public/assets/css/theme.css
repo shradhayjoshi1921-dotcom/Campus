@@ -375,8 +375,10 @@ html[data-theme="light"] body.admin-portal .admin-orb {
   box-shadow: inset 5px 7px 20px rgba(255, 255, 255, .7), 0 16px 38px rgba(120, 78, 40, .1);
   opacity: .55;
 }
-html[data-theme="light"] body.admin-portal .admin-topbar,
-html[data-theme="light"] body.admin-portal .admin-dock {
+/* Only the top bar is retinted here. The dock is the shared glass capsule and
+   must keep the material in liquid-glass.css; painting a flat gradient over it
+   (which this rule used to do) is what made the light dock look like a slab. */
+html[data-theme="light"] body.admin-portal .admin-topbar {
   border-color: var(--sv-dock-line);
   background: var(--sv-dock-shell);
   box-shadow: 0 18px 44px rgba(70, 48, 28, .16), inset 0 1px rgba(255, 255, 255, .9);
@@ -481,6 +483,23 @@ html[data-theme="light"] body.admin-portal .admin-details,
 html[data-theme="light"] body.admin-portal .admin-pre,
 html[data-theme="light"] body.admin-portal .admin-import-form { background: rgba(253, 243, 233, .85); border-color: var(--sv-line); }
 html[data-theme="light"] body.admin-portal .admin-footer { color: var(--sv-muted); }
+
+/* Text that is authored for the dark portal still needs a light value. These
+   are the remaining literal greys in the recruiter/admin sheets; everything
+   that already reads from --rec-* is remapped above. */
+html[data-theme="light"] body.recruiter-portal :is(.rec-form label, .rec-note strong, .rec-candidate-facts strong) { color: var(--sv-ink-soft); }
+html[data-theme="light"] body.recruiter-portal :is(.rec-steps li, .rec-job-company, .rec-interview-meta) { color: var(--sv-muted); }
+html[data-theme="light"] body.recruiter-portal .rec-steps strong { color: var(--sv-ink); }
+html[data-theme="light"] body.recruiter-portal .rec-steps li > span {
+  border-color: var(--sv-line-strong);
+  color: var(--sv-ink-soft);
+  background: var(--sv-surface-2);
+}
+html[data-theme="light"] body.recruiter-portal .rec-steps li:not(:last-child)::after { background: var(--sv-line); }
+html[data-theme="light"] body.recruiter-portal :is(.rec-cover-note p, .rec-history-list li, .rec-privacy-note p) { color: var(--sv-ink-soft); }
+html[data-theme="light"] body.admin-portal .admin-table th { color: var(--sv-muted); }
+html[data-theme="light"] body.admin-portal :is(.admin-announcements p, .admin-details summary) { color: var(--sv-ink-soft); }
+html[data-theme="light"] body.admin-portal .admin-metadata code { color: var(--sv-muted); }
 
 /* --------------------------------------------------- dark matte retint
  * The dark theme is a premium matte black: near-black paper, charcoal
@@ -756,14 +775,36 @@ body.sheet-open { overflow: hidden; }
   to { opacity: 1; transform: none; }
 }
 
-body > main,
-.dashboard,
+/* The student dock never reloads, so its page canvas carries the motion:
+   #main-content is swapped in place and animated by assets/js/student-nav.js.
+   It is excluded here because a running animation would out-rank the inline
+   states that the swap sets. */
+body > main:not(#main-content),
+.career-wrap,
 .admin-main,
 .rec-main {
   animation: sv-page-in 320ms var(--sv-ease) both;
 }
 @keyframes sv-page-in {
   from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+#main-content { transform-origin: 50% 0; }
+#main-content.is-pending {
+  opacity: .55;
+  transform: translate3d(0, 5px, 0) scale(.997);
+  transition: opacity 140ms var(--sv-ease), transform 180ms var(--sv-ease);
+}
+#main-content.is-entering { animation: sv-page-in 240ms var(--sv-ease) both; }
+#main-content.is-entering-forward { animation: sv-section-forward 340ms var(--sv-ease) both; }
+#main-content.is-entering-backward { animation: sv-section-backward 340ms var(--sv-ease) both; }
+@keyframes sv-section-forward {
+  from { opacity: 0; transform: translate3d(24px, 0, 0) scale(.995); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sv-section-backward {
+  from { opacity: 0; transform: translate3d(-24px, 0, 0) scale(.995); }
   to { opacity: 1; transform: none; }
 }
 
@@ -777,9 +818,10 @@ button, a { touch-action: manipulation; }
   ::view-transition-old(root),
   ::view-transition-new(root),
   body > main,
-  .dashboard,
+  #main-content,
   .admin-main,
   .rec-main { animation: none !important; }
+  #main-content.is-pending { opacity: 1; transform: none; transition: none; }
   .bubble, .bubble-sheet__panel, .bubble-sheet { transition: none !important; }
   .bubble:hover { transform: none; }
 }

@@ -54,6 +54,7 @@ $simulatedSkills = $skills;
 if ($simulatedSkill !== '' && !in_array(mb_strtolower($simulatedSkill), array_map('mb_strtolower', $skills), true)) $simulatedSkills[] = $simulatedSkill;
 ?><!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Career Intelligence · Campus</title>
+<meta name="theme-color" content="#fff7f0">
 <script>
 (function () {
     try {
@@ -64,7 +65,7 @@ if ($simulatedSkill !== '' && !in_array(mb_strtolower($simulatedSkill), array_ma
     } catch (error) { document.documentElement.dataset.theme = 'light'; }
 })();
 </script>
-<link rel="stylesheet" href="assets/css/theme.css"><link rel="stylesheet" href="assets/css/app.css"></head><body>
+<link rel="stylesheet" href="assets/css/theme.css?v=<?= $e(asset_version()) ?>"><link rel="stylesheet" href="assets/css/app.css?v=<?= $e(asset_version()) ?>"></head><body>
 <header class="topbar"><a class="brand" href="index.php" aria-label="Campus home"><span class="brand-mark" aria-hidden="true">C</span><span class="brand-copy"><strong>Campus</strong><small>PLACEMENT INTELLIGENCE</small></span></a><nav aria-label="Student navigation"><a href="index.php?page=dashboard">Dashboard</a><a href="index.php?page=profile">My profile</a><a href="index.php?page=jobs">Jobs</a><a href="index.php?page=applications">Applications</a><form method="post" action="index.php" class="inline-form"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="action" value="logout"><button class="nav-cta" type="submit">Sign out</button></form></nav></header>
 <main class="career-wrap"><div class="career-head"><div><p class="eyebrow">PHASE 5 · CAREER INTELLIGENCE</p><h1>Your career-fit insights.</h1><p class="career-muted">Transparent rule-based estimates from your saved profile, skills and currently open jobs.</p></div><a class="secondary-btn" href="index.php?page=profile">Update profile ↗</a></div>
 <?php if ($error !== ''): ?><div class="career-alert"><?= $e($error) ?></div><?php elseif (!$ranked): ?><section class="career-panel"><h2>No open opportunities to analyze yet</h2><p class="career-muted">When approved companies publish jobs, your fit scores and skill gaps will appear here. No demo jobs are invented.</p></section><?php else: ?>
@@ -77,4 +78,4 @@ if ($simulatedSkill !== '' && !in_array(mb_strtolower($simulatedSkill), array_ma
 <?php if ($roadmap): ?><details><summary>Suggested learning roadmap (<?= count($roadmap) ?> skills)</summary><ol class="career-list"><?php foreach ($roadmap as $step): ?><li><strong><?= $e($step['skill']) ?></strong> — <?= $e($step['priority']) ?> priority<br><span class="career-muted"><?= $e($step['practice']) ?> Project: <?= $e($step['project']) ?></span></li><?php endforeach; ?></ol></details><?php endif; ?><p style="margin-top:16px"><a class="primary-btn" href="index.php?page=jobs">Review and apply ↗</a></p></article>
 <?php endforeach; ?></div><?php endif; ?>
 <section class="career-panel"><h2>How the score works</h2><p class="career-muted">The current service weights required-skill overlap at 60%, academic score at 25%, and a default role-alignment score at 15%. Missing profile information can reduce or prevent eligibility. These are transparent heuristics, not machine-learning predictions or guarantees.</p></section>
-</main><script src="assets/js/theme.js" defer></script></body></html>
+</main><script src="assets/js/theme.js?v=<?= $e(asset_version()) ?>" defer></script></body></html>

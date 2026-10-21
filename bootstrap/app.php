@@ -28,3 +28,26 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     ini_set('session.use_strict_mode', '1');
     session_start();
 }
+
+/**
+ * One cache-busting token for every local asset.
+ *
+ * The link and script tags append this to the file name, so a browser keeps
+ * using its cached copy until *any* stylesheet or script changes. Deriving it
+ * from app.css alone meant a new dock engine could sit behind an old cache
+ * entry, which looks exactly like "the design did not change".
+ */
+function asset_version(): string
+{
+    static $version = null;
+    if ($version !== null) {
+        return $version;
+    }
+    $newest = 0;
+    foreach (['css', 'js'] as $kind) {
+        foreach (glob(dirname(__DIR__) . '/public/assets/' . $kind . '/*.' . $kind) ?: [] as $file) {
+            $newest = max($newest, (int) filemtime($file));
+        }
+    }
+    return $version = (string) ($newest ?: 1);
+}

@@ -351,9 +351,9 @@ body.admin-portal :focus-visible { outline: 3px solid #e0b48f; outline-offset: 3
 .admin-dock {
   position: fixed;
   z-index: 100;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   left: 50%;
-  width: min(880px, calc(100% - 24px));
+  width: min(960px, calc(100% - 32px));
   padding: 0;
   transform: translateX(-50%);
   touch-action: pan-y;
@@ -364,8 +364,8 @@ body.admin-portal :focus-visible { outline: 3px solid #e0b48f; outline-offset: 3
 .admin-dock-track {
   position: relative;
   display: flex;
-  gap: 2px;
-  padding: 8px;
+  gap: 4px;
+  padding: 9px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -379,13 +379,13 @@ body.admin-portal :focus-visible { outline: 3px solid #e0b48f; outline-offset: 3
   position: relative;
   z-index: 1;
   display: grid;
-  min-width: 88px;
+  min-width: 94px;
   flex: 1 0 auto;
-  min-height: 62px;
+  min-height: 66px;
   justify-items: center;
   align-content: center;
-  gap: 5px;
-  padding: 5px 8px;
+  gap: 6px;
+  padding: 6px 9px;
   border-radius: 999px;
   font-size: 9.5px;
   font-weight: 620;
@@ -409,8 +409,8 @@ body.admin-portal :focus-visible { outline: 3px solid #e0b48f; outline-offset: 3
   position: relative;
   z-index: 1;
   display: grid;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   place-items: center;
   transition: transform .22s cubic-bezier(.2, .8, .25, 1), opacity .22s ease;
 }
@@ -483,9 +483,9 @@ body.admin-portal :focus-visible { outline: 3px solid #e0b48f; outline-offset: 3
   .admin-page-heading h1 { font-size: clamp(26px, 8vw, 34px); }
   .admin-card { padding: 14px; border-radius: 18px; }
   .admin-stat strong { font-size: 21px; }
-  .admin-dock { width: calc(100% - 14px); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
-  .admin-dock-track { padding: 6px; }
-  .admin-dock-link { min-width: 74px; min-height: 58px; font-size: 8.5px; }
+  .admin-dock { width: calc(100% - 16px); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .admin-dock-track { padding: 7px; }
+  .admin-dock-link { min-width: 76px; min-height: 58px; font-size: 8.5px; }
   .admin-dock-icon svg { width: 20px; height: 20px; }
   .admin-dock-badge { right: 4px; }
   .admin-footer { flex-direction: column; margin-top: -92px; padding: 0 14px 18px; font-size: 8px; }

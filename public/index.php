@@ -704,7 +704,7 @@ function e(?string $s): string
 
 // Prepare shared layout data and a page-specific browser title.
 $csrf = Security::csrfToken();
-$appCssVersion = (string) (filemtime(__DIR__ . '/assets/css/app.css') ?: 1);
+$appCssVersion = asset_version();
 $pageTitle = match ($page) {
     'home' => 'SVIET Placement Portal',
     'login' => 'Sign in | SVIET Placement Portal',

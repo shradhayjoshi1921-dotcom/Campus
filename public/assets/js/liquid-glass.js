@@ -295,8 +295,16 @@
         velocity: 0,
         dragging: false,
         vertical: false,
+        captured: false,
         preview: activeIndex,
       };
+      /* Capture straight away: a fast flick can leave the dock between two
+         frames, and without capture those moves would be dropped. A tap still
+         produces its normal click. */
+      try {
+        bar.setPointerCapture(event.pointerId);
+        pointer.captured = true;
+      } catch (_) { /* capture is optional */ }
     });
 
     bar.addEventListener('pointermove', (event) => {
@@ -313,7 +321,6 @@
         state.dragging = true;
         state.target = state.x;
         bar.classList.add('is-dragging');
-        try { bar.setPointerCapture(event.pointerId); } catch (_) { /* optional */ }
       }
       event.preventDefault();
       if (scrollTrack.scrollWidth > scrollTrack.clientWidth + 1) {
@@ -343,18 +350,20 @@
       if (!pointer || event.pointerId !== pointer.id) return;
       const drag = pointer;
       pointer = null;
+      if (drag.captured) {
+        try {
+          if (bar.hasPointerCapture(event.pointerId)) bar.releasePointerCapture(event.pointerId);
+        } catch (_) { /* already released */ }
+      }
       if (!drag.dragging) return;
       state.dragging = false;
       bar.classList.remove('is-dragging');
       setPreview(-1);
-      try {
-        if (bar.hasPointerCapture(event.pointerId)) bar.releasePointerCapture(event.pointerId);
-      } catch (_) { /* already released */ }
       if (cancelled) {
         moveTo(activeIndex);
         return;
       }
-      suppressClickUntil = window.performance.now() + 220;
+      suppressClickUntil = window.performance.now() + 260;
       // A release with speed keeps flowing instead of stopping dead at the
       // finger, then the spring pulls it onto the destination.
       state.v = clamp(drag.velocity * 0.22, -1100, 1100);

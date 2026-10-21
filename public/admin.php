@@ -179,7 +179,7 @@ try {
 } catch (Throwable $exception) {
     error_log('Admin database connection failure: ' . $exception->getMessage());
     http_response_code(503);
-    $appCssVersion = (string) (filemtime(__DIR__ . '/assets/css/app.css') ?: 1);
+    $appCssVersion = asset_version();
     ?>
     <!doctype html>
     <html lang="en">
@@ -897,9 +897,9 @@ $sectionTitles = [
 ];
 [$pageTitle, $pageDescription] = $sectionTitles[$section];
 
-$appCssVersion = (string) (filemtime(__DIR__ . '/assets/css/app.css') ?: 1);
-$adminCssVersion = (string) (filemtime(__DIR__ . '/assets/css/admin.css') ?: 1);
-$adminNavJsVersion = (string) (filemtime(__DIR__ . '/assets/js/admin-nav.js') ?: 1);
+$appCssVersion = asset_version();
+$adminCssVersion = asset_version();
+$adminNavJsVersion = asset_version();
 
 require __DIR__ . '/views/admin/layout-start.php';
 require __DIR__ . '/views/admin/' . $section . '.php';
