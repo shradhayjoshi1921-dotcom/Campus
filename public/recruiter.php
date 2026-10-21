@@ -133,8 +133,8 @@ try {
 } catch (Throwable $exception) {
     error_log('Recruiter database connection failure: ' . $exception->getMessage());
     http_response_code(503);
-    $appCssVersion = (string) (filemtime(__DIR__ . '/assets/css/app.css') ?: 1);
-    $recruiterCssVersion = (string) (filemtime(__DIR__ . '/assets/css/recruiter.css') ?: 1);
+    $appCssVersion = asset_version();
+    $recruiterCssVersion = asset_version();
     ?>
     <!doctype html>
     <html lang="en">
@@ -885,9 +885,9 @@ $pageTitles = [
     'interviews' => ['Interviews', 'Schedule, reschedule, and follow up on candidate interviews.'],
 ];
 [$pageTitle, $pageDescription] = $pageTitles[$section];
-$appCssVersion = (string) (filemtime(__DIR__ . '/assets/css/app.css') ?: 1);
-$recruiterCssVersion = (string) (filemtime(__DIR__ . '/assets/css/recruiter.css') ?: 1);
-$recruiterNavJsVersion = (string) (filemtime(__DIR__ . '/assets/js/recruiter-nav.js') ?: 1);
+$appCssVersion = asset_version();
+$recruiterCssVersion = asset_version();
+$recruiterNavJsVersion = asset_version();
 
 require __DIR__ . '/views/recruiter/layout-start.php';
 require __DIR__ . '/views/recruiter/' . $section . '.php';

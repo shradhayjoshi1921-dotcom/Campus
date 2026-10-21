@@ -159,6 +159,8 @@ C:\xampp\php\php.exe tests\run.php
 
 The included automated suite covers pure service rules and static security/workflow checks. Complete `PHASE-7-TEST-CHECKLIST.md` on the target XAMPP/MySQL installation for live workflow acceptance; passing static tests alone does not verify a production deployment.
 
+The student workspace swaps pages in place: clicking a dock tab fetches the destination and replaces only `<main id="main-content">`, so the glass capsule never re-mounts and the change animates in from the direction you moved. The recruiter and admin workspaces route their own sections the same way, and any request that leaves the workspace (a redirect to sign-in, an external link, a form post) falls back to a normal document load.
+
 The shared capsule's gesture and spring logic has an optional Node check. It boots `liquid-glass.js` plus `recruiter-nav.js` in jsdom with stubbed geometry, so it verifies behaviour rather than pixels:
 
 ```bat
@@ -167,6 +169,14 @@ node tests\js\liquid-glass.test.js
 ```
 
 It covers 14 scenarios: boot geometry, click flight, one-tab width, drag and release, reversal/cancel, vertical gestures, synthetic-click suppression, GET filters and history, rapid switching, reduced motion, keyboard preview, cross-page handoff, option groups and mounting before layout.
+
+A second harness covers the student workspace:
+
+```bat
+node tests\js\student-nav.test.js
+```
+
+It covers six scenarios: in-place page swap with the dock still mounted, direction-aware entrance, reveal targets in fresh content, modified clicks left to the browser, back/forward replay, and reduced motion.
 
 Manual interaction check in a desktop browser and a phone-sized viewport: drag the dock slowly across all five tabs (the bubble should follow the pointer and stretch), reverse direction mid-drag (it should compress), release between tabs (it should settle on the nearest one), swipe the section content sideways on touch, use the GET filters on Jobs and Applicants, then use browser Back and Forward. Enable "reduce motion" in the OS to confirm transitions stop.
 

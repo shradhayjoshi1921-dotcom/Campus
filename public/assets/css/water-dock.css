@@ -7,9 +7,9 @@
 .sv-dock {
   position: fixed;
   z-index: 100;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   left: 50%;
-  width: min(760px, calc(100% - 24px));
+  width: min(820px, calc(100% - 32px));
   transform: translateX(-50%);
   touch-action: pan-y;
   -webkit-user-select: none;
@@ -19,8 +19,8 @@
 .sv-dock-track {
   position: relative;
   display: flex;
-  gap: 2px;
-  padding: 8px;
+  gap: 4px;
+  padding: 9px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -35,13 +35,13 @@
   position: relative;
   z-index: 1;
   display: grid;
-  min-width: 92px;
+  min-width: 104px;
   flex: 1 0 auto;
-  min-height: 64px;
+  min-height: 66px;
   justify-items: center;
   align-content: center;
-  gap: 5px;
-  padding: 5px 10px;
+  gap: 6px;
+  padding: 6px 12px;
   border-radius: 999px;
   font-size: 10px;
   font-weight: 650;
@@ -52,11 +52,11 @@
 }
 .sv-dock-icon {
   display: grid;
-  width: 26px;
-  height: 26px;
+  width: 27px;
+  height: 27px;
   place-items: center;
 }
-.sv-dock-icon svg { width: 24px; height: 24px; }
+.sv-dock-icon svg { width: 25px; height: 25px; }
 .sv-dock-label {
   max-width: 100%;
   overflow: hidden;
@@ -90,11 +90,11 @@ body:has(.sv-dock) .site-footer { padding-bottom: 44px; }
 
 @media (max-width: 720px) {
   .sv-dock {
-    width: calc(100% - 14px);
-    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    width: calc(100% - 16px);
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
-  .sv-dock-track { padding: 6px; gap: 1px; }
-  .sv-dock-link { min-width: 66px; min-height: 58px; padding: 4px 6px; font-size: 9px; }
+  .sv-dock-track { padding: 7px; gap: 2px; }
+  .sv-dock-link { min-width: 62px; min-height: 58px; padding: 4px 6px; font-size: 9px; }
   .sv-dock-icon { width: 24px; height: 24px; }
   .sv-dock-icon svg { width: 22px; height: 22px; }
   .sv-dock-badge { top: 2px; right: 5px; }

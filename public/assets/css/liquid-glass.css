@@ -11,42 +11,59 @@
    glass is neutral in both themes and takes its colour from what is behind it.
    ========================================================================== */
 
+/* Light glass: a bright, mostly clear sheet. The fill stays low so the page
+   behind is genuinely visible through the blur; the volume comes from the
+   meniscus ring, the top sheen and the inner shadows, not from opacity. */
 :root {
-  --lg-fill-top: rgba(255, 255, 255, .92);
-  --lg-fill-bottom: rgba(255, 255, 255, .56);
-  --lg-fill-edge: rgba(255, 255, 255, .98);
-  --lg-rim: rgba(255, 255, 255, .98);
-  --lg-rim-mid: rgba(255, 255, 255, .18);
-  --lg-rim-soft: rgba(255, 255, 255, .55);
-  --lg-edge: rgba(122, 98, 74, .12);
+  --lg-fill-top: rgba(255, 255, 255, .52);
+  --lg-fill-bottom: rgba(255, 255, 255, .20);
+  --lg-fill-edge: rgba(255, 255, 255, .9);
+  --lg-rim: rgba(255, 255, 255, 1);
+  --lg-rim-mid: rgba(255, 255, 255, .22);
+  --lg-rim-soft: rgba(255, 255, 255, .68);
+  --lg-edge: rgba(96, 72, 50, .16);
   --lg-cast: rgba(70, 48, 28, .26);
-  --lg-caustic: rgba(255, 255, 255, .8);
-  --lg-sheen: rgba(255, 255, 255, .9);
-  --lg-shell-top: rgba(255, 255, 255, .56);
-  --lg-shell-bottom: rgba(255, 247, 240, .40);
-  --lg-shell-line: rgba(255, 255, 255, .62);
-  --lg-shell-shadow: rgba(84, 56, 32, .20);
+  --lg-caustic: rgba(255, 255, 255, .85);
+  --lg-sheen: rgba(255, 255, 255, .95);
+  --lg-shell-top: rgba(255, 255, 255, .30);
+  --lg-shell-bottom: rgba(255, 251, 246, .16);
+  --lg-shell-line: rgba(255, 255, 255, .55);
+  --lg-shell-ring-top: rgba(255, 255, 255, .98);
+  --lg-shell-ring-mid: rgba(255, 255, 255, .22);
+  --lg-shell-ring-bottom: rgba(255, 255, 255, .82);
+  --lg-shell-inner: rgba(255, 255, 255, .92);
+  --lg-shell-outline: rgba(112, 84, 58, .13);
+  --lg-shell-bright: 1.06;
+  --lg-shell-shadow: rgba(78, 52, 30, .22);
   --lg-track: rgba(36, 32, 29, .05);
   --lg-ink: #24201d;
   --lg-ink-soft: #5d564e;
   --lg-ink-mute: #6f665c;
 }
 
+/* Dark glass: smoky and translucent, with controlled silver-white reflections
+   around the rim instead of a grey slab. */
 html[data-theme="dark"] {
-  --lg-fill-top: rgba(132, 136, 145, .30);
-  --lg-fill-bottom: rgba(66, 69, 76, .20);
-  --lg-fill-edge: rgba(196, 202, 212, .26);
-  --lg-rim: rgba(255, 255, 255, .62);
-  --lg-rim-mid: rgba(255, 255, 255, .08);
-  --lg-rim-soft: rgba(255, 255, 255, .26);
-  --lg-edge: rgba(255, 255, 255, .12);
-  --lg-cast: rgba(0, 0, 0, .62);
-  --lg-caustic: rgba(255, 255, 255, .22);
-  --lg-sheen: rgba(255, 255, 255, .34);
-  --lg-shell-top: rgba(46, 48, 54, .52);
-  --lg-shell-bottom: rgba(13, 14, 17, .74);
-  --lg-shell-line: rgba(255, 255, 255, .11);
-  --lg-shell-shadow: rgba(0, 0, 0, .6);
+  --lg-fill-top: rgba(176, 184, 198, .26);
+  --lg-fill-bottom: rgba(74, 78, 88, .20);
+  --lg-fill-edge: rgba(214, 220, 230, .22);
+  --lg-rim: rgba(255, 255, 255, .72);
+  --lg-rim-mid: rgba(255, 255, 255, .10);
+  --lg-rim-soft: rgba(255, 255, 255, .30);
+  --lg-edge: rgba(255, 255, 255, .14);
+  --lg-cast: rgba(0, 0, 0, .66);
+  --lg-caustic: rgba(255, 255, 255, .24);
+  --lg-sheen: rgba(255, 255, 255, .42);
+  --lg-shell-top: rgba(82, 87, 98, .28);
+  --lg-shell-bottom: rgba(12, 13, 16, .52);
+  --lg-shell-line: rgba(255, 255, 255, .14);
+  --lg-shell-ring-top: rgba(255, 255, 255, .52);
+  --lg-shell-ring-mid: rgba(255, 255, 255, .08);
+  --lg-shell-ring-bottom: rgba(255, 255, 255, .24);
+  --lg-shell-inner: rgba(255, 255, 255, .22);
+  --lg-shell-outline: rgba(255, 255, 255, .1);
+  --lg-shell-bright: .92;
+  --lg-shell-shadow: rgba(0, 0, 0, .7);
   --lg-track: rgba(255, 255, 255, .05);
   --lg-ink: #f2f3f5;
   --lg-ink-soft: #d7d9dd;
@@ -74,18 +91,18 @@ html[data-theme="dark"] {
   background:
     linear-gradient(180deg,
       var(--lg-fill-top) 0%,
-      var(--lg-fill-bottom) 62%,
+      var(--lg-fill-bottom) 58%,
       var(--lg-fill-bottom) 100%);
   box-shadow:
-    0 10px 24px -12px var(--lg-cast),
-    0 2px 6px -3px var(--lg-cast),
-    0 0 0 .5px var(--lg-edge),
-    inset 0 1px 1px var(--lg-rim),
-    inset 0 -1px 1px var(--lg-rim-soft),
-    inset 1px 0 1.5px var(--lg-rim-soft),
-    inset -1px 0 1.5px var(--lg-rim-soft);
-  -webkit-backdrop-filter: blur(14px) saturate(185%) brightness(1.04);
-  backdrop-filter: blur(14px) saturate(185%) brightness(1.04);
+    0 6px 16px -8px var(--lg-cast),
+    0 1px 3px -2px var(--lg-cast),
+    0 0 0 .75px var(--lg-edge),
+    inset 0 1.5px 1px var(--lg-rim),
+    inset 0 -1.5px 2px var(--lg-rim-soft),
+    inset 1.5px 0 2px var(--lg-rim-soft),
+    inset -1.5px 0 2px var(--lg-rim-soft);
+  -webkit-backdrop-filter: blur(20px) saturate(200%) brightness(1.12);
+  backdrop-filter: blur(20px) saturate(200%) brightness(1.12);
   transition: opacity .22s cubic-bezier(.22, 1, .36, 1);
   will-change: transform;
   contain: layout style paint;
@@ -207,50 +224,80 @@ html[data-theme="dark"] .lg-smoke {
 /* ------------------------------------------------------------ dock capsule */
 /* The bar is its own long, floating glass container. It is never turned into a
    single bubble and never clips the pill. */
+/* The capsule is a real pane of glass: the page behind it is blurred, slightly
+   brightened and over-saturated, the fill is thin enough to see through, and
+   the volume comes from three things a flat bar cannot fake — a bright
+   meniscus ring, a soft sheen across the top third, and an inner shadow along
+   the lower wall where the glass thickens. */
 .sv-dock,
 .admin-dock,
 .rec-bottom-nav {
   overflow: visible;
   isolation: isolate;
   border-radius: 999px;
-  border: 1px solid var(--lg-shell-line);
-  background: linear-gradient(180deg, var(--lg-shell-top), var(--lg-shell-bottom));
+  border: 0;
+  background:
+    radial-gradient(120% 220% at 34% -60%, var(--lg-sheen), rgba(255, 255, 255, 0) 46%),
+    linear-gradient(180deg, var(--lg-shell-top), var(--lg-shell-bottom));
   box-shadow:
-    0 26px 60px -26px var(--lg-shell-shadow),
-    0 4px 14px -8px var(--lg-shell-shadow),
-    inset 0 1px rgba(255, 255, 255, .72),
-    inset 0 -1px rgba(255, 255, 255, .22);
-  -webkit-backdrop-filter: blur(26px) saturate(180%);
-  backdrop-filter: blur(26px) saturate(180%);
+    0 22px 48px -22px var(--lg-shell-shadow),
+    0 6px 18px -12px var(--lg-shell-shadow),
+    0 0 0 1px var(--lg-shell-outline),
+    inset 0 1.5px 1px var(--lg-shell-inner),
+    inset 0 -2px 3px rgba(255, 255, 255, .18),
+    inset 0 -14px 24px -18px var(--lg-shell-shadow);
+  -webkit-backdrop-filter: blur(30px) saturate(195%) brightness(var(--lg-shell-bright));
+  backdrop-filter: blur(30px) saturate(195%) brightness(var(--lg-shell-bright));
 }
-html[data-theme="dark"] .sv-dock,
-html[data-theme="dark"] .admin-dock,
-html[data-theme="dark"] .rec-bottom-nav {
-  box-shadow:
-    0 28px 64px -26px rgba(0, 0, 0, .8),
-    0 4px 16px -10px rgba(0, 0, 0, .7),
-    inset 0 1px rgba(255, 255, 255, .16),
-    inset 0 -1px rgba(255, 255, 255, .05);
+/* The meniscus: a 1.5px ring that is brilliant at the top, almost clear at the
+   waist and lit again along the bottom bounce — the signature of a bubble. */
+.sv-dock::after,
+.admin-dock::after,
+.rec-bottom-nav::after {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: linear-gradient(168deg,
+    var(--lg-shell-ring-top) 0%,
+    var(--lg-shell-ring-mid) 26%,
+    var(--lg-shell-ring-mid) 62%,
+    var(--lg-shell-ring-bottom) 88%,
+    var(--lg-shell-ring-top) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  content: "";
+  pointer-events: none;
 }
-/* A fine bright line across the top edge of the shell. */
+/* A second, wider highlight sitting just inside the top rim. */
 .sv-dock::before,
 .admin-dock::before,
 .rec-bottom-nav::before {
   position: absolute;
-  z-index: 3;
-  top: 0;
-  right: 12%;
-  left: 12%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .9) 22%, rgba(255, 255, 255, .55) 70%, transparent);
+  z-index: 5;
+  top: 1px;
+  right: 4px;
+  left: 4px;
+  height: 48%;
+  border-radius: 999px 999px 40% 40% / 999px 999px 90% 90%;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, .22),
+    rgba(255, 255, 255, .05) 42%,
+    rgba(255, 255, 255, 0) 100%);
   content: "";
-  opacity: .75;
+  opacity: .9;
   pointer-events: none;
 }
 html[data-theme="dark"] .sv-dock::before,
 html[data-theme="dark"] .admin-dock::before,
 html[data-theme="dark"] .rec-bottom-nav::before {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .38) 22%, rgba(255, 255, 255, .16) 70%, transparent);
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, .13),
+    rgba(255, 255, 255, .03) 46%,
+    rgba(255, 255, 255, 0) 100%);
 }
 
 .sv-dock .lg-indicator,

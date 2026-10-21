@@ -545,6 +545,9 @@ $test('Student dock is a draggable water capsule, not five separate buttons', st
 
     $assert(str_contains($script, 'LiquidGlass.mount'));
     $assert(str_contains($script, 'sv-dock-track'), 'the rail is handed to the shared engine');
+    $assert(str_contains($script, 'DOMParser'), 'student tabs merge the next page without a reload');
+    $assert(str_contains($script, "addEventListener('popstate'"), 'back and forward replay the same motion');
+    $assert(str_contains($script, 'replaceWith'), 'only the page canvas is swapped, so the dock never blinks');
     $assert(str_contains($script, 'sviet-student-dock-index'), 'the capsule flows in from the previous workspace');
     $assert(!str_contains($script, 'setInterval'));
 });
@@ -596,7 +599,10 @@ $test('One shared liquid-glass capsule drives every dock and option group', stat
         $assert(str_contains($liquidGlassStyles, $layer), "missing material layer {$layer}");
     }
     $assert(str_contains($liquidGlassStyles, 'mask-composite: exclude'));
-    $assert(str_contains($liquidGlassStyles, 'backdrop-filter: blur(14px) saturate(185%)'));
+    $assert(str_contains($liquidGlassStyles, 'backdrop-filter: blur(20px) saturate(200%)'), 'the pill is a blurred lens, not a flat tint');
+    $assert(str_contains($liquidGlassStyles, 'backdrop-filter: blur(30px) saturate(195%)'), 'the capsule blurs the page behind it');
+    $assert(str_contains($liquidGlassStyles, '--lg-shell-ring-top'), 'the capsule carries a meniscus ring');
+    $assert(str_contains($liquidGlassStyles, '--lg-shell-bright'), 'the glass lifts what is behind it instead of greying it out');
     $assert(str_contains($liquidGlassStyles, 'border-radius: 999px'), 'the dock is an elongated glass capsule');
     $assert(str_contains($liquidGlassStyles, 'mix-blend-mode: screen'), 'highlights are additive light');
     $assert(str_contains($liquidGlassStyles, 'filter: url(#lg-refract)'), 'a small displacement filter adds refraction');
@@ -681,11 +687,14 @@ $test('Every portal starts flush with the viewport edge', static function () use
     // The strip was a collapsed top margin on the floating chrome, which let the
     // bare canvas show above the body's own gradient.
     $assert(str_contains($theme, 'display: flow-root'), 'body contains its first child margins');
+    $assert(str_contains($theme, '#main-content.is-entering-forward'), 'the student canvas has a directed entrance');
+    $assert(str_contains($theme, 'body > main:not(#main-content)'), 'the blanket page-in animation no longer out-ranks the swap states');
     $assert(preg_match('/\.bubble-top \{[^}]*margin: 0 auto 4px;/s', $theme) === 1, 'the floating chrome uses padding, not a top margin');
     $assert(str_contains($theme, 'html, body { margin: 0; padding: 0; }'));
     $assert(str_contains($app, 'background-color: var(--bg)'), 'the body paints its own top edge');
     $assert(!preg_match('/html\[data-theme="dark"\] \{\s*background: var\(--sv-bg-deep\)/', $theme), 'canvas and body share one top colour');
     $assert(str_contains($glass, 'isolation: isolate'), 'dock shells do not leak their blend layers');
+    $assert(!preg_match('/html\[data-theme="light"\] body\.admin-portal \.admin-dock\s*\{/s', $theme), 'the light theme leaves the dock material alone');
 });
 
 $test('Dark mode is matte black and light mode is warm ivory', static function () use ($assert, $root): void {
@@ -702,6 +711,28 @@ $test('Dark mode is matte black and light mode is warm ivory', static function (
     $home = file_get_contents($root . '/public/assets/css/homepage.css');
     $assert(str_contains($home, '#fff7f0'), 'the landing page shares the ivory paper');
     $assert(str_contains($home, '#f59a55'), 'the landing page shares the apricot accent');
+});
+
+$test('One asset version busts every cached stylesheet and script', static function () use ($assert, $root): void {
+    $bootstrap = file_get_contents($root . '/bootstrap/app.php');
+    $assert(str_contains($bootstrap, 'function asset_version()'), 'assets share one version token');
+    $assert(str_contains($bootstrap, "glob(dirname(__DIR__) . '/public/assets/' . \$kind . '/*.' . \$kind)"), 'the token follows the newest css and js file');
+    foreach (['public/index.php', 'public/admin.php', 'public/recruiter.php', 'public/career.php'] as $file) {
+        $markup = file_get_contents($root . '/' . $file);
+        $assert(str_contains($markup, 'asset_version()'), "{$file} uses the shared token");
+        $assert(!str_contains($markup, "filemtime(__DIR__ . '/assets/"), "{$file} no longer pins the token to one file");
+    }
+});
+
+$test('The capsule geometry matches the wider Instagram-style track', static function () use ($assert, $root): void {
+    $student = file_get_contents($root . '/public/assets/css/water-dock.css');
+    $recruiter = file_get_contents($root . '/public/assets/css/recruiter.css');
+    $admin = file_get_contents($root . '/public/assets/css/admin.css');
+    $assert(str_contains($student, 'width: min(820px, calc(100% - 32px))'), 'the student capsule is wide');
+    $assert(str_contains($recruiter, 'width: min(820px, calc(100% - 32px))'), 'the recruiter capsule matches it');
+    $assert(str_contains($admin, 'width: min(960px, calc(100% - 32px))'), 'the eight-tab admin rail is wider still');
+    $assert(str_contains($student, 'min-height: 66px'), 'tabs keep a usable touch target');
+    $assert(str_contains($recruiter, 'min-height: 66px'));
 });
 
 $test('No merge-conflict markers remain in key project files', static function () use ($assert, $root): void {
