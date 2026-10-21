@@ -387,6 +387,46 @@ const down = (env, index) => env.links[index].dispatchEvent(pointer(env.window, 
     env.dom.window.close();
   }
 
+  // 10b. A tap navigates. Regression: capturing the pointer on pointerdown made
+  // the browser retarget the click to the dock, so `event.target` was the <nav>
+  // and the link was never followed — drags worked, taps did nothing.
+  {
+    const env = buildDock({ activeIndex: 0 });
+    await wait(40);
+    const captured = [];
+    env.nav.setPointerCapture = (id) => captured.push(id);
+
+    down(env, 2);
+    env.nav.dispatchEvent(pointer(env.window, 'pointermove', { x: tabCenter(2) + 1 }));
+    env.nav.dispatchEvent(pointer(env.window, 'pointerup', { x: tabCenter(2) + 1 }));
+    await wait(60);
+    assert.equal(captured.length, 0, 'the dock never captures the pointer, so the click target stays the link');
+
+    click(env, 2);
+    await wait(120);
+    assert.equal(env.requests.length, 1, 'a tap loads the destination');
+    assert(env.requests[0].url.includes('section=jobs'), `a tap opens the tapped section (got ${env.requests[0].url})`);
+    assert.equal(env.document.querySelector('.rec-nav-link[data-rec-section="jobs"]').getAttribute('aria-current'), 'page');
+    assert.deepEqual(env.pushes.map((url) => new URL(url).searchParams.get('section')), ['jobs'], 'and records history');
+    env.dom.window.close();
+  }
+
+  // 10c. Even if an engine retargets the click to the dock, the tab under the
+  // pointer is found and followed.
+  {
+    const env = buildDock({ activeIndex: 0 });
+    await wait(40);
+    env.document.elementFromPoint = () => env.links[3];
+    const retargeted = new env.window.MouseEvent('click', {
+      bubbles: true, cancelable: true, button: 0, detail: 1, clientX: tabCenter(3), clientY: 30,
+    });
+    env.nav.dispatchEvent(retargeted);
+    await wait(140);
+    assert.equal(env.requests.length, 1, 'a retargeted click still routes');
+    assert(env.requests[0].url.includes('section=applicants'), 'to the tab under the pointer');
+    env.dom.window.close();
+  }
+
   // 11. Keyboard support: focus moves, the capsule previews without navigating.
   {
     const env = buildDock({ activeIndex: 0 });
@@ -457,7 +497,7 @@ const down = (env, index) => env.links[index].dispatchEvent(pointer(env.window, 
     env.dom.window.close();
   }
 
-  console.log('PASS liquid-glass engine + recruiter dock (14 scenarios, simulated DOM)');
+  console.log('PASS liquid-glass engine + recruiter dock (16 scenarios, simulated DOM)');
 })().catch((error) => {
   console.error(error);
   process.exit(1);

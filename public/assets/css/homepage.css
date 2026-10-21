@@ -215,39 +215,64 @@ body.homepage ::selection { color: #241a12; background: #f6d3b3; }
 .homepage .section-heading h2 span { color: #a9541c; }
 .homepage .section-heading > p { color: #6b6259; font-size: 14px; line-height: 1.8; }
 .homepage .feature-grid { gap: 16px; }
+/* Role cards. Every colour here is declared for both themes: the previous
+   version set a white heading on a white card, which is the "invisible title"
+   that showed up on the landing page. */
 .homepage .feature-card {
   position: relative;
+  padding: 26px;
   border: 1px solid rgba(36, 32, 29, .1);
   border-radius: 22px;
   color: #24201d;
-  background: linear-gradient(145deg, rgba(255,255,255,.94), rgba(247,250,251,.88));
-  box-shadow: 0 12px 32px rgba(70, 48, 28, .065), inset 0 1px rgba(255,255,255,.98);
-  -webkit-backdrop-filter: blur(12px) saturate(125%);
-  backdrop-filter: blur(12px) saturate(125%);
+  background: linear-gradient(150deg, #ffffff, #fff6ee);
+  box-shadow: 0 14px 34px rgba(120, 78, 40, .09), inset 0 1px #ffffff;
 }
-.homepage .feature-card { padding: 26px; }
-.homepage .feature-card::before { background: linear-gradient(90deg, transparent, rgba(25,116,84,.2), transparent); }
-.homepage .feature-card::after { background: rgba(67, 167, 123, .07); }
+.homepage .feature-card::before { background: linear-gradient(90deg, transparent, rgba(245, 154, 85, .28), transparent); }
+.homepage .feature-card::after { background: rgba(245, 154, 85, .12); }
 .homepage .feature-card:hover {
-  border-color: rgba(25,116,84,.23);
-  background: #fff;
-  box-shadow: 0 18px 42px rgba(15,39,60,.1), inset 0 1px #fff;
+  border-color: rgba(201, 111, 45, .3);
+  background: #ffffff;
+  box-shadow: 0 24px 52px rgba(120, 78, 40, .16), inset 0 1px #ffffff;
   transform: translateY(-3px);
 }
 .homepage .feature-icon {
   width: 46px;
   height: 46px;
-  border: 1px solid rgba(245, 154, 85, .2);
+  border: 1px solid rgba(201, 111, 45, .22);
   border-radius: 15px;
-  color: #f2b183;
-  background: linear-gradient(145deg, rgba(245, 154, 85, .14), rgba(255, 255, 255, .03));
-  box-shadow: inset 0 1px rgba(255, 255, 255, .1);
+  color: #b25e22;
+  background: linear-gradient(150deg, #fdeada, #fff7f0);
+  box-shadow: inset 0 1px #ffffff;
 }
 .homepage .feature-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
-.homepage .feature-card h3 { color: #f2f3f5; font-size: 17px; }
-.homepage .feature-card p { color: #6b6259; font-size: 13px; line-height: 1.75; }
-.homepage .feature-link { color: #a9541c; font-size: 12px; }
-.homepage .feature-link:hover { color: #f6c9a6; }
+.homepage .feature-card h3 { margin: 26px 0 10px; color: #24201d; font-size: 17px; font-weight: 660; letter-spacing: -.02em; }
+.homepage .feature-card p { color: #5f574f; font-size: 13px; line-height: 1.75; }
+.homepage .feature-link { color: #a9541c; font-size: 12px; font-weight: 700; }
+.homepage .feature-link:hover { color: #7d3c10; text-decoration: underline; text-underline-offset: 3px; }
+
+html[data-theme="dark"] .homepage .feature-card {
+  border-color: rgba(235, 238, 244, .1);
+  color: #f2f3f5;
+  background: linear-gradient(150deg, rgba(26, 27, 31, .92), rgba(18, 19, 22, .96));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .5), inset 0 1px rgba(255, 255, 255, .06);
+}
+html[data-theme="dark"] .homepage .feature-card:hover {
+  border-color: rgba(245, 154, 85, .28);
+  background: linear-gradient(150deg, rgba(32, 33, 38, .96), rgba(22, 23, 27, .98));
+  box-shadow: 0 26px 56px rgba(0, 0, 0, .6), inset 0 1px rgba(255, 255, 255, .09);
+}
+html[data-theme="dark"] .homepage .feature-card::before { background: linear-gradient(90deg, transparent, rgba(245, 154, 85, .34), transparent); }
+html[data-theme="dark"] .homepage .feature-card::after { background: rgba(245, 154, 85, .14); }
+html[data-theme="dark"] .homepage .feature-icon {
+  border-color: rgba(245, 154, 85, .26);
+  color: #f6bc90;
+  background: linear-gradient(150deg, rgba(245, 154, 85, .16), rgba(255, 255, 255, .02));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .08);
+}
+html[data-theme="dark"] .homepage .feature-card h3 { color: #f4f5f7; }
+html[data-theme="dark"] .homepage .feature-card p { color: #a8acb3; }
+html[data-theme="dark"] .homepage .feature-link { color: #f0b183; }
+html[data-theme="dark"] .homepage .feature-link:hover { color: #ffd0ab; }
 .homepage #for-recruiters, .homepage #how-it-works { scroll-margin-top: 110px; }
 .homepage .site-footer {
   align-items: flex-start;
@@ -434,20 +459,6 @@ html[data-theme="dark"] .homepage .secondary-btn {
 }
 
 /* Feature cards on warm paper */
-html[data-theme="light"] .homepage .feature-card {
-  border-color: rgba(196, 118, 62, .2);
-  background: linear-gradient(158deg, rgba(255, 255, 255, .97), rgba(255, 246, 238, .92));
-  box-shadow: 0 18px 44px rgba(180, 100, 48, .1), inset 0 1px rgba(255, 255, 255, .96);
-}
-html[data-theme="light"] .homepage .feature-card:hover { box-shadow: 0 26px 58px rgba(180, 100, 48, .18); }
-html[data-theme="light"] .homepage .feature-card h3 { color: #24201d; }
-html[data-theme="light"] .homepage .feature-card p { color: #6b6259; }
-html[data-theme="light"] .homepage .feature-icon {
-  color: #a9541c;
-  border-color: rgba(196, 118, 62, .24);
-  background: linear-gradient(150deg, rgba(255, 224, 200, .92), rgba(255, 255, 255, .82));
-}
-html[data-theme="light"] .homepage .feature-link { color: #a9541c; }
 html[data-theme="light"] .homepage .section-heading h2 { color: #24201d; }
 html[data-theme="light"] .homepage .section-heading h2 span {
   background: linear-gradient(100deg, #f59a55, #b25e22);
@@ -461,7 +472,6 @@ html[data-theme="light"] .homepage .section-heading > p,
 html[data-theme="light"] .homepage .site-footer { color: #6b6259; }
 html[data-theme="light"] .homepage .site-footer strong { color: #24201d; }
 html[data-theme="dark"] .homepage .site-footer { border-color: rgba(235, 238, 244, .12); }
-html[data-theme="light"] .homepage .feature-card { color: #24201d; }
 html[data-theme="light"] .homepage .hero-feature-card {
   border-color: rgba(255, 255, 255, .62);
   background: linear-gradient(150deg, rgba(255, 255, 255, .95), rgba(255, 238, 224, .84));
@@ -471,6 +481,10 @@ html[data-theme="light"] .homepage .hero-feature-card h2 { color: #24201d; }
 html[data-theme="light"] .homepage .hero-card-head,
 html[data-theme="light"] .homepage .hero-card-foot,
 html[data-theme="light"] .homepage .flow-copy small { color: #6f665c; }
+/* The card body sits on near-white glass in this theme, so the two lines that
+   were authored near-white have to come down with it. */
+html[data-theme="light"] .homepage .flow-copy strong { color: #2b2622; }
+html[data-theme="light"] .homepage .hero-card-status { color: #a0501a; }
 html[data-theme="light"] .homepage .hero-flow li { border-color: rgba(196, 118, 62, .16); }
 html[data-theme="light"] .homepage .flow-index {
   color: #a9541c;
@@ -522,6 +536,6 @@ html[data-theme="light"] .auth-wrap {
 }
 html[data-theme="dark"] .auth-wrap {
   background:
-    radial-gradient(48% 40% at 18% 12%, rgba(30, 116, 118, .32), rgba(30, 116, 118, 0) 70%),
-    radial-gradient(42% 38% at 86% 82%, rgba(255, 138, 75, .12), rgba(255, 138, 75, 0) 72%);
+    radial-gradient(46% 40% at 16% 10%, rgba(255, 255, 255, .045), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(42% 38% at 88% 84%, rgba(245, 154, 85, .10), rgba(245, 154, 85, 0) 72%);
 }

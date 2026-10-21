@@ -283,9 +283,27 @@
       return clientX - barRect.left - bar.clientLeft + (scrollTrack.scrollLeft || 0);
     };
 
+    /* The press is tracked on window, not on the dock.
+       Pointer capture would be tidier, but capturing on pointerdown makes the
+       browser retarget the follow-up click to the dock itself, so the link
+       never sees it and a plain tap stops navigating (only the drag path,
+       which routes through liquidglass:activate, kept working). Tracking from
+       window gives the same "never lose a fast flick" guarantee while leaving
+       the native click target intact — so taps, Ctrl/⌘-click and middle-click
+       all behave like ordinary links. */
+    const linkSelector = '.sv-dock-link, .admin-dock-link, .rec-nav-link';
+    const resetPointer = (settle) => {
+      if (!pointer) return;
+      pointer = null;
+      state.dragging = false;
+      bar.classList.remove('is-dragging');
+      setPreview(-1);
+      if (settle) moveTo(activeIndex);
+    };
+
     bar.addEventListener('pointerdown', (event) => {
       if (isGroup || !event.isPrimary || event.button !== 0) return;
-      if (!event.target.closest('.sv-dock-link, .admin-dock-link, .rec-nav-link')) return;
+      if (!event.target.closest(linkSelector)) return;
       pointer = {
         id: event.pointerId,
         startX: event.clientX,
@@ -295,19 +313,11 @@
         velocity: 0,
         dragging: false,
         vertical: false,
-        captured: false,
         preview: activeIndex,
       };
-      /* Capture straight away: a fast flick can leave the dock between two
-         frames, and without capture those moves would be dropped. A tap still
-         produces its normal click. */
-      try {
-        bar.setPointerCapture(event.pointerId);
-        pointer.captured = true;
-      } catch (_) { /* capture is optional */ }
     });
 
-    bar.addEventListener('pointermove', (event) => {
+    const onPointerMove = (event) => {
       if (!pointer || event.pointerId !== pointer.id || pointer.vertical) return;
       const dx = event.clientX - pointer.startX;
       const dy = event.clientY - pointer.startY;
@@ -344,17 +354,12 @@
       pointer.preview = nearest(position);
       setPreview(pointer.preview);
       start();
-    });
+    };
 
     const finish = (event, cancelled) => {
       if (!pointer || event.pointerId !== pointer.id) return;
       const drag = pointer;
       pointer = null;
-      if (drag.captured) {
-        try {
-          if (bar.hasPointerCapture(event.pointerId)) bar.releasePointerCapture(event.pointerId);
-        } catch (_) { /* already released */ }
-      }
       if (!drag.dragging) return;
       state.dragging = false;
       bar.classList.remove('is-dragging');
@@ -371,21 +376,27 @@
       else moveTo(activeIndex);
     };
 
-    bar.addEventListener('pointerup', (event) => finish(event, false));
-    bar.addEventListener('pointercancel', (event) => finish(event, true));
-    bar.addEventListener('lostpointercapture', (event) => {
-      if (pointer && pointer.dragging && event.pointerId === pointer.id) {
-        pointer = null;
-        state.dragging = false;
-        bar.classList.remove('is-dragging');
-        setPreview(-1);
-        moveTo(activeIndex);
-      }
-    });
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', (event) => finish(event, false));
+    window.addEventListener('pointercancel', (event) => finish(event, true));
+    window.addEventListener('blur', () => resetPointer(true));
 
     /* ---------------------------------------------------------------- click */
     bar.addEventListener('click', (event) => {
-      const link = event.target.closest('.sv-dock-link, .admin-dock-link, .rec-nav-link, .lg-option');
+      const selector = `${linkSelector}, .lg-option`;
+      let link = event.target && event.target.closest ? event.target.closest(selector) : null;
+      let retargeted = false;
+      if ((!link || !bar.contains(link)) && typeof document.elementFromPoint === 'function') {
+        // Some engines dispatch the click at the element that owned the
+        // pointer rather than the link under it. Find the tab under the
+        // pointer so a tap still lands on the destination the user aimed at.
+        const hit = document.elementFromPoint(event.clientX, event.clientY);
+        const found = hit && hit.closest ? hit.closest(selector) : null;
+        if (found && bar.contains(found)) {
+          link = found;
+          retargeted = true;
+        }
+      }
       if (!link || !bar.contains(link)) return;
       if (event.detail > 0 && window.performance.now() < suppressClickUntil) {
         event.preventDefault();
@@ -394,6 +405,12 @@
       }
       const index = links.indexOf(link);
       if (index < 0) return;
+      if (retargeted) {
+        // The anchor will not follow its own href, so route it explicitly.
+        event.preventDefault();
+        activate(index, 'click');
+        return;
+      }
       // Visual selection happens immediately; navigation stays with the page.
       setActive(index);
       emit('liquidglass:select', index, 'click');

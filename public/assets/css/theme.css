@@ -211,6 +211,7 @@ html[data-theme="dark"] .water-blob {
 html[data-theme="light"] body.recruiter-portal {
   --rec-bg: var(--sv-bg);
   --rec-ink: var(--sv-ink);
+  --rec-ink-soft: var(--sv-ink-soft);
   --rec-muted: var(--sv-muted);
   --rec-dim: var(--sv-dim);
   --rec-line: var(--sv-line);
@@ -350,11 +351,14 @@ html[data-theme="light"] body.recruiter-portal .rec-chip.is-active {
   background: linear-gradient(150deg, #b8621f, #9a4c1a);
 }
 html[data-theme="light"] body.recruiter-portal .rec-footer { color: var(--sv-muted); }
+html[data-theme="light"] body.recruiter-portal :focus-visible,
+html[data-theme="light"] body.admin-portal :focus-visible { outline-color: #a9541c; }
 
 /* ==================================================================== ADMIN */
 html[data-theme="light"] body.admin-portal {
   --adm-bg: var(--sv-bg);
   --adm-ink: var(--sv-ink);
+  --adm-ink-soft: var(--sv-ink-soft);
   --adm-muted: var(--sv-muted);
   --adm-dim: var(--sv-dim);
   --adm-line: var(--sv-line);
@@ -484,22 +488,60 @@ html[data-theme="light"] body.admin-portal .admin-pre,
 html[data-theme="light"] body.admin-portal .admin-import-form { background: rgba(253, 243, 233, .85); border-color: var(--sv-line); }
 html[data-theme="light"] body.admin-portal .admin-footer { color: var(--sv-muted); }
 
-/* Text that is authored for the dark portal still needs a light value. These
-   are the remaining literal greys in the recruiter/admin sheets; everything
-   that already reads from --rec-* is remapped above. */
-html[data-theme="light"] body.recruiter-portal :is(.rec-form label, .rec-note strong, .rec-candidate-facts strong) { color: var(--sv-ink-soft); }
-html[data-theme="light"] body.recruiter-portal :is(.rec-steps li, .rec-job-company, .rec-interview-meta) { color: var(--sv-muted); }
-html[data-theme="light"] body.recruiter-portal .rec-steps strong { color: var(--sv-ink); }
+/* Status pills keep their meaning in the light theme: green for live, amber
+   for in-progress, red for closed-out, neutral for parked. Without this the
+   generic light pill rule flattened every one of them to the same grey. */
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--published,
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--selected,
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--completed {
+  color: #14563a;
+  border-color: rgba(31, 122, 77, .26);
+  background: var(--sv-ok-soft);
+}
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--shortlisted,
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--interview,
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--rescheduled {
+  color: #8a5210;
+  border-color: rgba(156, 90, 18, .24);
+  background: var(--sv-warn-soft);
+}
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--rejected,
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--withdrawn,
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--cancelled {
+  color: #8f2318;
+  border-color: rgba(176, 42, 29, .26);
+  background: var(--sv-bad-soft);
+}
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--draft,
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--under_review,
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--scheduled,
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--paused,
+html[data-theme="light"] body.recruiter-portal .rec-status-pill--closed {
+  color: var(--sv-muted);
+  border-color: var(--sv-line-strong);
+  background: var(--sv-surface-2);
+}
+html[data-theme="light"] body.recruiter-portal .rec-button--quiet-danger {
+  color: #8f2318;
+  border-color: rgba(176, 42, 29, .3);
+  background: var(--sv-bad-soft);
+}
+
+/* Every text colour in the recruiter and admin sheets now reads from a token,
+   so the light theme only has to fix the few shapes that were painted for a
+   dark background: the step markers and their connector line. */
 html[data-theme="light"] body.recruiter-portal .rec-steps li > span {
   border-color: var(--sv-line-strong);
   color: var(--sv-ink-soft);
   background: var(--sv-surface-2);
 }
 html[data-theme="light"] body.recruiter-portal .rec-steps li:not(:last-child)::after { background: var(--sv-line); }
-html[data-theme="light"] body.recruiter-portal :is(.rec-cover-note p, .rec-history-list li, .rec-privacy-note p) { color: var(--sv-ink-soft); }
-html[data-theme="light"] body.admin-portal .admin-table th { color: var(--sv-muted); }
-html[data-theme="light"] body.admin-portal :is(.admin-announcements p, .admin-details summary) { color: var(--sv-ink-soft); }
-html[data-theme="light"] body.admin-portal .admin-metadata code { color: var(--sv-muted); }
+html[data-theme="light"] body.recruiter-portal .rec-steps li.is-current > span {
+  border-color: rgba(201, 111, 45, .45);
+  color: #fff7f0;
+  background: #c96f2d;
+  box-shadow: 0 0 0 4px rgba(201, 111, 45, .14);
+}
 
 /* --------------------------------------------------- dark matte retint
  * The dark theme is a premium matte black: near-black paper, charcoal
