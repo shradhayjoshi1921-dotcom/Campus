@@ -4,46 +4,48 @@
  * and real water glass. Dark mode is a cold slate pool with the same ember.
  */
 
+/* ---------------------------------------------------------------- palette
+ * One palette for every portal. Light is warm ivory with a restrained ember
+ * accent; dark is premium matte black with silver glass and a warm accent used
+ * only where it carries meaning. Radii, motion and type scale are shared.
+ */
 :root {
   color-scheme: light;
-  --sv-bg: #faf7f3;
-  --sv-bg-deep: #f2ece5;
-  --sv-bg-glow: #f6e3d3;
-  --sv-surface: #fffdfa;
-  --sv-surface-2: #f9f3ec;
-  --sv-glass: rgba(255, 253, 250, .78);
-  --sv-glass-strong: rgba(255, 253, 250, .93);
-  --sv-ink: #1f2429;
-  --sv-ink-soft: #3d454e;
-  --sv-muted: #69727d;
-  --sv-dim: #8b939d;
-  --sv-line: rgba(31, 36, 41, .12);
-  --sv-line-strong: rgba(31, 36, 41, .22);
-  --sv-orange: #cf5a17;
-  --sv-orange-deep: #a9430a;
-  --sv-orange-soft: #f7e4d5;
-  --sv-apricot: #e8a066;
-  --sv-honey: #e9c08a;
-  --sv-ok: #1c6a45;
-  --sv-ok-soft: #dfefe5;
+  --sv-bg: #fff7f0;
+  --sv-bg-deep: #fff0e3;
+  --sv-bg-glow: #ffe7d4;
+  --sv-surface: #ffffff;
+  --sv-surface-2: #fff4ea;
+  --sv-glass: rgba(255, 255, 255, .74);
+  --sv-glass-strong: rgba(255, 255, 255, .9);
+  --sv-ink: #24201d;
+  --sv-ink-soft: #3c3631;
+  --sv-muted: #6b6259;
+  --sv-dim: #8a8077;
+  --sv-line: rgba(36, 32, 29, .12);
+  --sv-line-strong: rgba(36, 32, 29, .22);
+  --sv-orange: #c96f2d;
+  --sv-orange-deep: #a9541c;
+  --sv-orange-soft: #fdeada;
+  --sv-apricot: #f59a55;
+  --sv-honey: #ecc6a4;
+  --sv-ok: #1f6b4a;
+  --sv-ok-soft: #e2f1e8;
   --sv-warn: #8a5714;
-  --sv-warn-soft: #f7ecd8;
-  --sv-bad: #a52a1d;
-  --sv-bad-soft: #f8e2dd;
-  --sv-shadow: 0 28px 68px rgba(46, 38, 32, .13);
-  --sv-shadow-soft: 0 12px 32px rgba(46, 38, 32, .08);
-  --sv-water: linear-gradient(180deg, rgba(255, 253, 250, .9), rgba(246, 231, 217, .74));
-  --sv-water-strong: linear-gradient(160deg, rgba(255, 255, 255, .97), rgba(242, 220, 200, .72));
-  --sv-water-ink: #7a3d13;
-  --sv-drop: linear-gradient(180deg, rgba(255, 250, 244, .95), rgba(240, 197, 163, .78) 46%, rgba(214, 139, 88, .82) 82%, rgba(190, 110, 60, .86));
+  --sv-warn-soft: #fbeed8;
+  --sv-bad: #a32a1e;
+  --sv-bad-soft: #fbe4df;
+  --sv-shadow: 0 24px 60px rgba(70, 48, 30, .12);
+  --sv-shadow-soft: 0 10px 28px rgba(70, 48, 30, .08);
+  --sv-water: linear-gradient(180deg, rgba(255, 255, 255, .88), rgba(255, 240, 227, .72));
+  --sv-water-strong: linear-gradient(160deg, rgba(255, 255, 255, .96), rgba(255, 238, 224, .78));
+  --sv-water-ink: #9a4f18;
+  --sv-drop: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(247, 236, 226, .74) 52%, rgba(226, 210, 196, .7));
   --sv-drop-rim: rgba(255, 255, 255, .96);
-  --sv-drop-shadow: rgba(120, 68, 34, .3);
-  --sv-dock-shell: linear-gradient(180deg, rgba(255, 253, 250, .93), rgba(246, 231, 217, .84));
-  --sv-dock-line: rgba(31, 36, 41, .14);
-  --sv-dock-ink: #3b2a1d;
-  --sv-dock-muted: #7d7468;
-  --sv-dock-active: #7a3d13;
-  --sv-dock-badge: linear-gradient(150deg, #ffd9c6, #ff9f6e);
+  --sv-drop-shadow: rgba(52, 40, 30, .18);
+  --sv-dock-shell: linear-gradient(180deg, rgba(255, 255, 255, .72), rgba(255, 246, 238, .58));
+  --sv-dock-line: rgba(36, 32, 29, .14);
+  --sv-dock-badge: linear-gradient(150deg, #f6d3b3, #f59a55);
   --sv-radius: 20px;
   --sv-ease: cubic-bezier(.22, 1, .36, 1);
   --sv-ease-out: cubic-bezier(.16, .84, .3, 1);
@@ -51,55 +53,63 @@
   --sv-dur: 220ms;
   --sv-dur-slow: 340ms;
   --sv-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sv-font-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
 }
 
 html[data-theme="dark"] {
   color-scheme: dark;
-  --sv-bg: #0d1114;
-  --sv-bg-deep: #080b0e;
-  --sv-bg-glow: #131b20;
-  --sv-surface: #151b20;
-  --sv-surface-2: #1a2229;
-  --sv-glass: rgba(20, 27, 33, .82);
-  --sv-glass-strong: rgba(18, 24, 29, .94);
-  --sv-ink: #eef2f5;
-  --sv-ink-soft: #d2dae1;
-  --sv-muted: #9aa6b2;
-  --sv-dim: #7c8894;
-  --sv-line: rgba(214, 228, 238, .13);
-  --sv-line-strong: rgba(214, 228, 238, .24);
-  --sv-orange: #f08a4b;
-  --sv-orange-deep: #ff6f2b;
-  --sv-orange-soft: rgba(240, 138, 75, .16);
-  --sv-apricot: #dda075;
-  --sv-honey: #e6c99f;
-  --sv-ok: #8fd9b3;
-  --sv-ok-soft: rgba(80, 190, 140, .14);
-  --sv-warn: #e9c894;
-  --sv-warn-soft: rgba(233, 200, 148, .12);
-  --sv-bad: #f3aca2;
-  --sv-bad-soft: rgba(243, 140, 128, .12);
-  --sv-shadow: 0 32px 74px rgba(0, 0, 0, .55);
-  --sv-shadow-soft: 0 14px 36px rgba(0, 0, 0, .38);
-  --sv-water: linear-gradient(180deg, rgba(28, 38, 45, .9), rgba(15, 22, 27, .86));
-  --sv-water-strong: linear-gradient(160deg, rgba(38, 51, 60, .94), rgba(13, 20, 25, .9));
-  --sv-water-ink: #f4d9c4;
-  --sv-drop: linear-gradient(180deg, rgba(255, 245, 236, .32), rgba(240, 138, 75, .42) 44%, rgba(146, 78, 42, .55) 82%, rgba(92, 52, 30, .6));
-  --sv-drop-rim: rgba(255, 236, 220, .72);
-  --sv-drop-shadow: rgba(0, 0, 0, .6);
-  --sv-dock-shell: linear-gradient(180deg, rgba(25, 34, 40, .94), rgba(11, 16, 20, .96));
-  --sv-dock-line: rgba(214, 228, 238, .16);
-  --sv-dock-ink: #eaf0f4;
-  --sv-dock-muted: #94a0ac;
-  --sv-dock-active: #ffd9c0;
-  --sv-dock-badge: linear-gradient(150deg, #ffd9c6, #ff9f6e);
+  --sv-bg: #090a0c;
+  --sv-bg-deep: #070809;
+  --sv-bg-glow: #101114;
+  --sv-surface: #121316;
+  --sv-surface-2: #17181c;
+  --sv-glass: rgba(18, 19, 22, .74);
+  --sv-glass-strong: rgba(16, 17, 20, .9);
+  --sv-ink: #f2f3f5;
+  --sv-ink-soft: #d6d8dc;
+  --sv-muted: #a2a6ad;
+  --sv-dim: #82868d;
+  --sv-line: rgba(235, 238, 244, .12);
+  --sv-line-strong: rgba(235, 238, 244, .22);
+  --sv-orange: #f59a55;
+  --sv-orange-deep: #ffb57d;
+  --sv-orange-soft: rgba(245, 154, 85, .14);
+  --sv-apricot: #e8b78f;
+  --sv-honey: #dcc3a9;
+  --sv-ok: #93d0ae;
+  --sv-ok-soft: rgba(120, 200, 155, .13);
+  --sv-warn: #e6c69a;
+  --sv-warn-soft: rgba(230, 198, 154, .12);
+  --sv-bad: #f0aea4;
+  --sv-bad-soft: rgba(240, 150, 140, .12);
+  --sv-shadow: 0 30px 70px rgba(0, 0, 0, .62);
+  --sv-shadow-soft: 0 12px 32px rgba(0, 0, 0, .44);
+  --sv-water: linear-gradient(180deg, rgba(33, 34, 38, .9), rgba(14, 15, 18, .88));
+  --sv-water-strong: linear-gradient(160deg, rgba(42, 43, 48, .94), rgba(13, 14, 16, .92));
+  --sv-water-ink: #f1d3b8;
+  --sv-drop: linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(196, 200, 208, .12) 52%, rgba(120, 126, 136, .16));
+  --sv-drop-rim: rgba(255, 255, 255, .7);
+  --sv-drop-shadow: rgba(0, 0, 0, .7);
+  --sv-dock-shell: linear-gradient(180deg, rgba(28, 29, 33, .66), rgba(10, 11, 13, .74));
+  --sv-dock-line: rgba(235, 238, 244, .16);
+  --sv-dock-badge: linear-gradient(150deg, #f6d3b3, #f59a55);
 }
 
+/* The canvas and the body share the same top colour and body never collapses a
+   child margin, so no strip of bare canvas can appear above the first row of
+   chrome at any width or scroll offset. The dark canvas is pinned to the exact
+   top colour of the body gradients (#0b0c0e) so iOS overscroll cannot flash a
+   darker band above the page either. */
 html { background: var(--sv-bg); }
-html[data-theme="dark"] { background: var(--sv-bg-deep); }
+html[data-theme="dark"] { background: #0b0c0e; }
+
+html, body { margin: 0; padding: 0; }
 
 body {
+  display: flow-root;
+  min-height: 100vh;
   color: var(--sv-ink);
+  background-color: var(--sv-bg);
 }
 
 /* ------------------------------------------------------------ theme switch */
@@ -115,7 +125,7 @@ body {
   border-radius: 999px;
   color: var(--sv-ink-soft);
   background: var(--sv-water);
-  box-shadow: inset 0 1px rgba(255, 255, 255, .7), 0 6px 18px rgba(180, 104, 52, .12);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .7), 0 6px 18px rgba(120, 78, 40, .1);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .04em;
@@ -142,8 +152,8 @@ html[data-theme="dark"] .theme-toggle {
   overflow: hidden;
 }
 html[data-theme="dark"] .theme-toggle__track {
-  background: radial-gradient(circle at 30% 24%, rgba(198, 246, 240, .5), rgba(30, 104, 104, .6) 58%, rgba(4, 26, 30, .8));
-  box-shadow: inset 0 1px rgba(228, 252, 248, .34), 0 3px 12px rgba(0, 0, 0, .45);
+  background: radial-gradient(circle at 30% 24%, rgba(236, 240, 247, .34), rgba(58, 60, 66, .7) 58%, rgba(9, 10, 12, .9));
+  box-shadow: inset 0 1px rgba(236, 240, 247, .26), 0 3px 12px rgba(0, 0, 0, .55);
 }
 .theme-toggle__icon {
   position: absolute;
@@ -152,7 +162,7 @@ html[data-theme="dark"] .theme-toggle__track {
   transition: opacity .24s ease, transform .32s cubic-bezier(.2, .8, .25, 1);
 }
 .theme-toggle__icon--sun { color: #a5470d; }
-.theme-toggle__icon--moon { color: #d9fbf6; opacity: 0; transform: rotate(-40deg) scale(.7); }
+.theme-toggle__icon--moon { color: #e6e9ef; opacity: 0; transform: rotate(-40deg) scale(.7); }
 html[data-theme="dark"] .theme-toggle__icon--sun { opacity: 0; transform: rotate(40deg) scale(.7); }
 html[data-theme="dark"] .theme-toggle__icon--moon { opacity: 1; transform: rotate(0) scale(1); }
 .theme-toggle__label { white-space: nowrap; }
@@ -180,8 +190,8 @@ html[data-theme="dark"] .theme-toggle__icon--moon { opacity: 1; transform: rotat
   animation: sv-float 15s ease-in-out infinite;
 }
 html[data-theme="dark"] .water-blob {
-  background: radial-gradient(circle at 32% 24%, rgba(170, 236, 230, .4), rgba(28, 104, 108, .4) 46%, rgba(4, 26, 30, .2) 78%);
-  box-shadow: inset 6px 10px 26px rgba(190, 248, 240, .18), 0 26px 64px rgba(0, 0, 0, .42);
+  background: radial-gradient(circle at 32% 24%, rgba(226, 232, 240, .16), rgba(64, 66, 72, .28) 46%, rgba(8, 9, 11, .16) 78%);
+  box-shadow: inset 6px 10px 26px rgba(230, 236, 244, .08), 0 26px 64px rgba(0, 0, 0, .5);
 }
 @keyframes sv-float {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
@@ -205,36 +215,32 @@ html[data-theme="light"] body.recruiter-portal {
   --rec-line-strong: var(--sv-line-strong);
   --rec-glass: var(--sv-glass);
   --rec-glass-strong: var(--sv-glass-strong);
-  --rec-mint: #c4510f;
+  --rec-mint: #b25e22;
   --rec-mint-ink: #fff6ee;
-  --rec-green: #1f7a4d;
-  --rec-blue: #1f5f86;
-  --rec-violet: #5b4b9c;
-  --rec-amber: #9c5a12;
+  --rec-amber: #8a5714;
   --rec-red: var(--sv-bad);
   color-scheme: light;
   color: var(--sv-ink);
   background:
-    radial-gradient(ellipse at 8% 0%, rgba(255, 186, 132, .3), transparent 34rem),
-    radial-gradient(ellipse at 94% 6%, rgba(255, 214, 176, .34), transparent 38rem),
+    radial-gradient(ellipse at 8% 0%, rgba(245, 154, 85, .22), transparent 34rem),
+    radial-gradient(ellipse at 94% 6%, rgba(255, 196, 150, .28), transparent 38rem),
     linear-gradient(180deg, var(--sv-bg) 0%, var(--sv-bg-deep) 100%);
 }
 html[data-theme="light"] body.recruiter-portal .rec-orb {
-  border-color: rgba(238, 140, 74, .22);
+  border-color: rgba(245, 154, 85, .22);
   background: radial-gradient(circle at 30% 24%, rgba(255, 255, 255, .9), rgba(255, 190, 146, .34) 40%, rgba(255, 255, 255, .02) 74%);
-  box-shadow: inset 5px 7px 20px rgba(255, 255, 255, .7), 0 16px 38px rgba(196, 104, 44, .12);
+  box-shadow: inset 5px 7px 20px rgba(255, 255, 255, .7), 0 16px 38px rgba(120, 78, 40, .1);
   opacity: .55;
 }
-html[data-theme="light"] body.recruiter-portal .rec-topbar,
-html[data-theme="light"] body.recruiter-portal .rec-dock {
+html[data-theme="light"] body.recruiter-portal .rec-topbar {
   border-color: var(--sv-dock-line);
   background: var(--sv-dock-shell);
-  box-shadow: 0 18px 44px rgba(180, 100, 48, .16), inset 0 1px rgba(255, 255, 255, .9);
+  box-shadow: 0 18px 44px rgba(70, 48, 28, .16), inset 0 1px rgba(255, 255, 255, .9);
 }
 html[data-theme="light"] body.recruiter-portal .rec-brand-mark {
   color: #fff8f2;
-  background: linear-gradient(150deg, #ffa15f, #e35a12);
-  box-shadow: 0 6px 18px rgba(214, 96, 32, .3), inset 0 1px rgba(255, 255, 255, .5);
+  background: linear-gradient(150deg, #c9793a, #a6531e);
+  box-shadow: 0 6px 18px rgba(120, 66, 26, .3), inset 0 1px rgba(255, 255, 255, .5);
 }
 html[data-theme="light"] body.recruiter-portal .rec-brand-copy strong { color: var(--sv-ink); }
 html[data-theme="light"] body.recruiter-portal .rec-brand-copy small { color: var(--sv-muted); }
@@ -258,7 +264,7 @@ html[data-theme="light"] body.recruiter-portal .rec-signout {
 html[data-theme="light"] body.recruiter-portal .rec-avatar,
 html[data-theme="light"] body.recruiter-portal .rec-applicant-avatar,
 html[data-theme="light"] body.recruiter-portal .rec-activity-avatar {
-  color: #8a3d0d;
+  color: #8a4a1c;
   border-color: rgba(214, 120, 60, .28);
   background: var(--sv-water-strong);
 }
@@ -268,12 +274,12 @@ html[data-theme="light"] body.recruiter-portal .rec-attention-card,
 html[data-theme="light"] body.recruiter-portal .rec-recent-card,
 html[data-theme="light"] body.recruiter-portal .rec-privacy-note {
   border-color: var(--sv-line);
-  background: linear-gradient(158deg, rgba(255, 255, 255, .96), rgba(255, 245, 236, .9));
-  box-shadow: 0 18px 44px rgba(180, 100, 48, .1), inset 0 1px rgba(255, 255, 255, .95);
+  background: linear-gradient(158deg, rgba(255, 255, 255, .96), rgba(255, 247, 240, .92));
+  box-shadow: 0 18px 44px rgba(70, 48, 28, .1), inset 0 1px rgba(255, 255, 255, .95);
   color: var(--sv-ink);
 }
 html[data-theme="light"] body.recruiter-portal .rec-stat-card::after {
-  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, .9), rgba(255, 186, 138, .22) 46%, transparent 72%);
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, .9), rgba(255, 206, 172, .26) 46%, transparent 72%);
 }
 html[data-theme="light"] body.recruiter-portal .rec-stat-card p,
 html[data-theme="light"] body.recruiter-portal .rec-page-description,
@@ -287,7 +293,7 @@ html[data-theme="light"] body.recruiter-portal .rec-card > h2 { color: var(--sv-
 html[data-theme="light"] body.recruiter-portal .rec-activity-list li { border-color: var(--sv-line); }
 html[data-theme="light"] body.recruiter-portal .rec-activity-copy small,
 html[data-theme="light"] body.recruiter-portal .rec-activity-list time { color: var(--sv-dim); }
-html[data-theme="light"] body.recruiter-portal .rec-text-link { color: #c4510f; }
+html[data-theme="light"] body.recruiter-portal .rec-text-link { color: #b25e22; }
 html[data-theme="light"] body.recruiter-portal .rec-button {
   border-color: var(--sv-line-strong);
   color: var(--sv-ink-soft);
@@ -296,12 +302,12 @@ html[data-theme="light"] body.recruiter-portal .rec-button {
 }
 html[data-theme="light"] body.recruiter-portal .rec-button--primary {
   color: #fff8f2;
-  border-color: rgba(214, 96, 32, .46);
-  background: linear-gradient(150deg, #ff9350, #df540f);
-  box-shadow: 0 12px 26px rgba(214, 96, 32, .28), inset 0 1px rgba(255, 255, 255, .4);
+  border-color: rgba(120, 66, 26, .46);
+  background: linear-gradient(150deg, #b8621f, #9a4c1a);
+  box-shadow: 0 12px 26px rgba(120, 66, 26, .28), inset 0 1px rgba(255, 255, 255, .4);
 }
 html[data-theme="light"] body.recruiter-portal .rec-button--secondary {
-  color: #8a3d0d;
+  color: #8a4a1c;
   border-color: rgba(214, 120, 60, .34);
   background: rgba(255, 255, 255, .8);
 }
@@ -319,7 +325,7 @@ html[data-theme="light"] body.recruiter-portal textarea {
   border-color: var(--sv-line-strong);
   color: var(--sv-ink);
   background: rgba(255, 255, 255, .9);
-  box-shadow: inset 0 1px 2px rgba(150, 80, 32, .06);
+  box-shadow: inset 0 1px 2px rgba(36, 32, 29, .06);
 }
 html[data-theme="light"] body.recruiter-portal input::placeholder,
 html[data-theme="light"] body.recruiter-portal textarea::placeholder { color: var(--sv-dim); }
@@ -327,10 +333,10 @@ html[data-theme="light"] body.recruiter-portal .rec-table { color: var(--sv-ink)
 html[data-theme="light"] body.recruiter-portal .rec-table th {
   color: var(--sv-muted);
   border-color: var(--sv-line-strong);
-  background: rgba(255, 236, 222, .6);
+  background: rgba(250, 240, 230, .72);
 }
 html[data-theme="light"] body.recruiter-portal .rec-table td { border-color: var(--sv-line); }
-html[data-theme="light"] body.recruiter-portal .rec-table tbody tr:hover { background: rgba(255, 226, 202, .42); }
+html[data-theme="light"] body.recruiter-portal .rec-table tbody tr:hover { background: rgba(249, 232, 216, .5); }
 html[data-theme="light"] body.recruiter-portal .rec-chip {
   border-color: var(--sv-line-strong);
   color: var(--sv-ink-soft);
@@ -338,11 +344,9 @@ html[data-theme="light"] body.recruiter-portal .rec-chip {
 }
 html[data-theme="light"] body.recruiter-portal .rec-chip.is-active {
   color: #fff8f2;
-  border-color: rgba(214, 96, 32, .5);
-  background: linear-gradient(150deg, #ff9350, #df540f);
+  border-color: rgba(120, 66, 26, .5);
+  background: linear-gradient(150deg, #b8621f, #9a4c1a);
 }
-html[data-theme="light"] body.recruiter-portal .rec-dock-link { color: var(--sv-dock-muted); }
-html[data-theme="light"] body.recruiter-portal .rec-dock-link.is-active { color: var(--sv-dock-active); }
 html[data-theme="light"] body.recruiter-portal .rec-footer { color: var(--sv-muted); }
 
 /* ==================================================================== ADMIN */
@@ -353,32 +357,32 @@ html[data-theme="light"] body.admin-portal {
   --adm-dim: var(--sv-dim);
   --adm-line: var(--sv-line);
   --adm-line-strong: var(--sv-line-strong);
-  --adm-mint: #c4510f;
-  --adm-amber: #9c5a12;
+  --adm-mint: #b25e22;
+  --adm-amber: #8a5714;
   --adm-red: var(--sv-bad);
   color-scheme: light;
   color: var(--sv-ink);
   background:
-    radial-gradient(ellipse at 6% 0%, rgba(255, 186, 132, .3), transparent 34rem),
-    radial-gradient(ellipse at 96% 6%, rgba(255, 214, 176, .34), transparent 36rem),
+    radial-gradient(ellipse at 6% 0%, rgba(245, 154, 85, .22), transparent 34rem),
+    radial-gradient(ellipse at 96% 6%, rgba(255, 196, 150, .28), transparent 36rem),
     linear-gradient(180deg, var(--sv-bg) 0%, var(--sv-bg-deep) 100%);
 }
 html[data-theme="light"] body.admin-portal .admin-orb {
-  border-color: rgba(238, 140, 74, .22);
+  border-color: rgba(245, 154, 85, .22);
   background: radial-gradient(circle at 30% 24%, rgba(255, 255, 255, .9), rgba(255, 190, 146, .32) 40%, rgba(255, 255, 255, .02) 74%);
-  box-shadow: inset 5px 7px 20px rgba(255, 255, 255, .7), 0 16px 38px rgba(196, 104, 44, .12);
+  box-shadow: inset 5px 7px 20px rgba(255, 255, 255, .7), 0 16px 38px rgba(120, 78, 40, .1);
   opacity: .55;
 }
 html[data-theme="light"] body.admin-portal .admin-topbar,
 html[data-theme="light"] body.admin-portal .admin-dock {
   border-color: var(--sv-dock-line);
   background: var(--sv-dock-shell);
-  box-shadow: 0 18px 44px rgba(180, 100, 48, .16), inset 0 1px rgba(255, 255, 255, .9);
+  box-shadow: 0 18px 44px rgba(70, 48, 28, .16), inset 0 1px rgba(255, 255, 255, .9);
 }
 html[data-theme="light"] body.admin-portal .admin-brand-mark {
   color: #fff8f2;
-  background: linear-gradient(150deg, #ffa15f, #e35a12);
-  box-shadow: 0 6px 18px rgba(214, 96, 32, .3), inset 0 1px rgba(255, 255, 255, .5);
+  background: linear-gradient(150deg, #c9793a, #a6531e);
+  box-shadow: 0 6px 18px rgba(120, 66, 26, .3), inset 0 1px rgba(255, 255, 255, .5);
 }
 html[data-theme="light"] body.admin-portal .admin-brand-copy strong { color: var(--sv-ink); }
 html[data-theme="light"] body.admin-portal .admin-brand-copy small,
@@ -391,7 +395,7 @@ html[data-theme="light"] body.admin-portal .admin-signout {
   background: var(--sv-water);
 }
 html[data-theme="light"] body.admin-portal .admin-avatar {
-  color: #8a3d0d;
+  color: #8a4a1c;
   border-color: rgba(214, 120, 60, .28);
   background: var(--sv-water-strong);
 }
@@ -400,8 +404,8 @@ html[data-theme="light"] body.admin-portal .admin-stat,
 html[data-theme="light"] body.admin-portal .admin-metrics > div,
 html[data-theme="light"] body.admin-portal .admin-queue li {
   border-color: var(--sv-line);
-  background: linear-gradient(158deg, rgba(255, 255, 255, .96), rgba(255, 245, 236, .9));
-  box-shadow: 0 18px 44px rgba(180, 100, 48, .1), inset 0 1px rgba(255, 255, 255, .95);
+  background: linear-gradient(158deg, rgba(255, 255, 255, .96), rgba(255, 247, 240, .92));
+  box-shadow: 0 18px 44px rgba(70, 48, 28, .1), inset 0 1px rgba(255, 255, 255, .95);
   color: var(--sv-ink);
 }
 html[data-theme="light"] body.admin-portal .admin-card h2,
@@ -419,11 +423,11 @@ html[data-theme="light"] body.admin-portal .admin-table { color: var(--sv-ink); 
 html[data-theme="light"] body.admin-portal .admin-table th {
   color: var(--sv-muted);
   border-color: var(--sv-line-strong);
-  background: rgba(255, 236, 222, .6);
+  background: rgba(250, 240, 230, .72);
 }
 html[data-theme="light"] body.admin-portal .admin-table th,
 html[data-theme="light"] body.admin-portal .admin-table td { border-color: var(--sv-line); }
-html[data-theme="light"] body.admin-portal .admin-table tbody tr:hover { background: rgba(255, 226, 202, .42); }
+html[data-theme="light"] body.admin-portal .admin-table tbody tr:hover { background: rgba(249, 232, 216, .5); }
 html[data-theme="light"] body.admin-portal .admin-table tr.is-invalid { background: rgba(255, 214, 206, .5); }
 html[data-theme="light"] body.admin-portal .admin-pill {
   border-color: var(--sv-line-strong);
@@ -440,12 +444,12 @@ html[data-theme="light"] body.admin-portal .admin-chip {
 }
 html[data-theme="light"] body.admin-portal .admin-chip.is-active {
   color: #fff8f2;
-  border-color: rgba(214, 96, 32, .5);
-  background: linear-gradient(150deg, #ff9350, #df540f);
+  border-color: rgba(120, 66, 26, .5);
+  background: linear-gradient(150deg, #b8621f, #9a4c1a);
 }
-html[data-theme="light"] body.admin-portal .admin-bar { background: rgba(196, 118, 62, .16); }
+html[data-theme="light"] body.admin-portal .admin-bar { background: rgba(36, 32, 29, .16); }
 html[data-theme="light"] body.admin-portal .admin-bar > span {
-  background: linear-gradient(90deg, #ffb27a, #e35a12);
+  background: linear-gradient(90deg, #ffb27a, #a6531e);
 }
 html[data-theme="light"] body.admin-portal input,
 html[data-theme="light"] body.admin-portal select,
@@ -453,7 +457,7 @@ html[data-theme="light"] body.admin-portal textarea {
   border-color: var(--sv-line-strong);
   color: var(--sv-ink);
   background: rgba(255, 255, 255, .92);
-  box-shadow: inset 0 1px 2px rgba(150, 80, 32, .06);
+  box-shadow: inset 0 1px 2px rgba(36, 32, 29, .06);
 }
 html[data-theme="light"] body.admin-portal input::placeholder,
 html[data-theme="light"] body.admin-portal textarea::placeholder { color: var(--sv-dim); }
@@ -473,57 +477,27 @@ html[data-theme="light"] body.admin-portal .admin-alert--error { border-color: r
 html[data-theme="light"] body.admin-portal .admin-alert--warn { border-color: rgba(156, 90, 18, .28); background: var(--sv-warn-soft); color: #7a3f0c; }
 html[data-theme="light"] body.admin-portal .admin-details,
 html[data-theme="light"] body.admin-portal .admin-pre,
-html[data-theme="light"] body.admin-portal .admin-import-form { background: rgba(255, 246, 238, .8); border-color: var(--sv-line); }
-html[data-theme="light"] body.admin-portal .admin-dock-link { color: var(--sv-dock-muted); }
-html[data-theme="light"] body.admin-portal .admin-dock-link.is-active { color: var(--sv-dock-active); }
+html[data-theme="light"] body.admin-portal .admin-import-form { background: rgba(253, 243, 233, .85); border-color: var(--sv-line); }
 html[data-theme="light"] body.admin-portal .admin-footer { color: var(--sv-muted); }
 
-/* ------------------------------------------------------- dark water retint */
+/* --------------------------------------------------- dark matte retint
+ * The dark theme is a premium matte black: near-black paper, charcoal
+ * surfaces and neutral silver glass. No teal wash, no green cards.
+ */
 html[data-theme="dark"] body.recruiter-portal,
 html[data-theme="dark"] body.admin-portal {
   background:
-    radial-gradient(ellipse at 8% 0%, rgba(46, 156, 150, .18), transparent 34rem),
-    radial-gradient(ellipse at 94% 6%, rgba(214, 122, 52, .12), transparent 36rem),
-    linear-gradient(180deg, #071c20 0%, #041416 58%, #05171a 100%);
+    radial-gradient(ellipse at 70% -10%, rgba(255, 255, 255, .035), transparent 40rem),
+    radial-gradient(ellipse at 12% 4%, rgba(255, 255, 255, .022), transparent 32rem),
+    linear-gradient(180deg, #0b0c0e 0%, #090a0c 62%, #08090a 100%);
 }
-html[data-theme="dark"] body.recruiter-portal .rec-dock,
-html[data-theme="dark"] body.admin-portal .admin-dock {
-  border-color: var(--sv-dock-line);
-  background: var(--sv-dock-shell);
+html[data-theme="dark"] body.recruiter-portal .rec-orb,
+html[data-theme="dark"] body.admin-portal .admin-orb {
+  border-color: rgba(235, 240, 248, .07);
+  background: radial-gradient(circle at 30% 24%, rgba(240, 244, 249, .10), rgba(240, 244, 249, .02) 46%, transparent 74%);
+  box-shadow: inset 4px 6px 18px rgba(255, 255, 255, .04);
+  opacity: .5;
 }
-html[data-theme="dark"] body.recruiter-portal .rec-dock-link.is-active,
-html[data-theme="dark"] body.admin-portal .admin-dock-link.is-active { color: var(--sv-dock-active); }
-html[data-theme="dark"] body.recruiter-portal .rec-dock-link,
-html[data-theme="dark"] body.admin-portal .admin-dock-link { color: var(--sv-dock-muted); }
-
-/* ------------------------------------------- watery dock glass (both themes) */
-body.recruiter-portal .rec-dock-indicator,
-body.admin-portal .admin-dock-indicator {
-  border-radius: 999px;
-  background: var(--sv-drop);
-  box-shadow:
-    0 14px 30px -10px var(--sv-drop-shadow),
-    0 4px 10px -4px rgba(0, 0, 0, .35),
-    0 0 0 .5px rgba(120, 62, 26, .28),
-    inset 0 2px 3px var(--sv-drop-rim),
-    inset 0 -2px 3px rgba(255, 255, 255, .38),
-    inset 1px 0 2px rgba(255, 255, 255, .5),
-    inset -1px 0 2px rgba(255, 255, 255, .45);
-  -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.03);
-  backdrop-filter: blur(14px) saturate(190%) brightness(1.03);
-}
-html[data-theme="dark"] body.recruiter-portal .rec-dock,
-html[data-theme="dark"] body.admin-portal .admin-dock { box-shadow: 0 22px 54px rgba(0, 0, 0, .55), inset 0 1px rgba(220, 250, 246, .16); }
-
-/* Dock ticks read as water pressure marks rather than separate buttons. */
-body.recruiter-portal .rec-dock-link.is-active,
-body.recruiter-portal .rec-dock-link.is-preview,
-body.admin-portal .admin-dock-link.is-active,
-body.admin-portal .admin-dock-link.is-preview { text-shadow: 0 1px 2px rgba(255, 255, 255, .5); }
-html[data-theme="dark"] body.recruiter-portal .rec-dock-link.is-active,
-html[data-theme="dark"] body.recruiter-portal .rec-dock-link.is-preview,
-html[data-theme="dark"] body.admin-portal .admin-dock-link.is-active,
-html[data-theme="dark"] body.admin-portal .admin-dock-link.is-preview { text-shadow: 0 1px 2px rgba(0, 12, 14, .55); }
 
 /* ======================================================================
  * Floating bubble chrome — replaces the full-width top bars.
@@ -532,14 +506,16 @@ html[data-theme="dark"] body.admin-portal .admin-dock-link.is-preview { text-sha
 .bubble-top {
   position: sticky;
   z-index: 120;
-  top: max(10px, env(safe-area-inset-top, 0px));
+  /* Padding, not margin: a top margin on the first child would collapse
+     through the body and expose the canvas as a strip above the chrome. */
+  top: 0;
   display: flex;
   width: min(1180px, calc(100% - 20px));
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin: 12px auto 4px;
-  padding: 0;
+  margin: 0 auto 4px;
+  padding: max(12px, env(safe-area-inset-top, 0px)) 0 0;
   border: 0;
   background: none;
   box-shadow: none;
@@ -621,7 +597,7 @@ html[data-theme="dark"] .bubble {
   color: #fffaf5;
   background:
     radial-gradient(circle at 32% 24%, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 58%),
-    linear-gradient(150deg, #ea9a5f, #c95313);
+    linear-gradient(150deg, #c2793d, #9a4c1a);
   box-shadow: 0 4px 12px rgba(160, 78, 26, .34), inset 0 1px rgba(255, 255, 255, .5);
   font-size: 13px;
   font-weight: 800;
@@ -632,9 +608,9 @@ html[data-theme="dark"] .bubble {
 
 .bubble--cta {
   color: #fff8f2;
-  border-color: rgba(169, 67, 10, .5);
-  background: linear-gradient(150deg, #f09a5c, #c95313);
-  box-shadow: 0 14px 28px -12px rgba(169, 67, 10, .55), inset 0 1px rgba(255, 255, 255, .4);
+  border-color: rgba(120, 62, 26, .5);
+  background: linear-gradient(150deg, #b8621f, #9a4c1a);
+  box-shadow: 0 14px 28px -12px rgba(120, 62, 26, .55), inset 0 1px rgba(255, 255, 255, .4);
 }
 .bubble--cta:hover { color: #fff; border-color: #a9430a; }
 .bubble--account {
@@ -761,45 +737,6 @@ html[data-theme="dark"] .bubble-sheet__panel {
 body.sheet-open { overflow: hidden; }
 
 /* ======================================================================
- * Water dock v3 — the active drop is larger than the bar and rises above it.
- * The capsule lives outside the scrolling track so nothing clips it.
- * ==================================================================== */
-.sv-dock,
-.admin-dock,
-.rec-dock {
-  overflow: visible;
-}
-.sv-dock-track,
-.admin-dock-track,
-.rec-dock-track {
-  position: relative;
-  z-index: 3;
-}
-.sv-dock-indicator,
-.admin-dock-indicator,
-.rec-dock-indicator {
-  z-index: 2;
-  border-radius: 48% 48% 44% 44% / 34% 34% 66% 66%;
-  transform-origin: 50% 78%;
-}
-.sv-dock-indicator::before,
-.admin-dock-indicator::before,
-.rec-dock-indicator::before {
-  /* Wet cap: the droplet catches light at its crown. */
-  border-radius: 50% 50% 40% 40% / 46% 46% 54% 54%;
-}
-.sv-dock-link.is-active .sv-dock-icon,
-.admin-dock-link.is-active .admin-dock-icon,
-.rec-dock-link.is-active .rec-dock-icon {
-  transform: translateY(-2px) scale(1.14);
-}
-.sv-dock-link.is-active .sv-dock-label,
-.admin-dock-link.is-active .admin-dock-label,
-.rec-dock-link.is-active .rec-dock-label {
-  transform: translateY(1px);
-}
-
-/* ======================================================================
  * Motion system — frame-rate independent, GPU-only, and calm.
  * ==================================================================== */
 @view-transition { navigation: auto; }
@@ -829,7 +766,7 @@ body > main,
 }
 
 /* Interaction polish that reads as higher refresh rate: short, eased, GPU. */
-a, button, .bubble, .sv-dock-link, .admin-dock-link, .rec-dock-link {
+a, button, .bubble, .sv-dock-link, .admin-dock-link, .rec-nav-link, .lg-option {
   transition-timing-function: var(--sv-ease);
 }
 button, a { touch-action: manipulation; }
@@ -843,49 +780,4 @@ button, a { touch-action: manipulation; }
   .rec-main { animation: none !important; }
   .bubble, .bubble-sheet__panel, .bubble-sheet { transition: none !important; }
   .bubble:hover { transform: none; }
-}
-
-/* -------------------------------------------------- recruiter dock (real names)
- * The recruiter rail uses .rec-bottom-nav / .rec-nav-indicator; give it the
- * same water, the same protrusion and the same theme colours as the others.
- */
-.rec-bottom-nav { overflow: visible; }
-.rec-bottom-nav .rec-nav-indicator {
-  z-index: 1;
-  border-radius: 48% 48% 44% 44% / 34% 34% 66% 66%;
-  transform-origin: 50% 78%;
-  background: var(--sv-drop);
-  box-shadow:
-    0 20px 38px -16px var(--sv-drop-shadow),
-    0 -8px 22px -14px rgba(255, 190, 150, .35),
-    0 0 0 .5px rgba(31, 36, 41, .16),
-    inset 0 3px 4px var(--sv-drop-rim),
-    inset 0 -3px 4px rgba(255, 255, 255, .35);
-  -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(1.03);
-  backdrop-filter: blur(14px) saturate(190%) brightness(1.03);
-}
-.rec-bottom-nav .rec-nav-link { z-index: 2; }
-html[data-theme="light"] .rec-bottom-nav {
-  border-color: var(--sv-dock-line);
-  background: var(--sv-dock-shell);
-  box-shadow: 0 22px 48px -18px rgba(46, 38, 32, .45), inset 0 1px rgba(255, 255, 255, .9);
-}
-html[data-theme="dark"] .rec-bottom-nav {
-  border-color: var(--sv-dock-line);
-  background: var(--sv-dock-shell);
-  box-shadow: 0 24px 54px rgba(0, 0, 0, .55), inset 0 1px rgba(255, 255, 255, .12);
-}
-html[data-theme="light"] .rec-nav-link { color: var(--sv-dock-muted); }
-html[data-theme="light"] .rec-nav-link.is-active { color: var(--sv-dock-active); }
-html[data-theme="dark"] .rec-nav-link { color: var(--sv-dock-muted); }
-html[data-theme="dark"] .rec-nav-link.is-active { color: var(--sv-dock-active); }
-
-/* The admin rail also needs to paint above its own shell. */
-.admin-dock .admin-dock-indicator { top: auto; }
-.admin-dock-track .admin-dock-link { z-index: 3; }
-
-@media (prefers-reduced-motion: reduce) {
-  .rec-bottom-nav .rec-nav-indicator::before,
-  .admin-dock-indicator::before,
-  .sv-dock-indicator::before { animation: none !important; }
 }

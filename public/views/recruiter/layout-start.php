@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#fff8f1">
+    <meta name="theme-color" content="#fff7f0">
     <script>
         (function () {
             try {
@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="assets/css/liquid-glass.css?v=<?= recruiter_h($recruiterCssVersion) ?>">
 </head>
 <body class="recruiter-portal">
+<?php require dirname(__DIR__) . '/partials/glass-defs.php'; ?>
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <div class="rec-ambient" aria-hidden="true">
     <span class="rec-orb rec-orb--one"></span>

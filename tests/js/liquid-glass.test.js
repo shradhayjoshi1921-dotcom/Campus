@@ -20,9 +20,9 @@ const SECTIONS = ['overview', 'company', 'jobs', 'applicants', 'interviews'];
 const TAB_WIDTH = 144;
 const TAB_HEIGHT = 56;
 const PAD_LEFT = 10;
-const INSET_X = Math.max(4, Math.min(8, TAB_WIDTH * 0.06));
+const INSET_X = Math.max(5, Math.min(9, TAB_WIDTH * 0.07));
 const BASE_WIDTH = TAB_WIDTH - INSET_X;
-const INSET_Y = Math.max(3, Math.min(6, TAB_HEIGHT * 0.07));
+const INSET_Y = Math.max(4, Math.min(7, TAB_HEIGHT * 0.08));
 const CAPSULE_HEIGHT = TAB_HEIGHT - INSET_Y;
 
 const layers = `
@@ -185,7 +185,15 @@ const number = (value, fallback = NaN) => {
   return match ? Number(match[0]) : fallback;
 };
 const translateX = (indicator) => number(/translate3d\((-?[\d.]+)px/.exec(indicator.style.transform || '')?.[1]);
-const width = (indicator) => number(indicator.style.width);
+const baseWidth = (indicator) => number(indicator.style.width, 0);
+const scaleOf = (indicator) => {
+  const match = /scale3d\((-?[\d.]+),\s*(-?[\d.]+)/.exec(indicator.style.transform || '');
+  return match ? [Number(match[1]), Number(match[2])] : [1, 1];
+};
+// The pill is laid out once and stretched with a transform, so its visible
+// width is the laid-out width times the horizontal scale.
+const width = (indicator) => baseWidth(indicator) * scaleOf(indicator)[0];
+const scaleX = (indicator) => scaleOf(indicator)[0];
 const slosh = (indicator) => number(indicator.style.getPropertyValue('--lg-slosh'), 0);
 const click = (env, index) => env.links[index].dispatchEvent(new env.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1 }));
 const down = (env, index) => env.links[index].dispatchEvent(pointer(env.window, 'pointerdown', { x: tabCenter(index) }));
@@ -194,7 +202,8 @@ const down = (env, index) => env.links[index].dispatchEvent(pointer(env.window, 
   // 1. Boot: one shared capsule, one tab wide, centred, hidden until measured.
   {
     const env = buildDock({ activeIndex: 0 });
-    assert.equal(width(env.indicator), Number(BASE_WIDTH.toFixed(2)), 'capsule is inset from the tab width');
+    assert.equal(baseWidth(env.indicator), Number(BASE_WIDTH.toFixed(2)), 'capsule is laid out inset from the tab width');
+    assert.equal(scaleX(env.indicator), 1, 'and rests unstretched');
     assert.equal(width(env.indicator) <= TAB_WIDTH, true, 'capsule never exceeds one tab');
     assert(Math.abs(translateX(env.indicator) - restingLeft(0)) < 0.2, 'capsule is centred on the active tab');
     assert.equal(env.indicator.style.height, `${CAPSULE_HEIGHT.toFixed(1)}px`, 'capsule height follows the tab');
@@ -221,11 +230,11 @@ const down = (env, index) => env.links[index].dispatchEvent(pointer(env.window, 
     assert(width(env.indicator) <= TAB_WIDTH + 0.01, 'stretch stays inside a single tab');
     assert(Math.abs(slosh(env.indicator)) > 0, 'interior liquid sloshes while travelling');
     assert(env.indicator.classList.contains('is-moving'), 'moving state is published for styling');
-    assert(env.indicator.style.transform.includes('scaleY(0.'), 'capsule squashes slightly along travel');
+    assert(scaleOf(env.indicator)[1] < 1, 'capsule squashes slightly along travel');
 
     await wait(900);
     assert(Math.abs(translateX(env.indicator) - restingLeft(3)) < 0.2, 'capsule settles exactly on the destination tab');
-    assert.equal(width(env.indicator), Number(BASE_WIDTH.toFixed(2)), 'capsule returns to its pill width');
+    assert.equal(scaleX(env.indicator), 1, 'capsule returns to its pill width');
     assert.equal(env.indicator.classList.contains('is-moving'), false);
     assert.equal(slosh(env.indicator), 0, 'liquid levels out after settling');
 
@@ -372,7 +381,7 @@ const down = (env, index) => env.links[index].dispatchEvent(pointer(env.window, 
     click(env, 4);
     await wait(40);
     assert(Math.abs(translateX(env.indicator) - restingLeft(4)) < 0.2, 'reduced motion moves instantly');
-    assert.equal(width(env.indicator), Number(BASE_WIDTH.toFixed(2)), 'no stretch under reduced motion');
+    assert.equal(scaleX(env.indicator), 1, 'no stretch under reduced motion');
     assert.equal(slosh(env.indicator), 0);
     assert.equal(env.requests.length, 1, 'sections still change');
     env.dom.window.close();
@@ -414,7 +423,7 @@ const down = (env, index) => env.links[index].dispatchEvent(pointer(env.window, 
     const env = buildGroup({ activeIndex: 1 });
     await wait(40);
     const first = env.options[1].getBoundingClientRect();
-    assert.equal(width(env.indicator), Number((74 - 3).toFixed(2)), 'group capsule is trimmed to the option');
+    assert.equal(baseWidth(env.indicator), Number((74 - 3).toFixed(2)), 'group capsule is trimmed to the option');
     assert(Math.abs(translateX(env.indicator) - ((first.left + 37) - (74 - 3) / 2)) < 0.2, 'group capsule centres on the option');
     assert.equal(number(env.indicator.style.height), 32 - 3, 'group capsule uses the compact height');
 
@@ -439,10 +448,11 @@ const down = (env, index) => env.links[index].dispatchEvent(pointer(env.window, 
     const env = buildDock({ activeIndex: 2, deferLayout: true });
     await wait(40);
     assert.equal(width(env.indicator), 0, 'a dock without a box stays dormant');
+    assert.equal(baseWidth(env.indicator), 0, 'nothing is laid out while unmeasured');
     assert.equal(env.nav.classList.contains('has-liquid-indicator'), true, 'reveal is still scheduled');
     env.showLayout();
     env.window.LiquidGlass.controller(env.nav).refresh();
-    assert.equal(width(env.indicator), Number(BASE_WIDTH.toFixed(2)), 'the capsule measures once the dock is laid out');
+    assert.equal(baseWidth(env.indicator), Number(BASE_WIDTH.toFixed(2)), 'the capsule measures once the dock is laid out');
     assert(Math.abs(translateX(env.indicator) - restingLeft(2)) < 0.2, 'and lands on the rendered tab');
     env.dom.window.close();
   }

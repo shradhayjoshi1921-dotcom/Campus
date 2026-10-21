@@ -1,54 +1,26 @@
 /*
- * Student workspace water dock — one continuous capsule that slides across
- * five destinations. Colours come from theme.css: peach water in light mode,
- * deep water in dark mode. Sized so the droplet reads larger than the tab.
+ * Student workspace dock — a long floating capsule of glass with a separate
+ * glass pill for the current destination. Geometry only: the material lives in
+ * liquid-glass.css, the spring in assets/js/liquid-glass.js.
  */
 
 .sv-dock {
   position: fixed;
   z-index: 100;
-  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   left: 50%;
-  width: min(620px, calc(100% - 24px));
-  border: 1px solid var(--sv-dock-line);
-  border-radius: 26px;
-  background: var(--sv-dock-shell);
-  box-shadow:
-    0 24px 58px rgba(150, 78, 30, .22),
-    0 3px 10px rgba(150, 78, 30, .12),
-    inset 0 1px rgba(255, 255, 255, .86);
-  -webkit-backdrop-filter: blur(26px) saturate(180%);
-  backdrop-filter: blur(26px) saturate(180%);
+  width: min(760px, calc(100% - 24px));
   transform: translateX(-50%);
   touch-action: pan-y;
   -webkit-user-select: none;
   user-select: none;
 }
-html[data-theme="dark"] .sv-dock {
-  box-shadow:
-    0 26px 60px rgba(0, 0, 0, .55),
-    0 3px 12px rgba(0, 0, 0, .4),
-    inset 0 1px rgba(220, 250, 246, .16);
-}
-.sv-dock::before {
-  position: absolute;
-  inset: 1px 6% auto;
-  height: 44%;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0));
-  content: "";
-  opacity: .6;
-  pointer-events: none;
-}
-html[data-theme="dark"] .sv-dock::before {
-  background: linear-gradient(180deg, rgba(198, 246, 240, .18), rgba(198, 246, 240, 0));
-}
 
 .sv-dock-track {
   position: relative;
   display: flex;
-  gap: 3px;
-  padding: 7px;
+  gap: 2px;
+  padding: 8px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -56,255 +28,86 @@ html[data-theme="dark"] .sv-dock::before {
   -webkit-overflow-scrolling: touch;
 }
 .sv-dock-track::-webkit-scrollbar { display: none; }
+.sv-dock.is-dragging { cursor: grabbing; }
 .sv-dock.is-dragging .sv-dock-track { scroll-behavior: auto; cursor: grabbing; }
 
 .sv-dock-link {
   position: relative;
   z-index: 1;
   display: grid;
-  min-width: 84px;
+  min-width: 92px;
   flex: 1 0 auto;
-  min-height: 58px;
+  min-height: 64px;
   justify-items: center;
   align-content: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border-radius: 22px;
-  color: var(--sv-dock-muted);
-  font-size: 9px;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 10px;
   font-weight: 650;
-  letter-spacing: .02em;
+  letter-spacing: .01em;
   text-align: center;
-  transition: color .22s ease;
   -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
 }
-.sv-dock-link:hover { color: var(--sv-ink-soft); }
-.sv-dock-link.is-active { color: var(--sv-dock-active); }
-.sv-dock-link.is-preview { color: var(--sv-dock-active); opacity: .82; }
-.sv-dock-link.is-active .sv-dock-icon,
-.sv-dock-link.is-preview .sv-dock-icon { transform: translateY(-1px) scale(1.1); }
-.sv-dock-link.is-active .sv-dock-label,
-.sv-dock-link.is-preview .sv-dock-label { opacity: 1; }
-
 .sv-dock-icon {
   display: grid;
-  width: 24px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   place-items: center;
-  transition: transform .24s cubic-bezier(.2, .8, .25, 1);
 }
-.sv-dock-icon svg { width: 20px; height: 20px; }
+.sv-dock-icon svg { width: 24px; height: 24px; }
 .sv-dock-label {
   max-width: 100%;
   overflow: hidden;
-  opacity: .78;
+  opacity: .8;
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: opacity .2s ease;
 }
 .sv-dock-badge {
   position: absolute;
-  z-index: 2;
-  top: 1px;
-  right: 8px;
+  z-index: 3;
+  top: 4px;
+  right: 10px;
   display: grid;
-  min-width: 16px;
-  height: 16px;
+  min-width: 17px;
+  height: 17px;
   padding: 0 4px;
   place-items: center;
   border-radius: 999px;
-  color: #4a1608;
+  color: #3a2413;
   background: var(--sv-dock-badge);
-  box-shadow: 0 2px 8px rgba(140, 60, 20, .3);
-  font-size: 8.5px;
+  box-shadow: 0 2px 8px rgba(120, 70, 30, .28);
+  font-size: 9px;
   font-weight: 800;
   line-height: 1;
 }
 
-/* The capsule itself: one body, three light layers. */
-.sv-dock-indicator {
-  --sv-slosh: 0;
-  --sv-stretch: 0;
-  position: absolute;
-  z-index: 0;
-  top: 3px;
-  left: 0;
-  display: block;
-  width: 92px;
-  height: 66px;
-  overflow: hidden;
-  border-radius: 999px;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate3d(0, 0, 0);
-  background: var(--sv-drop);
-  box-shadow:
-    0 16px 30px -12px var(--sv-drop-shadow),
-    0 4px 10px -4px rgba(0, 0, 0, .22),
-    0 0 0 .5px rgba(150, 84, 44, .24),
-    inset 0 3px 4px var(--sv-drop-rim),
-    inset 0 -3px 4px rgba(255, 255, 255, .4),
-    inset 2px 0 3px rgba(255, 255, 255, .48),
-    inset -2px 0 3px rgba(255, 255, 255, .42),
-    inset 0 -14px 20px -16px rgba(255, 255, 255, .8);
-  -webkit-backdrop-filter: blur(16px) saturate(195%) brightness(1.04);
-  backdrop-filter: blur(16px) saturate(195%) brightness(1.04);
-  transition: opacity .24s ease;
-  will-change: transform, width;
-}
-.sv-dock.has-sliding-indicator .sv-dock-indicator { opacity: 1; }
-
-/* Specular band on the upper half — the wet sheen of a droplet. */
-.sv-dock-indicator::before {
-  position: absolute;
-  z-index: 2;
-  inset: 1px 2px auto;
-  height: 54%;
-  border-radius: 999px 999px 46% 46% / 999px 999px 58% 58%;
-  background:
-    radial-gradient(46% 70% at 22% 0%, rgba(255, 255, 255, .95), rgba(255, 255, 255, .3) 44%, rgba(255, 255, 255, 0) 76%),
-    radial-gradient(42% 54% at 80% 4%, rgba(255, 244, 232, .42), rgba(255, 244, 232, 0) 78%),
-    radial-gradient(82% 98% at 56% -14%, rgba(255, 255, 255, .55), rgba(255, 255, 255, .1) 54%, rgba(255, 255, 255, 0) 80%);
-  content: "";
-  opacity: .95;
-  pointer-events: none;
-}
-
-/* Masked 1px refraction ring. */
-.sv-dock-indicator::after {
-  position: absolute;
-  z-index: 3;
-  inset: 0;
-  padding: 1px;
-  border-radius: inherit;
-  background: linear-gradient(158deg,
-    rgba(255, 255, 255, .98) 0%,
-    rgba(255, 255, 255, .55) 9%,
-    rgba(255, 255, 255, .1) 26%,
-    rgba(255, 236, 220, .06) 48%,
-    rgba(255, 255, 255, .18) 64%,
-    rgba(255, 250, 244, .62) 82%,
-    rgba(255, 255, 255, .96) 100%);
-  content: "";
-  opacity: calc(.85 + var(--sv-stretch) * .15);
-  pointer-events: none;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-}
-html[data-theme="dark"] .sv-dock-indicator::after {
-  background: linear-gradient(158deg,
-    rgba(224, 252, 248, .96) 0%,
-    rgba(224, 252, 248, .42) 10%,
-    rgba(224, 252, 248, .08) 28%,
-    rgba(255, 178, 122, .1) 52%,
-    rgba(224, 252, 248, .16) 68%,
-    rgba(224, 252, 248, .5) 84%,
-    rgba(232, 254, 250, .92) 100%);
-}
-
-.sv-dock-liquid {
-  position: absolute;
-  z-index: 1;
-  inset: 0 -10px;
-  border-radius: inherit;
-  background:
-    radial-gradient(64% 130% at 46% -18%, rgba(255, 255, 255, .3), rgba(255, 255, 255, .06) 46%, rgba(255, 255, 255, 0) 72%),
-    radial-gradient(98% 94% at 62% 124%, rgba(255, 236, 220, .3), rgba(212, 110, 48, .14) 48%, rgba(0, 0, 0, 0) 80%),
-    linear-gradient(180deg, rgba(255, 246, 236, .1), rgba(190, 92, 32, .12));
-  pointer-events: none;
-  transform: translate3d(calc(var(--sv-slosh) * 4px), 0, 0);
-}
-html[data-theme="dark"] .sv-dock-liquid {
-  background:
-    radial-gradient(64% 130% at 46% -18%, rgba(206, 252, 246, .22), rgba(206, 252, 246, .04) 46%, rgba(206, 252, 246, 0) 72%),
-    radial-gradient(98% 94% at 62% 124%, rgba(255, 157, 99, .2), rgba(18, 84, 88, .3) 48%, rgba(0, 0, 0, 0) 80%),
-    linear-gradient(180deg, rgba(206, 252, 246, .06), rgba(2, 20, 24, .22));
-}
-
-.sv-dock-rim {
-  position: absolute;
-  z-index: 2;
-  right: 5%;
-  bottom: 1px;
-  left: 5%;
-  height: 48%;
-  border-radius: 50%;
-  background: radial-gradient(56% 100% at 50% 100%,
-    rgba(255, 255, 255, 0) 48%,
-    rgba(255, 244, 232, .3) 60%,
-    rgba(255, 255, 255, .7) 72%,
-    rgba(255, 255, 255, .18) 80%,
-    rgba(255, 255, 255, 0) 88%);
-  filter: blur(.9px);
-  opacity: .85;
-  pointer-events: none;
-  transform: translate3d(calc(var(--sv-slosh) * 2px), 0, 0);
-}
-html[data-theme="dark"] .sv-dock-rim {
-  background: radial-gradient(56% 100% at 50% 100%,
-    rgba(224, 252, 248, 0) 48%,
-    rgba(224, 252, 248, .24) 60%,
-    rgba(230, 254, 250, .6) 72%,
-    rgba(224, 252, 248, .14) 80%,
-    rgba(224, 252, 248, 0) 88%);
-}
-
-.sv-dock-caustic {
-  position: absolute;
-  z-index: 2;
-  top: 44%;
-  left: 9%;
-  width: 34%;
-  height: 34%;
-  border-radius: 50%;
-  background: radial-gradient(50% 50% at 50% 50%, rgba(255, 255, 255, .42), rgba(255, 255, 255, 0) 72%);
-  filter: blur(2px);
-  opacity: .6;
-  pointer-events: none;
-  transform: translate3d(calc(var(--sv-slosh) * -5px), 0, 0);
-}
-html[data-theme="dark"] .sv-dock-caustic {
-  background: radial-gradient(50% 50% at 50% 50%, rgba(206, 252, 246, .34), rgba(206, 252, 246, 0) 72%);
-}
-
-.sv-dock.is-dragging .sv-dock-indicator {
-  -webkit-backdrop-filter: blur(9px) saturate(200%) brightness(1.08);
-  backdrop-filter: blur(9px) saturate(200%) brightness(1.08);
-}
-
-/* No-JS highlight: identical destinations, simpler material. */
-.sv-dock:not(.has-sliding-indicator) .sv-dock-link.is-active::before {
-  position: absolute;
-  z-index: 0;
-  inset: 2px;
-  border: 1px solid var(--sv-dock-line);
-  border-radius: 20px;
-  background: var(--sv-water-strong);
-  content: "";
-}
-
 /* Leave room for the dock on every student workspace page. */
-body:has(.sv-dock) .dashboard { padding-bottom: 124px; }
-body:has(.sv-dock) .site-footer { padding-bottom: 40px; }
+body:has(.sv-dock) .dashboard { padding-bottom: 140px; }
+body:has(.sv-dock) .site-footer { padding-bottom: 44px; }
 
-@media (max-width: 640px) {
-  .sv-dock { width: calc(100% - 14px); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); border-radius: 22px; }
-  .sv-dock-track { padding: 5px; }
-  .sv-dock-link { min-width: 70px; min-height: 54px; font-size: 8px; }
-  .sv-dock-icon svg { width: 18px; height: 18px; }
-  .sv-dock-indicator { height: 62px; }
-  .sv-dock-badge { right: 4px; }
+@media (max-width: 720px) {
+  .sv-dock {
+    width: calc(100% - 14px);
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .sv-dock-track { padding: 6px; gap: 1px; }
+  .sv-dock-link { min-width: 66px; min-height: 58px; padding: 4px 6px; font-size: 9px; }
+  .sv-dock-icon { width: 24px; height: 24px; }
+  .sv-dock-icon svg { width: 22px; height: 22px; }
+  .sv-dock-badge { top: 2px; right: 5px; }
+}
+
+@media (max-width: 380px) {
+  .sv-dock-link { min-width: 60px; font-size: 8.5px; }
+  .sv-dock-link .sv-dock-label { opacity: .75; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sv-dock-indicator { transition: none; }
-  .sv-dock-link, .sv-dock-icon, .sv-dock-label { transition: none; }
-  .sv-dock-liquid, .sv-dock-rim, .sv-dock-caustic { transform: none; }
-}
-
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .sv-dock { background: var(--sv-surface); }
-  .sv-dock-indicator { background: var(--sv-water-strong); }
+  .sv-dock-track { scroll-behavior: auto; }
+  .sv-dock-link,
+  .sv-dock-icon,
+  .sv-dock-label { transition: none; }
 }

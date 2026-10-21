@@ -116,6 +116,24 @@ For deployment, set the Apache document root to `Campus/public/`. If using the l
 - Honors the device's `prefers-reduced-motion` setting and avoids external style/font/icon CDNs.
 - Added an XAMPP-ready ZIP package and resolved the leftover merge-conflict text in the setup script, tests, and previous README.
 
+## Appearance and navigation
+
+The whole portal now runs on one two-theme design system, declared once in `public/assets/css/theme.css`.
+
+- **Light** — warm ivory paper (`#FFF7F0` / `#FFF0E3`), white cards, `#24201D` ink and a restrained ember accent (`#C96F2D` deep, `#F59A55` apricot). Orange is a highlight, never a page wash.
+- **Dark** — premium matte black (`#0B0C0E` / `#090A0C`) with charcoal surfaces, graphite borders, soft-white text and silver glass reflections. The old teal gradients and glowing orbs are gone.
+- Every card, table, form, modal, badge, button and dock reads from the same tokens, so the student, recruiter and TPO/admin workspaces match. `public/career.php` no longer carries its own dark-only stylesheet.
+- The theme is applied by an inline bootstrap before first paint in `public/index.php`, `public/career.php`, `public/views/admin/layout-start.php` and `public/views/recruiter/layout-start.php`, then persisted in `localStorage` under `sviet-theme`. There is no flash of the wrong theme, and `meta[name="theme-color"]` follows the theme.
+
+The bottom navigation is one shared material (`public/assets/css/liquid-glass.css`) driven by one shared engine (`public/assets/js/liquid-glass.js`):
+
+- A long, floating glass capsule with evenly spaced destinations and a separate, one-tab-wide glass pill for the current route.
+- Layer order inside the pill: body fill → displaced smoke → lower caustic → additive specular cap → masked 1 px rim, plus a travelling glint. The pill is neutral in both themes; it takes its colour from whatever sits behind it.
+- Click springs to the destination in roughly 250–400 ms; a drag follows the pointer continuously and a flick carries into the settle. The pill stretches with its leading edge ahead of the trailing edge, squashes slightly at speed and settles still.
+- `prefers-reduced-motion` collapses every movement to an instant placement, and the links stay ordinary keyboard-focusable anchors.
+
+The top of every page is flush with the viewport edge: `html` and `body` share one top colour, `body` is `display: flow-root` so a child margin cannot collapse through it, and the floating bubble chrome uses padding instead of a top margin. No negative-margin band-aids are involved.
+
 ## Known limitations
 
 - Recruiters cannot yet enter required/preferred job skills in the job editor; the career-insights service reads skills from `job_skills`, so skill matching is limited until that workflow is added.
@@ -134,6 +152,7 @@ C:\xampp\php\php.exe -l public\index.php
 C:\xampp\php\php.exe -l public\recruiter.php
 C:\xampp\php\php.exe -l public\admin.php
 C:\xampp\php\php.exe -l public\career.php
+C:\xampp\php\php.exe -l public\views\partials\glass-defs.php
 C:\xampp\php\php.exe -l scripts\create-admin.php
 C:\xampp\php\php.exe tests\run.php
 ```

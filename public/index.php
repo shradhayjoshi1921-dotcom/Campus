@@ -723,7 +723,7 @@ $pageTitle = match ($page) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#fff8f1">
+    <meta name="theme-color" content="#fff7f0">
     <meta name="description" content="A placement portal for Swami Vivekanand Institute of Engineering and Technology. Explore opportunities, manage applications, and connect students, recruiters, and the Training &amp; Placement Cell.">
     <title><?= e($pageTitle) ?></title>
     <script>
@@ -750,6 +750,7 @@ $pageTitle = match ($page) {
     <link rel="stylesheet" href="assets/css/liquid-glass.css?v=<?= e($appCssVersion) ?>">
 </head>
 <body class="<?= $page === 'home' ? 'homepage' : '' ?>">
+<?php require __DIR__ . '/views/partials/glass-defs.php'; ?>
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <header class="bubble-top" aria-label="SVIET Training and Placement">
     <a class="bubble bubble--brand" href="index.php" aria-label="Swami Vivekanand Institute of Engineering and Technology home">
