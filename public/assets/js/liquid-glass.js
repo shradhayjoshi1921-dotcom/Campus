@@ -101,44 +101,49 @@
           top: rect.top - barRect.top - bar.clientTop,
         };
       });
-      const insetX = isGroup ? 3 : Math.max(4, Math.min(8, metrics[0].width * 0.06));
-      const insetY = isGroup ? 3 : Math.max(3, Math.min(6, metrics[0].height * 0.07));
+      const insetX = isGroup ? 3 : Math.max(5, Math.min(9, metrics[0].width * 0.07));
+      const insetY = isGroup ? 3 : Math.max(4, Math.min(7, metrics[0].height * 0.08));
       state.baseWidth = Math.max(isGroup ? 40 : 46, metrics[0].width - insetX);
-      // The capsule owns one tab/option, never more: the stretch budget is the
-      // inset it was trimmed by, so even a stretched capsule still fits inside
-      // a single tab and cannot paint over a neighbour.
+      // The pill owns exactly one tab/option. Its stretch budget is the width it
+      // was trimmed by, so even a stretched pill stays inside a single tab and
+      // can never paint over a neighbour.
       state.maxStretch = Math.min(isGroup ? 9 : 18, insetX);
       state.height = Math.max(isGroup ? 26 : 34, metrics[0].height - insetY);
       state.top = (metrics[0].top || 0) + insetY / 2;
+      state.barLeft = barRect.left;
       indicator.style.height = `${state.height.toFixed(1)}px`;
       indicator.style.top = `${Math.max(0, state.top).toFixed(1)}px`;
-      if (!state.width) state.width = state.baseWidth;
-      state.width = Math.min(state.width, state.baseWidth);
+      // The box is laid out at its resting size once; every frame only writes a
+      // transform, so the browser never re-lays-out the dock while moving.
+      indicator.style.width = `${state.baseWidth.toFixed(2)}px`;
+      state.width = Math.min(state.width || state.baseWidth, state.baseWidth);
     };
 
+    // One transform per frame: translate to the tab centre, then scale the pill
+    // horizontally for the stretch and vertically for the volume squash. Both
+    // happen around the centre, so the tracked position stays exact.
     const render = () => {
-      const stretch = state.width - state.baseWidth;
+      const stretch = Math.max(0, state.width - state.baseWidth);
       const direction = state.v > 0.5 ? 1 : state.v < -0.5 ? -1 : 0;
-      // Bias the extra width forward so the leading edge leads the trailing edge.
-      const lead = direction * stretch * 0.42;
-      // `state.x` is measured in the bar's padding-box content space, which
-      // already includes the track offset; only the scroll has to be undone.
-      const left = state.x - (scrollTrack.scrollLeft || 0) - state.width / 2 + lead;
+      // Bias the extra width forward so the leading edge leads the trailing
+      // edge and the trailing edge lags: the pill reads as liquid, not a bar.
+      const lead = direction * stretch * 0.38;
+      const scaleX = state.width / state.baseWidth;
+      const left = state.x - (scrollTrack.scrollLeft || 0) - state.baseWidth / 2 + lead;
       const speed = Math.min(1, Math.abs(state.v) / 1600);
-      const squash = 1 - speed * 0.05;
-      const slosh = clamp(-state.v / 900, -1, 1) * speed;
+      const squash = 1 - speed * 0.045;
+      const slosh = clamp(-state.v / 1100, -1, 1) * speed;
 
-      indicator.style.width = `${state.width.toFixed(2)}px`;
-      indicator.style.transform = `translate3d(${left.toFixed(2)}px, 0, 0) scaleY(${squash.toFixed(4)})`;
+      indicator.style.transform = `translate3d(${left.toFixed(2)}px, 0, 0) scale3d(${scaleX.toFixed(4)}, ${squash.toFixed(4)}, 1)`;
       indicator.style.setProperty('--lg-slosh', slosh.toFixed(3));
-      indicator.style.setProperty('--lg-stretch', Math.min(1, stretch / Math.max(1, state.baseWidth * 0.2)).toFixed(3));
+      indicator.style.setProperty('--lg-stretch', Math.min(1, stretch / Math.max(1, state.maxStretch)).toFixed(3));
 
-      const moving = speed > 0.02 || Math.abs(stretch) > 0.4 || state.dragging;
+      const moving = speed > 0.02 || stretch > 0.4 || state.dragging;
       indicator.classList.toggle('is-moving', moving);
       indicator.classList.toggle('is-dragging', state.dragging);
     };
 
-    const desiredWidth = () => state.baseWidth + Math.min(state.maxStretch, Math.abs(state.v) * 0.013);
+    const desiredWidth = () => state.baseWidth + Math.min(state.maxStretch, Math.abs(state.v) * 0.012);
 
     const integrate = (dt) => {
       const spring = state.dragging ? DRAG_SPRING : MOVE_SPRING;
@@ -149,7 +154,9 @@
         state.x += state.v * stepSize;
         remaining -= stepSize;
       }
-      state.width += (desiredWidth() - state.width) * Math.min(1, dt * 16);
+      // Frame-rate independent smoothing of the stretch (no per-frame layout).
+      const follow = 1 - Math.exp(-dt * 16);
+      state.width += (desiredWidth() - state.width) * follow;
     };
 
     const settled = () => !state.dragging
@@ -284,6 +291,8 @@
         startX: event.clientX,
         startY: event.clientY,
         lastX: event.clientX,
+        lastT: window.performance.now(),
+        velocity: 0,
         dragging: false,
         vertical: false,
         preview: activeIndex,
@@ -316,6 +325,13 @@
         );
         pointer.lastX = event.clientX;
       }
+      // Track the pointer's own velocity so a flick carries into the settle.
+      const now = window.performance.now();
+      const elapsed = now - pointer.lastT;
+      if (elapsed > 6) {
+        pointer.velocity = ((event.clientX - pointer.lastX) / elapsed) * 1000;
+        pointer.lastT = now;
+      }
       const position = localX(event.clientX);
       state.target = clamp(position, metrics[0].center, metrics[metrics.length - 1].center);
       pointer.preview = nearest(position);
@@ -339,6 +355,9 @@
         return;
       }
       suppressClickUntil = window.performance.now() + 220;
+      // A release with speed keeps flowing instead of stopping dead at the
+      // finger, then the spring pulls it onto the destination.
+      state.v = clamp(drag.velocity * 0.22, -1100, 1100);
       if (drag.preview !== activeIndex) activate(drag.preview, 'drag');
       else moveTo(activeIndex);
     };

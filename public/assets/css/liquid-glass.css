@@ -1,182 +1,258 @@
 /* ==========================================================================
-   Campus — Liquid Glass
-   One shared material for every portal's navigation capsule and segmented
-   option group. Neutrally tinted glass: transmission, a smoky core, curved
-   specular highlights, a masked refraction ring and an internal caustic.
-   Colours are theme-aware through theme.css tokens; nothing here is orange.
+   Campus — Liquid Glass (v2)
+   One shared material for every portal's bottom navigation and for the
+   segmented option groups. The look follows the iOS / Instagram glass dock:
+   a long, floating capsule of transparent glass, with a separate glass pill
+   that slides behind the active destination.
+
+   Layer order inside .lg-indicator (bottom → top):
+     body fill  →  .lg-smoke  →  .lg-caustic  →  .lg-specular  →  .lg-rim
+   and .lg-glint floats above the fill. Nothing here is orange or brown: the
+   glass is neutral in both themes and takes its colour from what is behind it.
    ========================================================================== */
 
 :root {
-  --lg-tint-top: rgba(255, 255, 255, .30);
-  --lg-tint-mid: rgba(238, 246, 252, .10);
-  --lg-tint-low: rgba(20, 32, 44, .10);
-  --lg-smoke: rgba(214, 231, 243, .12);
-  --lg-shade: rgba(14, 26, 38, .20);
-  --lg-rim: rgba(255, 255, 255, .92);
-  --lg-rim-soft: rgba(255, 255, 255, .35);
-  --lg-caustic: rgba(255, 255, 255, .55);
-  --lg-cast: rgba(18, 32, 46, .28);
-  --lg-edge: rgba(255, 255, 255, .5);
-  --lg-track: rgba(255, 255, 255, .06);
+  --lg-fill-top: rgba(255, 255, 255, .92);
+  --lg-fill-bottom: rgba(255, 255, 255, .56);
+  --lg-fill-edge: rgba(255, 255, 255, .98);
+  --lg-rim: rgba(255, 255, 255, .98);
+  --lg-rim-mid: rgba(255, 255, 255, .18);
+  --lg-rim-soft: rgba(255, 255, 255, .55);
+  --lg-edge: rgba(122, 98, 74, .12);
+  --lg-cast: rgba(70, 48, 28, .26);
+  --lg-caustic: rgba(255, 255, 255, .8);
+  --lg-sheen: rgba(255, 255, 255, .9);
+  --lg-shell-top: rgba(255, 255, 255, .56);
+  --lg-shell-bottom: rgba(255, 247, 240, .40);
+  --lg-shell-line: rgba(255, 255, 255, .62);
+  --lg-shell-shadow: rgba(84, 56, 32, .20);
+  --lg-track: rgba(36, 32, 29, .05);
+  --lg-ink: #24201d;
+  --lg-ink-soft: #5d564e;
+  --lg-ink-mute: #6f665c;
 }
 
 html[data-theme="dark"] {
-  --lg-tint-top: rgba(226, 244, 255, .26);
-  --lg-tint-mid: rgba(170, 210, 236, .09);
-  --lg-tint-low: rgba(1, 8, 14, .30);
-  --lg-smoke: rgba(120, 176, 208, .12);
-  --lg-shade: rgba(0, 8, 14, .42);
-  --lg-rim: rgba(236, 252, 255, .82);
-  --lg-rim-soft: rgba(214, 244, 255, .26);
-  --lg-caustic: rgba(214, 246, 255, .42);
-  --lg-cast: rgba(0, 0, 0, .55);
-  --lg-edge: rgba(226, 250, 255, .26);
-  --lg-track: rgba(255, 255, 255, .04);
+  --lg-fill-top: rgba(132, 136, 145, .30);
+  --lg-fill-bottom: rgba(66, 69, 76, .20);
+  --lg-fill-edge: rgba(196, 202, 212, .26);
+  --lg-rim: rgba(255, 255, 255, .62);
+  --lg-rim-mid: rgba(255, 255, 255, .08);
+  --lg-rim-soft: rgba(255, 255, 255, .26);
+  --lg-edge: rgba(255, 255, 255, .12);
+  --lg-cast: rgba(0, 0, 0, .62);
+  --lg-caustic: rgba(255, 255, 255, .22);
+  --lg-sheen: rgba(255, 255, 255, .34);
+  --lg-shell-top: rgba(46, 48, 54, .52);
+  --lg-shell-bottom: rgba(13, 14, 17, .74);
+  --lg-shell-line: rgba(255, 255, 255, .11);
+  --lg-shell-shadow: rgba(0, 0, 0, .6);
+  --lg-track: rgba(255, 255, 255, .05);
+  --lg-ink: #f2f3f5;
+  --lg-ink-soft: #d7d9dd;
+  --lg-ink-mute: #a4a8af;
 }
 
-/* --------------------------------------------------------------- indicator */
+/* ----------------------------------------------------------- the glass pill */
 .lg-indicator {
   --lg-slosh: 0;
   --lg-stretch: 0;
-  --lg-press: 0;
   position: absolute;
   z-index: 1;
   top: 0;
   left: 0;
   display: block;
   width: 88px;
-  height: 40px;
-  overflow: hidden;
+  height: 44px;
   border-radius: 999px;
   opacity: 0;
   pointer-events: none;
   transform: translate3d(0, 0, 0);
   transform-origin: 50% 50%;
+  overflow: hidden;
+  isolation: isolate;
   background:
     linear-gradient(180deg,
-      var(--lg-tint-top) 0%,
-      var(--lg-tint-mid) 30%,
-      var(--lg-shade) 78%,
-      var(--lg-tint-low) 100%);
+      var(--lg-fill-top) 0%,
+      var(--lg-fill-bottom) 62%,
+      var(--lg-fill-bottom) 100%);
   box-shadow:
-    0 12px 26px -12px var(--lg-cast),
-    0 2px 6px -2px rgba(0, 0, 0, .18),
+    0 10px 24px -12px var(--lg-cast),
+    0 2px 6px -3px var(--lg-cast),
     0 0 0 .5px var(--lg-edge),
     inset 0 1px 1px var(--lg-rim),
-    inset 0 -1px 1px rgba(255, 255, 255, .28),
-    inset 1px 0 1.5px rgba(255, 255, 255, .30),
-    inset -1px 0 1.5px rgba(255, 255, 255, .34),
-    inset 0 -9px 14px -12px var(--lg-caustic);
-  -webkit-backdrop-filter: blur(11px) saturate(190%) brightness(1.07);
-  backdrop-filter: blur(11px) saturate(190%) brightness(1.07);
-  transition: opacity .26s cubic-bezier(.22, 1, .36, 1);
-  will-change: transform, width;
+    inset 0 -1px 1px var(--lg-rim-soft),
+    inset 1px 0 1.5px var(--lg-rim-soft),
+    inset -1px 0 1.5px var(--lg-rim-soft);
+  -webkit-backdrop-filter: blur(14px) saturate(185%) brightness(1.04);
+  backdrop-filter: blur(14px) saturate(185%) brightness(1.04);
+  transition: opacity .22s cubic-bezier(.22, 1, .36, 1);
+  will-change: transform;
   contain: layout style paint;
 }
+/* Filter definitions live once per document and paint nothing. */
+.lg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .has-liquid-indicator .lg-indicator { opacity: 1; }
 
-/* Smoky, refractive interior. The displacement filter is dropped while the
-   capsule moves so no heavy filter work happens on the spring frames. */
+/* Interior volume: a soft top-to-bottom falloff plus a smoky floor. The
+   displacement filter is dropped while the pill moves, so the spring frames
+   only paint a transform. */
 .lg-smoke {
   position: absolute;
   z-index: 1;
-  inset: -6%;
+  inset: -8%;
   border-radius: inherit;
   background:
-    radial-gradient(58% 120% at 42% -16%, rgba(255, 255, 255, .22), rgba(255, 255, 255, .04) 46%, rgba(255, 255, 255, 0) 72%),
-    radial-gradient(90% 86% at 64% 118%, var(--lg-caustic), rgba(255, 255, 255, 0) 66%),
-    radial-gradient(120% 100% at 50% 50%, rgba(255, 255, 255, 0) 40%, var(--lg-smoke) 100%);
+    radial-gradient(70% 130% at 42% -24%, rgba(255, 255, 255, .34), rgba(255, 255, 255, .06) 46%, rgba(255, 255, 255, 0) 72%),
+    radial-gradient(120% 110% at 50% 118%, var(--lg-caustic), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(20, 22, 26, .05));
   filter: url(#lg-refract);
-  opacity: .95;
+  opacity: .85;
   transform: translate3d(calc(var(--lg-slosh) * 3px), 0, 0);
 }
 .lg-indicator.is-moving .lg-smoke,
 .lg-indicator.is-dragging .lg-smoke { filter: none; }
+html[data-theme="dark"] .lg-smoke {
+  background:
+    radial-gradient(70% 130% at 42% -24%, rgba(255, 255, 255, .16), rgba(255, 255, 255, .03) 46%, rgba(255, 255, 255, 0) 72%),
+    radial-gradient(120% 110% at 50% 118%, rgba(255, 255, 255, .10), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(0, 0, 0, .10));
+}
 
-/* Bright upper cap plus side slivers — the wet edges of a glass sphere. */
+/* The curved highlight that hugs the top of the pill, plus slivers down both
+   sides: light is additive, so this is a screen blend, never a colour wash. */
 .lg-specular {
   position: absolute;
   z-index: 3;
-  inset: 1px 1.5px auto;
-  height: 54%;
-  border-radius: 999px 999px 46% 46% / 999px 999px 58% 58%;
+  inset: 1px 2px auto;
+  height: 52%;
+  border-radius: 999px 999px 44% 44% / 999px 999px 60% 60%;
   background:
-    radial-gradient(38% 62% at 24% 0%, rgba(255, 255, 255, .95), rgba(255, 255, 255, .22) 48%, rgba(255, 255, 255, 0) 78%),
-    radial-gradient(30% 46% at 78% 4%, rgba(236, 250, 255, .42), rgba(236, 250, 255, 0) 76%),
-    radial-gradient(84% 94% at 54% -18%, rgba(255, 255, 255, .5), rgba(255, 255, 255, .08) 54%, rgba(255, 255, 255, 0) 82%);
-  opacity: calc(.9 + var(--lg-stretch) * .1);
+    radial-gradient(34% 66% at 22% 0%, var(--lg-sheen), rgba(255, 255, 255, .18) 52%, rgba(255, 255, 255, 0) 78%),
+    radial-gradient(30% 52% at 76% 2%, rgba(255, 255, 255, .40), rgba(255, 255, 255, 0) 76%),
+    radial-gradient(88% 100% at 54% -22%, rgba(255, 255, 255, .46), rgba(255, 255, 255, .06) 56%, rgba(255, 255, 255, 0) 84%);
+  opacity: calc(.82 + var(--lg-stretch) * .18);
   transform: translate3d(calc(var(--lg-slosh) * -2px), 0, 0);
   mix-blend-mode: screen;
   pointer-events: none;
 }
 
-/* Masked 1px refraction ring: bright at both rims, nearly clear on the waist. */
+/* 1px refraction ring: bright along the top rim and the lower bounce, almost
+   clear at the waist, exactly like a wet glass edge. */
 .lg-rim {
   position: absolute;
   z-index: 4;
   inset: 0;
   padding: 1px;
   border-radius: inherit;
-  background: linear-gradient(156deg,
-    rgba(255, 255, 255, .98) 0%,
-    rgba(255, 255, 255, .52) 9%,
-    rgba(255, 255, 255, .07) 26%,
-    rgba(255, 255, 255, .04) 47%,
-    rgba(255, 255, 255, .16) 64%,
-    rgba(255, 255, 255, .58) 84%,
-    rgba(255, 255, 255, .95) 100%);
+  background: linear-gradient(155deg,
+    var(--lg-rim) 0%,
+    rgba(255, 255, 255, .62) 12%,
+    var(--lg-rim-mid) 34%,
+    var(--lg-rim-mid) 56%,
+    rgba(255, 255, 255, .22) 74%,
+    rgba(255, 255, 255, .68) 90%,
+    var(--lg-rim) 100%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
-  opacity: calc(.82 + var(--lg-stretch) * .18);
+  opacity: calc(.8 + var(--lg-stretch) * .2);
   pointer-events: none;
 }
 
-/* Lower-rim bounce light and a small internal caustic. */
+/* Lower bounce light — the second reflection a real glass pill throws back. */
 .lg-caustic {
   position: absolute;
   z-index: 2;
-  right: 7%;
-  bottom: 1px;
-  left: 7%;
-  height: 46%;
+  right: 6%;
+  bottom: 0;
+  left: 6%;
+  height: 52%;
   border-radius: 50%;
-  background: radial-gradient(56% 100% at 50% 100%,
-    rgba(255, 255, 255, 0) 46%,
-    rgba(240, 252, 255, .34) 62%,
-    var(--lg-caustic) 72%,
-    rgba(255, 255, 255, .14) 80%,
-    rgba(255, 255, 255, 0) 88%);
-  filter: blur(.7px);
-  opacity: .8;
+  background: radial-gradient(58% 100% at 50% 100%,
+    rgba(255, 255, 255, 0) 44%,
+    rgba(255, 255, 255, .30) 64%,
+    var(--lg-caustic) 78%,
+    rgba(255, 255, 255, 0) 92%);
+  filter: blur(1px);
+  opacity: .6;
   transform: translate3d(calc(var(--lg-slosh) * 2px), 0, 0);
   pointer-events: none;
 }
 
-/* A small highlight that slides against the direction of travel. */
+/* A small travelling highlight that drifts against the direction of travel. */
 .lg-glint {
   position: absolute;
   z-index: 3;
-  top: 18%;
-  left: 18%;
-  width: 26%;
-  height: 24%;
+  top: 16%;
+  left: 20%;
+  width: 24%;
+  height: 22%;
   border-radius: 50%;
-  background: radial-gradient(50% 50% at 50% 50%, rgba(255, 255, 255, .85), rgba(255, 255, 255, 0) 72%);
-  filter: blur(1.5px);
-  opacity: .55;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(255, 255, 255, .9), rgba(255, 255, 255, 0) 72%);
+  filter: blur(2px);
+  opacity: .5;
   transform: translate3d(calc(var(--lg-slosh) * -7px), calc(var(--lg-slosh) * 1.5px), 0);
   pointer-events: none;
 }
 
-/* Bars never clip the capsule, and their own shell stays subtle. */
+/* ------------------------------------------------------------ dock capsule */
+/* The bar is its own long, floating glass container. It is never turned into a
+   single bubble and never clips the pill. */
 .sv-dock,
 .admin-dock,
 .rec-bottom-nav {
   overflow: visible;
   isolation: isolate;
+  border-radius: 999px;
+  border: 1px solid var(--lg-shell-line);
+  background: linear-gradient(180deg, var(--lg-shell-top), var(--lg-shell-bottom));
+  box-shadow:
+    0 26px 60px -26px var(--lg-shell-shadow),
+    0 4px 14px -8px var(--lg-shell-shadow),
+    inset 0 1px rgba(255, 255, 255, .72),
+    inset 0 -1px rgba(255, 255, 255, .22);
+  -webkit-backdrop-filter: blur(26px) saturate(180%);
+  backdrop-filter: blur(26px) saturate(180%);
 }
+html[data-theme="dark"] .sv-dock,
+html[data-theme="dark"] .admin-dock,
+html[data-theme="dark"] .rec-bottom-nav {
+  box-shadow:
+    0 28px 64px -26px rgba(0, 0, 0, .8),
+    0 4px 16px -10px rgba(0, 0, 0, .7),
+    inset 0 1px rgba(255, 255, 255, .16),
+    inset 0 -1px rgba(255, 255, 255, .05);
+}
+/* A fine bright line across the top edge of the shell. */
+.sv-dock::before,
+.admin-dock::before,
+.rec-bottom-nav::before {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 12%;
+  left: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .9) 22%, rgba(255, 255, 255, .55) 70%, transparent);
+  content: "";
+  opacity: .75;
+  pointer-events: none;
+}
+html[data-theme="dark"] .sv-dock::before,
+html[data-theme="dark"] .admin-dock::before,
+html[data-theme="dark"] .rec-bottom-nav::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .38) 22%, rgba(255, 255, 255, .16) 70%, transparent);
+}
+
 .sv-dock .lg-indicator,
 .admin-dock .lg-indicator,
 .rec-bottom-nav .lg-indicator { z-index: 1; }
@@ -184,164 +260,41 @@ html[data-theme="dark"] {
 .admin-dock .admin-dock-track { position: relative; z-index: 2; }
 .rec-bottom-nav .rec-nav-link { position: relative; z-index: 2; }
 
-/* Neutral shells: smoke over the page rather than a tinted panel. */
-html[data-theme="light"] .sv-dock,
-html[data-theme="light"] .admin-dock,
-html[data-theme="light"] .rec-bottom-nav {
-  border-color: var(--sv-line-strong);
-  background: linear-gradient(180deg, rgba(255, 255, 255, .72), rgba(242, 247, 250, .62));
-  box-shadow:
-    0 22px 50px -22px rgba(28, 38, 48, .38),
-    0 2px 8px -4px rgba(28, 38, 48, .18),
-    inset 0 1px rgba(255, 255, 255, .92);
-}
-html[data-theme="dark"] .sv-dock,
-html[data-theme="dark"] .admin-dock,
-html[data-theme="dark"] .rec-bottom-nav {
-  border-color: var(--sv-line-strong);
-  background: linear-gradient(180deg, rgba(21, 33, 42, .66), rgba(7, 14, 20, .78));
-  box-shadow:
-    0 24px 56px -18px rgba(0, 0, 0, .62),
-    inset 0 1px rgba(226, 250, 255, .12);
-}
-
-/* ------------------------------------------------------------ option groups */
-.lg-group {
-  position: relative;
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 3px;
-  max-width: 100%;
-  margin: 0 0 14px;
-  padding: 4px;
-  overflow-x: auto;
-  border: 1px solid var(--sv-line);
-  border-radius: 999px;
-  background: var(--lg-track);
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-  isolation: isolate;
-}
-.lg-group::-webkit-scrollbar { display: none; }
-.lg-group .lg-indicator {
-  height: 32px;
-  border-radius: 999px;
-  /* Groups are compact: less cast shadow than the dock capsule. */
-  box-shadow:
-    0 6px 14px -8px var(--lg-cast),
-    0 0 0 .5px var(--lg-edge),
-    inset 0 1px 1px var(--lg-rim),
-    inset 0 -1px 1px rgba(255, 255, 255, .26),
-    inset 0 -7px 11px -10px var(--lg-caustic);
-}
-.lg-option {
+/* ------------------------------------------------------------ dock labels */
+.sv-dock-link,
+.admin-dock-link,
+.rec-nav-link {
   position: relative;
   z-index: 2;
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  min-height: 32px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 999px;
-  color: var(--sv-muted);
-  background: none;
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: .01em;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color .2s var(--sv-ease, cubic-bezier(.22, 1, .36, 1)), opacity .2s ease;
-  -webkit-tap-highlight-color: transparent;
+  color: var(--lg-ink-mute);
+  transition: color .24s cubic-bezier(.22, 1, .36, 1), opacity .24s ease;
 }
-.lg-option:hover { color: var(--sv-ink-soft); }
-.lg-option.is-active { color: var(--sv-ink); }
-.lg-option.is-preview { color: var(--sv-ink-soft); }
-.lg-option:focus-visible {
-  outline: 2px solid var(--sv-orange, #cf5a17);
-  outline-offset: 1px;
-}
-.lg-option[disabled],
-.lg-option[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
-
-/* Chips lose their own pill fill once they live in a glass group. */
-.lg-group.admin-chips { gap: 3px; padding: 4px; }
-.lg-group.admin-chips .admin-chip {
-  min-height: 32px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 999px;
-  color: var(--sv-muted);
-  background: none;
-  box-shadow: none;
-  font-size: 12px;
-}
-.lg-group.admin-chips .admin-chip:hover { background: none; color: var(--sv-ink-soft); }
-.lg-group.admin-chips .admin-chip.is-active {
-  color: var(--sv-ink);
-  background: none;
-  border: 0;
-}
-html[data-theme="light"] .lg-group { background: rgba(31, 36, 41, .045); }
-html[data-theme="dark"] .lg-group { background: rgba(255, 255, 255, .05); }
-
-/* ------------------------------------------------------------- degradations */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .lg-indicator {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, .55), rgba(210, 226, 238, .42) 55%, rgba(120, 142, 160, .42));
-  }
-  html[data-theme="dark"] .lg-indicator {
-    background:
-      linear-gradient(180deg, rgba(190, 218, 236, .32), rgba(28, 46, 60, .55) 60%, rgba(8, 18, 26, .62));
-  }
-  /* The shells cannot blur the page without backdrop-filter, so they turn
-     opaque enough to keep dock labels readable over any content. */
-  html[data-theme="light"] .sv-dock,
-  html[data-theme="light"] .admin-dock,
-  html[data-theme="light"] .rec-bottom-nav {
-    background: linear-gradient(180deg, #fbfdfe, #eef3f7);
-  }
-  html[data-theme="dark"] .sv-dock,
-  html[data-theme="dark"] .admin-dock,
-  html[data-theme="dark"] .rec-bottom-nav {
-    background: linear-gradient(180deg, #141f27, #070e14);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lg-indicator { transition: none; }
-  .lg-smoke,
-  .lg-specular,
-  .lg-caustic,
-  .lg-glint { transform: none !important; }
-}
-
-/* --------------------------------------------------------------- legibility */
-html[data-theme="light"] .sv-dock-link,
-html[data-theme="light"] .admin-dock-link,
-html[data-theme="light"] .rec-nav-link { color: #67727e; }
-html[data-theme="light"] .sv-dock-link:hover,
-html[data-theme="light"] .admin-dock-link:hover,
-html[data-theme="light"] .rec-nav-link:hover { color: #2b333b; }
-html[data-theme="light"] .sv-dock-link.is-active,
-html[data-theme="light"] .admin-dock-link.is-active,
-html[data-theme="light"] .rec-nav-link.is-active { color: #1b2228; }
-html[data-theme="dark"] .sv-dock-link,
-html[data-theme="dark"] .admin-dock-link,
-html[data-theme="dark"] .rec-nav-link { color: #93a3b0; }
-html[data-theme="dark"] .sv-dock-link:hover,
-html[data-theme="dark"] .admin-dock-link:hover,
-html[data-theme="dark"] .rec-nav-link:hover { color: #e3edf3; }
-html[data-theme="dark"] .sv-dock-link.is-active,
-html[data-theme="dark"] .admin-dock-link.is-active,
-html[data-theme="dark"] .rec-nav-link.is-active { color: #f4fafd; }
+.sv-dock-link:hover,
+.admin-dock-link:hover,
+.rec-nav-link:hover { color: var(--lg-ink-soft); }
+.sv-dock-link.is-preview,
+.admin-dock-link.is-preview,
+.rec-nav-link.is-preview { color: var(--lg-ink-soft); }
+.sv-dock-link.is-active,
+.admin-dock-link.is-active,
+.rec-nav-link.is-active { color: var(--lg-ink); }
+.sv-dock-link.is-active .sv-dock-icon,
+.admin-dock-link.is-active .admin-dock-icon,
+.rec-nav-link.is-active .rec-nav-icon { transform: none; }
 .sv-dock-link.is-active .sv-dock-label,
 .admin-dock-link.is-active .admin-dock-label,
 .rec-nav-link.is-active .rec-nav-label { opacity: 1; font-weight: 700; }
+.sv-dock-icon,
+.admin-dock-icon,
+.rec-nav-icon {
+  transition: transform .32s cubic-bezier(.22, 1, .36, 1), opacity .24s ease;
+  opacity: .9;
+}
+.sv-dock-link.is-active .sv-dock-icon,
+.admin-dock-link.is-active .admin-dock-icon,
+.rec-nav-link.is-active .rec-nav-icon { opacity: 1; transform: translateY(-1px); }
 
-/* The old per-portal no-JS highlights would sit under the new capsule. */
+/* The old per-portal no-JS highlights would sit under the capsule. */
 .admin-dock:not(.has-sliding-indicator) .admin-dock-link.is-active::before,
 .sv-dock:not(.has-sliding-indicator) .sv-dock-link.is-active::before,
 .rec-bottom-nav:not(.has-sliding-indicator) .rec-nav-link.is-active::before {
@@ -356,16 +309,139 @@ html[data-theme="dark"] .rec-nav-link.is-active { color: #f4fafd; }
 .rec-bottom-nav:not(.has-liquid-indicator) .rec-nav-link.is-active::before {
   position: absolute;
   z-index: 0;
-  inset: 3px;
-  border: 1px solid var(--lg-edge);
+  inset: 2px;
+  border: 1px solid var(--lg-rim-soft);
   border-radius: 999px;
-  background: var(--sv-glass);
-  box-shadow: inset 0 1px rgba(255, 255, 255, .45);
+  background: linear-gradient(180deg, var(--lg-fill-top), var(--lg-fill-bottom));
   content: "";
   pointer-events: none;
 }
 
-/* Dock labels must never be clipped by the capsule. */
-.sv-dock-link,
-.admin-dock-link,
-.rec-nav-link { position: relative; z-index: 2; }
+/* ------------------------------------------------------------ option groups */
+.lg-group {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  max-width: 100%;
+  margin: 0 0 14px;
+  padding: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--lg-shell-line);
+  border-radius: 999px;
+  background: var(--lg-track);
+  isolation: isolate;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.lg-group::-webkit-scrollbar { display: none; }
+.lg-group .lg-indicator {
+  height: 32px;
+  border-radius: 999px;
+  box-shadow:
+    0 6px 14px -8px var(--lg-cast),
+    0 0 0 .5px var(--lg-edge),
+    inset 0 1px 1px var(--lg-rim),
+    inset 0 -1px 1px var(--lg-rim-soft);
+}
+.lg-option {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--lg-ink-mute);
+  background: none;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .01em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .2s var(--sv-ease, cubic-bezier(.22, 1, .36, 1)), opacity .2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.lg-option:hover { color: var(--lg-ink-soft); }
+.lg-option.is-active { color: var(--lg-ink); }
+.lg-option.is-preview { color: var(--lg-ink-soft); }
+.lg-option:focus-visible {
+  outline: 2px solid var(--sv-orange, #c96f2d);
+  outline-offset: 1px;
+}
+.lg-option[disabled],
+.lg-option[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+
+/* Chips lose their own pill fill once they live in a glass group. */
+.lg-group.admin-chips { gap: 2px; padding: 4px; }
+.lg-group.admin-chips .admin-chip {
+  min-height: 32px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--lg-ink-mute);
+  background: none;
+  box-shadow: none;
+  font-size: 12px;
+}
+.lg-group.admin-chips .admin-chip:hover { background: none; color: var(--lg-ink-soft); }
+.lg-group.admin-chips .admin-chip.is-active {
+  color: var(--lg-ink);
+  background: none;
+  border: 0;
+}
+html[data-theme="light"] .lg-group { background: rgba(36, 32, 29, .045); }
+html[data-theme="dark"] .lg-group { background: rgba(255, 255, 255, .05); }
+
+/* ------------------------------------------------------------- degradations */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .lg-indicator {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(246, 240, 234, .86));
+  }
+  html[data-theme="dark"] .lg-indicator {
+    background:
+      linear-gradient(180deg, rgba(92, 96, 104, .92), rgba(38, 40, 45, .94));
+  }
+  .sv-dock,
+  .admin-dock,
+  .rec-bottom-nav {
+    background: linear-gradient(180deg, rgba(255, 255, 255, .97), rgba(252, 244, 236, .95));
+  }
+  html[data-theme="dark"] .sv-dock,
+  html[data-theme="dark"] .admin-dock,
+  html[data-theme="dark"] .rec-bottom-nav {
+    background: linear-gradient(180deg, rgba(28, 29, 33, .98), rgba(11, 12, 14, .99));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-indicator { transition: none; }
+  .lg-smoke,
+  .lg-specular,
+  .lg-caustic,
+  .lg-glint { transform: none !important; }
+}
+
+/* --------------------------------------------------------------- legibility */
+html[data-theme="light"] .sv-dock-link,
+html[data-theme="light"] .admin-dock-link,
+html[data-theme="light"] .rec-nav-link { color: #6f665c; }
+html[data-theme="light"] .sv-dock-link:hover,
+html[data-theme="light"] .admin-dock-link:hover,
+html[data-theme="light"] .rec-nav-link:hover { color: #4a443d; }
+html[data-theme="light"] .sv-dock-link.is-active,
+html[data-theme="light"] .admin-dock-link.is-active,
+html[data-theme="light"] .rec-nav-link.is-active { color: #221f1c; }
+html[data-theme="dark"] .sv-dock-link,
+html[data-theme="dark"] .admin-dock-link,
+html[data-theme="dark"] .rec-nav-link { color: #a4a8af; }
+html[data-theme="dark"] .sv-dock-link:hover,
+html[data-theme="dark"] .admin-dock-link:hover,
+html[data-theme="dark"] .rec-nav-link:hover { color: #e6e8ec; }
+html[data-theme="dark"] .sv-dock-link.is-active,
+html[data-theme="dark"] .admin-dock-link.is-active,
+html[data-theme="dark"] .rec-nav-link.is-active { color: #ffffff; }

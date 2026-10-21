@@ -35,10 +35,10 @@
       button.setAttribute('aria-label', `Switch to ${next} appearance`);
       button.setAttribute('title', `Switch to ${next} appearance`);
       const label = button.querySelector('.theme-toggle__label');
-      if (label) label.textContent = theme === 'dark' ? 'Dark water' : 'Light orange';
+      if (label) label.textContent = theme === 'dark' ? 'Dark' : 'Light';
     });
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', theme === 'dark' ? '#051519' : '#fff8f1');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0b0c0e' : '#fff7f0');
   };
 
   paint(resolve());
