@@ -186,7 +186,21 @@ function build({ activeIndex = 0, reducedMotion = false } = {}) {
     env.dom.window.close();
   }
 
-  // 6. Reduced motion drops the directional slide but still swaps.
+  // 6. A click whose target was retargeted to the dock still navigates.
+  {
+    const env = build({ activeIndex: 0 });
+    await wait(40);
+    env.document.elementFromPoint = () => env.links[4];
+    env.nav.dispatchEvent(new env.window.MouseEvent('click', {
+      bubbles: true, cancelable: true, button: 0, detail: 1, clientX: 900, clientY: 1200,
+    }));
+    await wait(140);
+    assert.equal(env.requests.length, 1, 'the tab under the pointer is resolved');
+    assert.equal(env.document.querySelector('#main-content h1').textContent, 'profile', 'and loaded');
+    env.dom.window.close();
+  }
+
+  // 7. Reduced motion drops the directional slide but still swaps.
   {
     const env = build({ activeIndex: 0, reducedMotion: true });
     await wait(40);
@@ -197,7 +211,7 @@ function build({ activeIndex = 0, reducedMotion = false } = {}) {
     env.dom.window.close();
   }
 
-  console.log('PASS student workspace navigation (6 scenarios, simulated DOM)');
+  console.log('PASS student workspace navigation (7 scenarios, simulated DOM)');
 })().catch((error) => {
   console.error(error);
   process.exit(1);

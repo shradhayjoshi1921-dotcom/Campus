@@ -2,13 +2,13 @@
 
 **Version 2.0.0** · PHP 8.2+ · MySQL/MariaDB · Apache/XAMPP
 
-Campus is a server-rendered placement portal for students, recruiters, and placement teams. The interface uses an institute-focused navy-and-emerald design, responsive navigation, restrained frosted-glass accents, and reduced-motion-aware transitions. The homepage uses a CSS-built abstract hero rather than unverified campus photography. The website does not depend on remote font, Bootstrap, icon, or hero-image CDNs.
+Campus is a server-rendered placement portal for students, recruiters, and placement teams. The interface uses one warm ember-and-slate appearance (light by default, matte dark available everywhere), responsive navigation, restrained frosted-glass accents, and reduced-motion-aware transitions. The homepage uses a CSS-built abstract hero rather than unverified campus photography. The website does not depend on remote font, Bootstrap, icon, or hero-image CDNs.
 
 All three workspaces share one liquid-glass system: a translucent, neutrally tinted 3D glass capsule that sits behind the active destination in every dock and behind the active option in every segmented filter group. It is one shared component (`assets/css/liquid-glass.css` + `assets/js/liquid-glass.js`), one tab wide, driven by a fixed-step spring. The database starts empty. No fake users, companies, jobs, applications, or placement statistics are seeded.
 
 ### Recruiter navigation interaction
 
-- Tap or click a tab (Overview, Company, Jobs, Applicants, Interviews) to glide the capsule to it.
+- Tap or click a tab (Overview, Company, Jobs, Applicants, Interviews) to glide the capsule to it. This holds on every portal — student, recruiter and admin. The engine reads the press from `window` without capturing the pointer, so the browser still delivers the click to the link; a press shorter than the drag threshold navigates, a longer one drags.
 - On desktop, press and drag horizontally anywhere on the dock: the capsule follows the pointer, stretches into the direction of travel, squashes slightly to conserve volume, and settles with a short spring. Release over a tab to open it. A plain click still opens the tab normally.
 - On touch screens, swipe the dock left or right, or swipe the section content horizontally, to move to the next or previous section. Vertical scrolling is unaffected.
 - A horizontal trackpad swipe over the section content also moves one section at a time.
@@ -37,6 +37,8 @@ The whole portal now runs on one appearance layer, `public/assets/css/theme.css`
 ### One sign-in for every role
 
 `index.php?page=login` is the only sign-in form. After the password check the server reads the account role and answers with a 303 redirect: students to `index.php?page=dashboard`, recruiters to `recruiter.php`, TPO/admin staff to `admin.php`. The login page says so and lists the three audiences; only the registration form still asks for an account type.
+
+Sign in and registration share one entry layout: a role-aware panel (what each of the three audiences gets, plus a privacy line) beside a focused form card. Validation from the server lands inside the card next to the field it belongs to, passwords can be revealed, and the submit button is disabled-free but shows a busy state on submit. Registration's account-type choice is a pair of radio cards with a visible focus ring in both themes.
 
 ### Student workspace additions
 

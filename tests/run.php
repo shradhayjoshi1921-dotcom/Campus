@@ -501,11 +501,42 @@ $test('One sign-in routes each role to its own workspace', static function () us
     $assert(str_contains($index, "'tpo', 'admin' => 'admin.php'"));
     $assert(str_contains($index, "default => 'index.php?page=dashboard'"));
     $assert(str_contains($index, 'header(\'Location: \' . $landing, true, 303)'), 'role redirect must be a 303');
-    $assert(str_contains($index, 'We read your role from your account'), 'the login page explains the unified sign-in');
+    $assert(str_contains($index, 'Your role is read from your account'), 'the login page explains the unified sign-in');
     $assert(str_contains($index, 'auth-role-note'), 'the login page names the three audiences');
     // The login form must not ask the visitor to pick a role; registration still does.
-    $loginForm = substr($index, strpos($index, "\$page === 'login' || \$page === 'register'"), 5200);
-    $assert(substr_count($loginForm, 'name="role"') === 1, 'only the registration form exposes a role field');
+    $authSection = substr($index, strpos($index, "\$page === 'login' || \$page === 'register'"));
+    $authSection = substr($authSection, 0, strpos($authSection, "<?php elseif (\$page === 'profile'"));
+    $loginForm = $authSection;
+    $assert(substr_count($loginForm, 'name="role"') === 2, 'registration offers exactly the two creatable roles');
+    $assert(str_contains($loginForm, 'value="student"') && str_contains($loginForm, 'value="recruiter"'), 'both role options are present');
+    $assert(substr_count($loginForm, 'name="role"') === substr_count($loginForm, 'type="radio" name="role"'), 'the role field is a radio group, not a second login step');
+    $assert(str_contains($loginForm, "value=\"<?= \$isLogin ? 'login' : 'register' ?>\""), 'the submitted action still matches the page');
+    $assert(str_contains($loginForm, 'data-password-toggle="account-password"'), 'the password can be revealed without JS-by-default chrome');
+    $assert(str_contains($loginForm, "'current-password'") && str_contains($loginForm, "'new-password'"), 'password managers get the right hints');
+});
+
+$test('Sign in and registration share one professional entry layout', static function () use ($assert, $root): void {
+    $index = file_get_contents($root . '/public/index.php');
+    $css = file_get_contents($root . '/public/assets/css/app.css');
+    $site = file_get_contents($root . '/public/assets/js/site.js');
+
+    $assert(str_contains($index, 'class="auth-shell"'), 'the entry page is a two-panel layout');
+    $assert(str_contains($index, 'class="auth-intro"'), 'the left panel explains the portal');
+    $assert(str_contains($index, 'class="auth-field"'), 'fields are grouped with visible labels');
+    $assert(str_contains($index, 'class="auth-role-choices"'), 'registration picks a role with radio cards');
+    $assert(str_contains($index, 'auth-alert'), 'errors and notices appear inside the card');
+    $assert(!preg_match('/\$error \|\| \$success\): \?>\s*<div class="container pt-3">/', $index), 'the old page-top alert no longer double-prints on the auth pages');
+
+    $assert(str_contains($css, '.auth-shell {'), 'the layout has its own grid');
+    $assert(str_contains($css, 'grid-template-columns: minmax(0, 1fr) minmax(360px, 448px)'), 'two panels on desktop');
+    $assert(str_contains($css, '@media (max-width: 940px)'), 'and a single readable column on tablets');
+    $assert(str_contains($css, '.auth-choice input:focus-visible + .auth-choice__body'), 'role cards keep a visible keyboard focus');
+    $assert(str_contains($site, 'data-password-toggle'), 'the reveal button is wired');
+    $assert(str_contains($site, 'button.hidden = false'), 'the reveal button only appears when it can work');
+    $assert(str_contains($index, 'data-busy-label="<?= $isLogin ? \'Signing in…\''), 'the submit button says what it is doing while the form posts');
+    $assert(str_contains($site, "button.setAttribute('aria-busy', 'true')"), 'the busy state is exposed to assistive tech');
+    $assert(str_contains($site, "window.addEventListener('pageshow'"), 'a back/forward restore re-enables the button');
+    $assert(str_contains($css, '.auth-submit[aria-busy="true"]'), 'the busy state is visible, not just disabled');
 });
 
 $test('Students can upload, replace, download and remove a PDF resume', static function () use ($assert, $root): void {
@@ -617,7 +648,9 @@ $test('One shared liquid-glass capsule drives every dock and option group', stat
     $assert(str_contains($liquidGlassScript, 'MOVE_SPRING'));
     $assert(str_contains($liquidGlassScript, 'DRAG_SPRING'));
     $assert(str_contains($liquidGlassScript, 'const STEP = 1 / 240'));
-    $assert(str_contains($liquidGlassScript, 'setPointerCapture'));
+    $assert(str_contains($liquidGlassScript, "window.addEventListener('pointermove'"), 'the press is tracked off the dock so a flick is never lost');
+    $assert(!preg_match('/addEventListener\(\'pointerdown\'[\s\S]{0,600}setPointerCapture/s', $liquidGlassScript), 'capturing on pointerdown retargets the click away from the link');
+    $assert(str_contains($liquidGlassScript, 'document.elementFromPoint'), 'a retargeted click still resolves the tab under the pointer');
     $assert(str_contains($liquidGlassScript, 'is-preview'));
     $assert(str_contains($liquidGlassScript, 'suppressClickUntil'));
     $assert(str_contains($liquidGlassScript, 'ArrowRight'));

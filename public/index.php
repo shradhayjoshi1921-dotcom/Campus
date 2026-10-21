@@ -822,7 +822,7 @@ $pageTitle = match ($page) {
         </div>
     </div>
 </div>
-<?php if ($error || $success): ?>
+<?php if (($error || $success) && $page !== 'login' && $page !== 'register'): ?>
     <div class="container pt-3">
         <div class="alert <?= $error
             ? 'alert-danger'
@@ -981,91 +981,164 @@ $pageTitle = match ($page) {
     </footer>
 </main>
 <?php elseif ($page === 'login' || $page === 'register'): ?>
+<?php $isLogin = $page === 'login'; ?>
 <main id="main-content" class="auth-wrap">
-    <section class="auth-card" aria-labelledby="auth-title">
-        <p class="eyebrow">SVIET Training &amp; Placement Portal</p>
-        <h1 id="auth-title">
-            <?= $page === 'login'
-                ? 'One sign-in. Your workspace.'
-                : 'Create your portal account.' ?>
-        </h1>
-        <p class="muted">
-            <?= $page === 'login'
-                ? 'Students, recruiters and placement-cell staff sign in here. We read your role from your account and open the right workspace automatically.'
-                : 'Choose the account type that matches your placement role.' ?>
-        </p>
-        <?php if ($page === 'login'): ?>
-            <p class="auth-role-note">
-                <span>Student</span><span>Recruiter</span><span>TPO / Admin</span>
-            </p>
-        <?php endif; ?>
-
-        <form method="post" class="auth-form">
-            <input type="hidden" name="_csrf" value="<?= e($csrf) ?>">
-            <input type="hidden" name="action" value="<?= $page === 'login'
-                ? 'login'
-                : 'register' ?>">
-
-            <?php if ($page === 'register'): ?>
-                <label for="account-name">
-                    Full name
-                    <input id="account-name" class="form-control" name="name" required maxlength="120" autocomplete="name">
-                </label>
-            <?php endif; ?>
-
-            <label for="account-email">
-                Email address
-                <input id="account-email" class="form-control" type="email" name="email" required maxlength="190" autocomplete="email">
-            </label>
-
-            <label for="account-password">
-                Password
-                <input id="account-password" class="form-control" type="password" name="password" required minlength="<?= $page ===
-                'register'
-                    ? '10'
-                    : '1' ?>" autocomplete="<?= $page === 'login'
-    ? 'current-password'
-    : 'new-password' ?>">
-                <?php if ($page === 'register'): ?>
-                    <small>Use at least 10 characters.</small>
+    <div class="auth-shell">
+        <section class="auth-intro" aria-labelledby="auth-page-title">
+            <p class="eyebrow">SVIET Training &amp; Placement</p>
+            <h1 id="auth-page-title">
+                <?php if ($isLogin): ?>
+                    One sign-in.<br><span>Three workspaces.</span>
+                <?php else: ?>
+                    One account.<br><span>The right workspace.</span>
                 <?php endif; ?>
-            </label>
+            </h1>
+            <p class="auth-intro__lede">
+                A single, role-aware portal for the whole placement journey at Swami Vivekanand Institute of Engineering and Technology.
+            </p>
 
-            <?php if ($page === 'register'): ?>
-                <label for="account-role">
-                    Account type
-                    <select id="account-role" class="form-select" name="role" required aria-describedby="account-role-help">
-                        <option value="student" <?= $selectedRole === 'student'
-                            ? 'selected'
-                            : '' ?>>Student</option>
-                        <option value="recruiter" <?= $selectedRole ===
-                        'recruiter'
-                            ? 'selected'
-                            : '' ?>>Recruiter / Company</option>
-                    </select>
-                    <small id="account-role-help">Recruiter accounts require Training &amp; Placement Cell approval before sign-in. After approval, submit your company profile for review.</small>
-                </label>
+            <ul class="auth-role-note" aria-label="Who uses this portal">
+                <li class="auth-role-item">
+                    <span class="auth-role-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-5 9 5-9 5-9-5Z"/><path d="M7 11.2v5.1c3.2 2.2 6.8 2.2 10 0v-5.1M21 9v5"/></svg>
+                    </span>
+                    <span class="auth-role-copy">
+                        <strong>Students</strong>
+                        <small>Profile, eligible openings, applications and alerts.</small>
+                    </span>
+                </li>
+                <li class="auth-role-item">
+                    <span class="auth-role-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18m-11 0v2h4v-2"/></svg>
+                    </span>
+                    <span class="auth-role-copy">
+                        <strong>Recruiters</strong>
+                        <small>Company profile, job listings, applicants and interviews.</small>
+                    </span>
+                </li>
+                <li class="auth-role-item">
+                    <span class="auth-role-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h7l4 4v14H5V6a3 3 0 0 1 3-3Z"/><path d="M15 3v5h5M8 13h8M8 17h5"/></svg>
+                    </span>
+                    <span class="auth-role-copy">
+                        <strong>Training &amp; Placement Cell</strong>
+                        <small>Approvals, placement records and institute reports.</small>
+                    </span>
+                </li>
+            </ul>
+
+            <p class="auth-intro__foot">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5"/><path d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9"/></svg>
+                Session-based access. Your role is read from your account, never chosen at sign-in.
+            </p>
+        </section>
+
+        <section class="auth-card" aria-labelledby="auth-title">
+            <header class="auth-card__head">
+                <p class="eyebrow"><?= $isLogin ? 'Welcome back' : 'Create an account' ?></p>
+                <h2 id="auth-title"><?= $isLogin ? 'Sign in' : 'Register' ?></h2>
+                <p class="muted">
+                    <?= $isLogin
+                        ? 'Use the email address your account was created with. You will land in the workspace that matches your role.'
+                        : 'Choose the account type that matches your placement role. Recruiter accounts need Training &amp; Placement approval before first sign-in.' ?>
+                </p>
+            </header>
+
+            <?php if ($error || $success): ?>
+                <div class="alert <?= $error ? 'alert-danger' : 'alert-success' ?> auth-alert"
+                     role="<?= $error ? 'alert' : 'status' ?>"
+                     aria-live="<?= $error ? 'assertive' : 'polite' ?>">
+                    <?= e($error ?: $success) ?>
+                </div>
             <?php endif; ?>
 
-            <button class="primary-btn w-100" type="submit">
-                <?= $page === 'login'
-                    ? 'Sign in'
-                    : 'Create account' ?> <span aria-hidden="true">↗</span>
-            </button>
-        </form>
+            <form method="post" class="auth-form">
+                <input type="hidden" name="_csrf" value="<?= e($csrf) ?>">
+                <input type="hidden" name="action" value="<?= $isLogin ? 'login' : 'register' ?>">
 
-        <p class="auth-switch">
-            <?= $page === 'login'
-                ? 'New to the portal?'
-                : 'Already registered?' ?>
-            <a href="index.php?page=<?= $page === 'login'
-                ? 'register'
-                : 'login' ?>">
-                <?= $page === 'login' ? 'Create an account' : 'Sign in' ?>
-            </a>
-        </p>
-        <a class="auth-back-link" href="index.php">Back to the SVIET portal</a>
-    </section>
+                <?php if (!$isLogin): ?>
+                    <div class="auth-field">
+                        <label for="account-name">Full name</label>
+                        <input id="account-name" class="form-control" name="name" required maxlength="120" autocomplete="name" placeholder="As printed on your institute record">
+                    </div>
+                <?php endif; ?>
+
+                <div class="auth-field">
+                    <label for="account-email">Email address</label>
+                    <input id="account-email" class="form-control" type="email" name="email" required maxlength="190" autocomplete="email"
+                           inputmode="email" placeholder="you@example.com" spellcheck="false">
+                </div>
+
+                <div class="auth-field">
+                    <div class="auth-field__label">
+                        <label for="account-password">Password</label>
+                        <?php if (!$isLogin): ?>
+                            <span class="auth-hint">At least 10 characters</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="auth-password">
+                        <input id="account-password" class="form-control" type="password" name="password" required
+                               minlength="<?= $isLogin ? '1' : '10' ?>"
+                               autocomplete="<?= $isLogin ? 'current-password' : 'new-password' ?>"
+                               placeholder="<?= $isLogin ? 'Your password' : 'Choose a strong password' ?>"
+                               <?= $isLogin ? '' : 'aria-describedby="account-password-help"' ?>>
+                        <button type="button" class="auth-reveal" data-password-toggle="account-password"
+                                aria-controls="account-password" aria-pressed="false" aria-label="Show password" hidden>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <span class="sr-only">Show password</span>
+                        </button>
+                    </div>
+                    <?php if (!$isLogin): ?>
+                        <small id="account-password-help" class="auth-help">Mix letters, numbers and a symbol. Never reuse your institute password.</small>
+                    <?php endif; ?>
+                </div>
+
+                <?php if (!$isLogin): ?>
+                    <fieldset class="auth-field auth-roles-field">
+                        <legend>Account type</legend>
+                        <div class="auth-role-choices">
+                            <label class="auth-choice">
+                                <input type="radio" name="role" value="student" required <?= $selectedRole === 'student' ? 'checked' : '' ?>>
+                                <span class="auth-choice__body">
+                                    <span class="auth-choice__icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-5 9 5-9 5-9-5Z"/><path d="M7 11.2v5.1c3.2 2.2 6.8 2.2 10 0v-5.1"/></svg>
+                                    </span>
+                                    <span class="auth-choice__copy">
+                                        <strong>Student</strong>
+                                        <small>Immediate access</small>
+                                    </span>
+                                </span>
+                            </label>
+                            <label class="auth-choice">
+                                <input type="radio" name="role" value="recruiter" required <?= $selectedRole === 'recruiter' ? 'checked' : '' ?>>
+                                <span class="auth-choice__body">
+                                    <span class="auth-choice__icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18m-11 0v2h4v-2"/></svg>
+                                    </span>
+                                    <span class="auth-choice__copy">
+                                        <strong>Recruiter</strong>
+                                        <small>Needs approval</small>
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+                        <small class="auth-help" id="account-role-help">Approved recruiters submit a company profile for a second review before publishing roles.</small>
+                    </fieldset>
+                <?php endif; ?>
+
+                <button class="primary-btn w-100 auth-submit" type="submit"
+                        data-busy-label="<?= $isLogin ? 'Signing in…' : 'Creating account…' ?>">
+                    <?= $isLogin ? 'Sign in' : 'Create account' ?> <span class="btn-arrow" aria-hidden="true">↗</span>
+                </button>
+            </form>
+
+            <p class="auth-switch">
+                <?= $isLogin ? 'New to the portal?' : 'Already registered?' ?>
+                <a href="index.php?page=<?= $isLogin ? 'register' : 'login' ?>"><?= $isLogin ? 'Create an account' : 'Sign in' ?></a>
+            </p>
+            <a class="auth-back-link" href="index.php">Back to the SVIET portal</a>
+        </section>
+    </div>
 </main>
 <?php elseif ($page === 'profile' && $user && $user['role'] === 'student'): ?>
 <main id="main-content" class="dashboard container">
