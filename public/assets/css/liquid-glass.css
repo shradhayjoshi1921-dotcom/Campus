@@ -11,6 +11,33 @@
    glass is neutral in both themes and takes its colour from what is behind it.
    ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   Dock metrics — one source of truth for every portal.
+
+   The capsule is fixed to the bottom of the viewport, so its size has to be
+   derived from the viewport, never from a desktop constant. These tokens are
+   the only place a dock dimension is decided: `--dock-max` is the widest the
+   capsule is allowed to get (each portal overrides it), everything else scales
+   with `clamp()` between a comfortable desktop value and a deliberate floor.
+
+   `--dock-clearance` is the full vertical footprint of the dock including its
+   distance from the viewport edge. Page content and footers reserve this much
+   space, so nothing can ever end up underneath the glass.
+   -------------------------------------------------------------------------- */
+:root {
+  --dock-gutter: clamp(8px, 2.4vw, 32px);
+  --dock-bottom: clamp(10px, 2.2vh, 18px);
+  --dock-pad: clamp(6px, 0.85vw, 9px);
+  --dock-gap: clamp(2px, 0.4vw, 4px);
+  --dock-tab-height: clamp(52px, 7.2vw, 66px);
+  --dock-icon: clamp(20px, 3vw, 25px);
+  --dock-label-size: clamp(8.5px, 1.05vw, 10px);
+  --dock-badge-size: clamp(14px, 1.7vw, 17px);
+  --dock-max: 820px;
+  --dock-shell-height: calc(var(--dock-tab-height) + var(--dock-pad) * 2);
+  --dock-clearance: calc(var(--dock-shell-height) + var(--dock-bottom) + env(safe-area-inset-bottom, 0px) + 18px);
+}
+
 /* Light glass: a bright, mostly clear sheet. The fill stays low so the page
    behind is genuinely visible through the blur; the volume comes from the
    meniscus ring, the top sheen and the inner shadows, not from opacity. */

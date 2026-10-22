@@ -122,7 +122,7 @@ body.admin-portal :focus-visible { outline: 3px solid #e0b48f; outline-offset: 3
 
 /* ------------------------------------------------------------------ layout */
 .admin-workspace { position: relative; z-index: 1; width: min(100%, 1380px); margin: 0 auto; }
-.admin-main { min-height: 74vh; padding: clamp(26px, 4vw, 48px) clamp(14px, 3vw, 38px) 150px; touch-action: pan-y; }
+.admin-main { min-height: 74vh; padding: clamp(26px, 4vw, 48px) clamp(14px, 3vw, 38px) clamp(22px, 3vw, 38px); touch-action: pan-y; }
 .admin-page-content {
   transform: translate3d(0, 0, 0);
   transform-origin: center top;
@@ -350,11 +350,12 @@ body.admin-portal :focus-visible { outline: 3px solid #e0b48f; outline-offset: 3
 
 /* ------------------------------------------------------------------ dock */
 .admin-dock {
+  --dock-max: 960px;
   position: fixed;
   z-index: 100;
-  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--dock-bottom) + env(safe-area-inset-bottom, 0px));
   left: 50%;
-  width: min(960px, calc(100% - 32px));
+  width: min(var(--dock-max, 960px), calc(100% - var(--dock-gutter, 24px)));
   padding: 0;
   transform: translateX(-50%);
   touch-action: pan-y;
@@ -365,8 +366,8 @@ body.admin-portal :focus-visible { outline: 3px solid #e0b48f; outline-offset: 3
 .admin-dock-track {
   position: relative;
   display: flex;
-  gap: 4px;
-  padding: 9px;
+  gap: var(--dock-gap);
+  padding: var(--dock-pad);
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -380,15 +381,15 @@ body.admin-portal :focus-visible { outline: 3px solid #e0b48f; outline-offset: 3
   position: relative;
   z-index: 1;
   display: grid;
-  min-width: 94px;
-  flex: 1 0 auto;
-  min-height: 66px;
+  min-width: 0;
+  flex: 1 1 0;
+  min-height: var(--dock-tab-height);
   justify-items: center;
   align-content: center;
-  gap: 6px;
-  padding: 6px 9px;
+  gap: clamp(3px, 0.6vw, 6px);
+  padding: 4px clamp(1px, 0.7vw, 9px);
   border-radius: 999px;
-  font-size: 9.5px;
+  font-size: var(--dock-label-size);
   font-weight: 620;
   letter-spacing: .01em;
   text-align: center;
@@ -460,8 +461,8 @@ body.admin-portal :focus-visible { outline: 3px solid #e0b48f; outline-offset: 3
   justify-content: space-between;
   gap: 6px;
   width: min(100%, 1300px);
-  margin: -96px auto 0;
-  padding: 0 26px 22px;
+  margin: 0 auto;
+  padding: 0 clamp(14px, 3vw, 38px) var(--dock-clearance, 118px);
   color: var(--adm-dim);
   font-size: 9px;
 }
@@ -480,18 +481,24 @@ body.admin-portal :focus-visible { outline: 3px solid #e0b48f; outline-offset: 3
   .admin-brand-mark { width: 34px; height: 34px; flex-basis: 34px; border-radius: 12px; font-size: 14px; }
   .admin-brand-copy small { font-size: 7px; }
   .admin-account-name, .admin-role-pill { display: none; }
-  .admin-main { padding: 22px 11px 132px; }
+  .admin-main { padding: 22px 11px 22px; }
   .admin-page-heading h1 { font-size: clamp(26px, 8vw, 34px); }
   .admin-card { padding: 14px; border-radius: 18px; }
   .admin-stat strong { font-size: 21px; }
-  .admin-dock { width: calc(100% - 16px); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
-  .admin-dock-track { padding: 7px; }
-  .admin-dock-link { min-width: 76px; min-height: 58px; font-size: 8.5px; }
-  .admin-dock-icon svg { width: 20px; height: 20px; }
-  .admin-dock-badge { right: 4px; }
-  .admin-footer { flex-direction: column; margin-top: -92px; padding: 0 14px 18px; font-size: 8px; }
+  .admin-footer { flex-direction: column; font-size: 8px; }
   .admin-table { font-size: 10px; }
   .admin-decision input { flex: 1 1 100%; }
+}
+@media (max-width: 720px) {
+  .admin-dock-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .admin-dock-link { gap: 0; }
 }
 @media (max-width: 420px) {
   .admin-brand-copy { display: none; }

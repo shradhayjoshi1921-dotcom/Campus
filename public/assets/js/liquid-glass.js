@@ -103,7 +103,10 @@
       });
       const insetX = isGroup ? 3 : Math.max(5, Math.min(9, metrics[0].width * 0.07));
       const insetY = isGroup ? 3 : Math.max(4, Math.min(7, metrics[0].height * 0.08));
-      state.baseWidth = Math.max(isGroup ? 40 : 46, metrics[0].width - insetX);
+      // The floor stays below the smallest tab the responsive dock can produce
+      // (a 360 px window leaves ~40 px per tab on the eight-tab admin rail), so
+      // the pill always fits inside one destination.
+      state.baseWidth = Math.max(isGroup ? 30 : 28, metrics[0].width - insetX);
       // The pill owns exactly one tab/option. Its stretch budget is the width it
       // was trimmed by, so even a stretched pill stays inside a single tab and
       // can never paint over a neighbour.
@@ -487,12 +490,26 @@
       links.forEach((link) => resizeObserver.observe(link));
     }
 
-    const onResize = () => {
+    // A window drag (or a split-screen snap) fires dozens of resize events. One
+    // measurement per frame keeps the pill glued to its tab without turning
+    // continuous resizing into a spring animation.
+    let resizeFrame = 0;
+    const applyResize = () => {
+      resizeFrame = 0;
       if (pointer && pointer.dragging) return;
       measure();
       setActive(activeIndex, { immediate: true });
     };
+    const onResize = () => {
+      if (resizeFrame) return;
+      resizeFrame = window.requestAnimationFrame(applyResize);
+    };
     window.addEventListener('resize', onResize, { passive: true });
+    // Split-screen and the on-screen keyboard change the visual viewport
+    // without always changing the layout viewport.
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', onResize, { passive: true });
+    }
 
     const onMotionChange = (event) => {
       reduced = event.matches;

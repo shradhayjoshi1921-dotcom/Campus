@@ -2,14 +2,21 @@
  * Student workspace dock — a long floating capsule of glass with a separate
  * glass pill for the current destination. Geometry only: the material lives in
  * liquid-glass.css, the spring in assets/js/liquid-glass.js.
+ *
+ * Every dimension comes from the shared `--dock-*` tokens, so the capsule
+ * shrinks with the viewport instead of keeping a desktop width. There is no
+ * fixed `min-width` on a tab: the five destinations always divide the space
+ * they actually have, and the label ellipsises rather than pushing the capsule
+ * wider than the window.
  */
 
 .sv-dock {
+  --dock-max: 820px;
   position: fixed;
   z-index: 100;
-  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--dock-bottom) + env(safe-area-inset-bottom, 0px));
   left: 50%;
-  width: min(820px, calc(100% - 32px));
+  width: min(var(--dock-max, 820px), calc(100% - var(--dock-gutter, 24px)));
   transform: translateX(-50%);
   touch-action: pan-y;
   -webkit-user-select: none;
@@ -19,8 +26,8 @@
 .sv-dock-track {
   position: relative;
   display: flex;
-  gap: 4px;
-  padding: 9px;
+  gap: var(--dock-gap);
+  padding: var(--dock-pad);
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -35,15 +42,15 @@
   position: relative;
   z-index: 1;
   display: grid;
-  min-width: 104px;
-  flex: 1 0 auto;
-  min-height: 66px;
+  min-width: 0;
+  flex: 1 1 0;
+  min-height: var(--dock-tab-height);
   justify-items: center;
   align-content: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: clamp(3px, 0.6vw, 6px);
+  padding: 4px clamp(2px, 0.9vw, 12px);
   border-radius: 999px;
-  font-size: 10px;
+  font-size: var(--dock-label-size);
   font-weight: 650;
   letter-spacing: .01em;
   text-align: center;
@@ -52,11 +59,11 @@
 }
 .sv-dock-icon {
   display: grid;
-  width: 27px;
-  height: 27px;
+  width: var(--dock-icon);
+  height: var(--dock-icon);
   place-items: center;
 }
-.sv-dock-icon svg { width: 25px; height: 25px; }
+.sv-dock-icon svg { width: 100%; height: 100%; }
 .sv-dock-label {
   max-width: 100%;
   overflow: hidden;
@@ -68,41 +75,47 @@
 .sv-dock-badge {
   position: absolute;
   z-index: 3;
-  top: 4px;
-  right: 10px;
+  top: 2px;
+  right: clamp(2px, 0.8vw, 10px);
   display: grid;
-  min-width: 17px;
-  height: 17px;
+  min-width: var(--dock-badge-size);
+  height: var(--dock-badge-size);
   padding: 0 4px;
   place-items: center;
   border-radius: 999px;
   color: #3a2413;
   background: var(--sv-dock-badge);
   box-shadow: 0 2px 8px rgba(120, 70, 30, .28);
-  font-size: 9px;
+  font-size: clamp(8px, 0.95vw, 9px);
   font-weight: 800;
   line-height: 1;
 }
 
-/* Leave room for the dock on every student workspace page. */
-body:has(.sv-dock) .dashboard { padding-bottom: 140px; }
-body:has(.sv-dock) .site-footer { padding-bottom: 44px; }
+/* Leave room for the dock on every student workspace page. The clearance comes
+   from the same tokens that size the capsule, so it tracks the dock down to a
+   phone width instead of guessing 140 px forever. */
+body:has(.sv-dock) .dashboard { padding-bottom: var(--dock-clearance, 118px); }
+body:has(.sv-dock) .site-footer { padding-bottom: calc(var(--dock-bottom) + 26px); }
 
-@media (max-width: 720px) {
-  .sv-dock {
-    width: calc(100% - 16px);
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+/* Below ~380 px the labels would be clipped mid-word; drop them to screen
+   readers only and let the icons plus the badge carry the dock. */
+@media (max-width: 380px) {
+  .sv-dock-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
-  .sv-dock-track { padding: 7px; gap: 2px; }
-  .sv-dock-link { min-width: 62px; min-height: 58px; padding: 4px 6px; font-size: 9px; }
-  .sv-dock-icon { width: 24px; height: 24px; }
-  .sv-dock-icon svg { width: 22px; height: 22px; }
-  .sv-dock-badge { top: 2px; right: 5px; }
+  .sv-dock-link { gap: 0; }
 }
 
-@media (max-width: 380px) {
-  .sv-dock-link { min-width: 60px; font-size: 8.5px; }
-  .sv-dock-link .sv-dock-label { opacity: .75; }
+/* Short viewports (landscape phones, a split pane dragged very short): keep the
+   capsule compact so it never eats the page. */
+@media (max-height: 460px) {
+  .sv-dock { --dock-tab-height: 46px; --dock-icon: 18px; }
+  .sv-dock-label { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

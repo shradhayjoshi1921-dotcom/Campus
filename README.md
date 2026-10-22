@@ -172,6 +172,14 @@ node tests\js\liquid-glass.test.js
 
 It covers 14 scenarios: boot geometry, click flight, one-tab width, drag and release, reversal/cancel, vertical gestures, synthetic-click suppression, GET filters and history, rapid switching, reduced motion, keyboard preview, cross-page handoff, option groups and mounting before layout.
 
+The dock is sized from the viewport, not from a desktop constant, so it is worth checking that arithmetic after any change to its tokens:
+
+```bat
+node tests\js\dock-geometry.test.js
+```
+
+It resolves the declared `--dock-*` values at 1536, 1024, 768, 480 and 360 px (and sweeps continuously between the extremes) and asserts that the capsule fits the window, every tab keeps a usable target, the active pill stays inside one tab, and each portal's footer reserves the dock's clearance.
+
 A second harness covers the student workspace:
 
 ```bat

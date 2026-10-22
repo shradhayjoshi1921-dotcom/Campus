@@ -728,7 +728,7 @@ $test('One shared liquid-glass capsule drives every dock and option group', stat
 
     // Compact, one-tab-wide geometry rather than the full bar.
     $assert(str_contains($liquidGlassScript, 'metrics[0].width - insetX'));
-    $assert(str_contains($liquidGlassScript, 'Math.max(isGroup ? 40 : 46'));
+    $assert(str_contains($liquidGlassScript, 'Math.max(isGroup ? 30 : 28'), 'the pill floor fits the narrowest responsive tab');
     $assert(str_contains($liquidGlassScript, 'Math.min(isGroup ? 9 : 18, insetX)'), 'the stretch budget never exceeds the tab inset');
     $assert(str_contains($liquidGlassScript, 'scale3d('), 'the pill stretches with a transform, not by resizing the box');
     $assert(!preg_match('/indicator\.style\.width\s*=\s*\$\{state\.width/', $liquidGlassScript), 'no layout write per spring frame');
@@ -823,15 +823,61 @@ $test('One asset version busts every cached stylesheet and script', static funct
     }
 });
 
-$test('The capsule geometry matches the wider Instagram-style track', static function () use ($assert, $root): void {
+$test('The capsule geometry is viewport-driven, not a fixed desktop width', static function () use ($assert, $root): void {
     $student = file_get_contents($root . '/public/assets/css/water-dock.css');
     $recruiter = file_get_contents($root . '/public/assets/css/recruiter.css');
     $admin = file_get_contents($root . '/public/assets/css/admin.css');
-    $assert(str_contains($student, 'width: min(820px, calc(100% - 32px))'), 'the student capsule is wide');
-    $assert(str_contains($recruiter, 'width: min(820px, calc(100% - 32px))'), 'the recruiter capsule matches it');
-    $assert(str_contains($admin, 'width: min(960px, calc(100% - 32px))'), 'the eight-tab admin rail is wider still');
-    $assert(str_contains($student, 'min-height: 66px'), 'tabs keep a usable touch target');
-    $assert(str_contains($recruiter, 'min-height: 66px'));
+    $glass = file_get_contents($root . '/public/assets/css/liquid-glass.css');
+
+    $assert(str_contains($glass, '--dock-gutter: clamp('), 'the side gutter scales with the viewport');
+    $assert(str_contains($glass, '--dock-tab-height: clamp('), 'tab height scales with the viewport');
+    $assert(str_contains($glass, '--dock-icon: clamp('), 'icons scale with the viewport');
+    $assert(str_contains($glass, '--dock-clearance: calc(var(--dock-shell-height)'), 'clearance is derived from the real dock height');
+
+    foreach (['student' => [$student, '820px'], 'recruiter' => [$recruiter, '820px'], 'admin' => [$admin, '960px']] as $name => [$css, $max]) {
+        $assert(str_contains($css, 'width: min(var(--dock-max'), "the {$name} capsule shrinks with the window");
+        $assert(str_contains($css, '--dock-max: ' . $max), "the {$name} capsule keeps its wide desktop ceiling");
+        $selector = ['student' => '.sv-dock', 'recruiter' => '.rec-bottom-nav', 'admin' => '.admin-dock'][$name];
+        $assert(preg_match('/' . preg_quote($selector, '/') . '\s*\{([^}]*)\}/', $css, $block) === 1, "the {$name} dock rule is present");
+        $assert(!preg_match('/(?<![a-z-])(?:min-)?width:\s*\d+px/', $block[1]), "the {$name} dock rule sets no hard-coded width");
+    }
+    $assert(str_contains($student, 'min-height: var(--dock-tab-height)'), 'tabs keep a usable touch target');
+    $assert(str_contains($recruiter, 'min-height: var(--dock-tab-height)'));
+    $assert(str_contains($admin, 'min-height: var(--dock-tab-height)'));
+
+    // A fixed per-tab floor is what stopped the narrow docks from shrinking.
+    $assert(!preg_match('/\.sv-dock-link\s*\{[^}]*min-width:\s*\d+px/', $student), 'student tabs have no fixed floor');
+    $assert(!preg_match('/\.rec-nav-link\s*\{[^}]*min-width:\s*\d+px/', $recruiter), 'recruiter tabs have no fixed floor');
+    $assert(!preg_match('/\.admin-dock-link\s*\{[^}]*min-width:\s*\d+px/', $admin), 'admin tabs have no fixed floor');
+});
+
+$test('No portal footer can end up underneath the floating dock', static function () use ($assert, $root): void {
+    $student = file_get_contents($root . '/public/assets/css/water-dock.css');
+    $recruiter = file_get_contents($root . '/public/assets/css/recruiter.css');
+    $admin = file_get_contents($root . '/public/assets/css/admin.css');
+
+    // A negative top margin pulled the footer into the dock's band; the footer
+    // now reserves the dock's own measured clearance instead.
+    foreach (['recruiter' => $recruiter, 'admin' => $admin] as $name => $css) {
+        $assert(!preg_match('/\.(rec|admin)-footer\s*\{[^}]*margin(?:-top)?:\s*-\d+px/', $css), "the {$name} footer is no longer pulled up under the dock");
+        $assert(str_contains($css, 'var(--dock-clearance, 118px)'), "the {$name} footer reserves the dock clearance");
+    }
+    $assert(str_contains($student, '.dashboard { padding-bottom: var(--dock-clearance, 118px); }'), 'the student canvas reserves it too');
+    $assert(str_contains($student, '.site-footer { padding-bottom: calc(var(--dock-bottom) + 26px); }'), 'and the student footer keeps its own spacing');
+});
+
+$test('The dock switches to a compact layout before labels can clip', static function () use ($assert, $root): void {
+    $student = file_get_contents($root . '/public/assets/css/water-dock.css');
+    $admin = file_get_contents($root . '/public/assets/css/admin.css');
+    $engine = file_get_contents($root . '/public/assets/js/liquid-glass.js');
+    $assert(str_contains($student, '@media (max-width: 380px)'), 'the five-tab dock drops labels on the narrowest phones');
+    $assert(str_contains($student, 'clip-path: inset(50%)'), 'the label stays available to screen readers');
+    $assert(str_contains($admin, '.admin-dock-label'), 'the eight-tab rail compacts earlier than the five-tab docks');
+    $assert(str_contains($admin, 'clip-path: inset(50%)'));
+    $assert(str_contains($student, '@media (max-height: 460px)'), 'a short split pane gets a shorter capsule');
+    $assert(str_contains($engine, 'window.visualViewport'), 'split-screen changes the visual viewport, not just the window');
+    $assert(str_contains($engine, 'resizeFrame = window.requestAnimationFrame(applyResize)'), 'continuous resizing is coalesced to one measurement per frame');
+    $assert(str_contains($engine, 'state.baseWidth = Math.max(isGroup ? 30 : 28'), 'the pill stays inside one tab at every width');
 });
 
 $test('No merge-conflict markers remain in key project files', static function () use ($assert, $root): void {

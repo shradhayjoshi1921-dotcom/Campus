@@ -131,9 +131,29 @@ function buildDock({ activeIndex = 0, storedIndex = null, reducedMotion = false,
 
   window.eval(ENGINE);
   window.eval(NAV);
+  // Re-stub the same dock at a different width, as a window resize would.
+  const resizeTo = (tabWidth, padLeft = PAD_LEFT) => {
+    links.forEach((link, index) => {
+      const left = padLeft + index * tabWidth;
+      const height = TAB_HEIGHT;
+      const top = 7;
+      Object.defineProperty(link, 'offsetLeft', { configurable: true, get: () => left });
+      Object.defineProperty(link, 'offsetWidth', { configurable: true, get: () => tabWidth });
+      Object.defineProperty(link, 'offsetTop', { configurable: true, get: () => top });
+      Object.defineProperty(link, 'offsetHeight', { configurable: true, get: () => height });
+      Object.defineProperty(link, 'offsetParent', { configurable: true, get: () => null });
+      link.getBoundingClientRect = () => ({ left, top, width: tabWidth, height, right: left + tabWidth, bottom: top + height });
+    });
+    const barWidth = tabWidth * links.length + padLeft * 2;
+    const barHeight = TAB_HEIGHT + 14;
+    nav.getBoundingClientRect = () => ({ left: 0, top: 0, width: barWidth, height: barHeight, right: barWidth, bottom: barHeight });
+    Object.defineProperty(nav, 'scrollWidth', { configurable: true, get: () => barWidth });
+    Object.defineProperty(nav, 'clientWidth', { configurable: true, get: () => barWidth });
+  };
   return {
     dom, window, document, nav, indicator, links, store, requests, pushes,
     showLayout: () => applyGeometry(true),
+    resizeTo,
   };
 }
 
@@ -497,7 +517,45 @@ const down = (env, index) => env.links[index].dispatchEvent(pointer(env.window, 
     env.dom.window.close();
   }
 
-  console.log('PASS liquid-glass engine + recruiter dock (16 scenarios, simulated DOM)');
+  // 15. Resizing (split-screen) re-aligns the pill to its tab, at any width.
+  {
+    const env = buildDock({ activeIndex: 3 });
+    await wait(30);
+    assert(Math.abs(translateX(env.indicator) - restingLeft(3)) < 0.2, 'pill starts on its tab at desktop width');
+
+    // A 768 px window leaves ~146 px per tab here; a 360 px one leaves ~66 px.
+    for (const tabWidth of [146, 96, 66]) {
+      env.resizeTo(tabWidth, 8);
+      env.window.dispatchEvent(new env.window.Event('resize'));
+      await wait(40);
+      const width = baseWidth(env.indicator) * scaleX(env.indicator);
+      const expectedLeft = 8 + 3 * tabWidth + tabWidth / 2 - baseWidth(env.indicator) / 2;
+      assert(Math.abs(translateX(env.indicator) - expectedLeft) < 0.2, `pill re-centres on the focused tab at ${tabWidth}px per tab`);
+      assert(width <= tabWidth + 0.01, `pill never exceeds its tab at ${tabWidth}px per tab`);
+      assert(width > 0, 'pill keeps a usable size when the dock shrinks');
+      assert.equal(env.indicator.classList.contains('is-moving'), false, `resizing at ${tabWidth}px per tab does not animate`);
+    }
+
+    // A burst of resize events must measure once, not once per event: every
+    // measurement reads the bar's box, so counting those reads counts measures.
+    let reads = 0;
+    const barRect = env.nav.getBoundingClientRect.bind(env.nav);
+    env.nav.getBoundingClientRect = () => { reads += 1; return barRect(); };
+    for (let i = 0; i < 12; i += 1) env.window.dispatchEvent(new env.window.Event('resize'));
+    await wait(60);
+    assert.equal(reads, 1, 'continuous resizing is coalesced into one measurement per frame');
+    env.nav.getBoundingClientRect = barRect;
+
+    // Switching tabs afterwards still works, starting from the resized layout.
+    const beforeSwitch = translateX(env.indicator);
+    click(env, 0);
+    await wait(40);
+    assert(translateX(env.indicator) < beforeSwitch, 'a tab switch after a resize travels in the new geometry');
+    assert.equal(baseWidth(env.indicator) * scaleX(env.indicator) <= 66.01, true, 'and the pill keeps fitting its tab');
+    env.dom.window.close();
+  }
+
+  console.log('PASS liquid-glass engine + recruiter dock (17 scenarios, simulated DOM)');
 })().catch((error) => {
   console.error(error);
   process.exit(1);
