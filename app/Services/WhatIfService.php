@@ -15,9 +15,9 @@ namespace App\Services;
 final class WhatIfService
 {
     public function __construct(
-        private readonly CareerFitService $fit,
-        private readonly EligibilityService $eligibility,
-        private readonly ScoringModel $model,
+        private CareerFitService $fit,
+        private EligibilityService $eligibility,
+        private ScoringModel $model,
     ) {
     }
 

@@ -12,7 +12,7 @@ namespace App\Services;
  */
 final class JobDescriptionService
 {
-    public function __construct(private readonly SkillListService $skills)
+    public function __construct(private SkillListService $skills)
     {
     }
 

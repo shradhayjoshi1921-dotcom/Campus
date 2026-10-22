@@ -21,7 +21,7 @@ final class ResumeAnalysisService
         'experience' => ['experience', 'internship', 'work history', 'employment'],
     ];
 
-    public function __construct(private readonly EvidenceService $evidenceService)
+    public function __construct(private EvidenceService $evidenceService)
     {
     }
 

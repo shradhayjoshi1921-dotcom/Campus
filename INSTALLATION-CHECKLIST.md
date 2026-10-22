@@ -5,8 +5,8 @@
 3. Confirm `.env` exists locally and is ignored by Git. Never include it in the ZIP.
 4. Start Apache and MySQL in XAMPP.
 5. Import `database/schema.sql` through phpMyAdmin; confirm `.env` points to the same database.
-6. Confirm PHP 8.2+, PDO MySQL, `mbstring`, and JSON are enabled.
-7. Run the `php -l` checks and `php tests/run.php` listed in `README.md`.
+6. Confirm PHP 8.0+ (8.2 recommended), PDO MySQL, `mbstring`, and JSON are enabled. In XAMPP, `php -v` in the XAMPP shell must report the same version Apache serves.
+7. Run `php scripts\doctor.php` — it reports the PHP version, extensions, `.env`, the database connection, missing `schema.sql` tables, pending migrations and whether an admin exists. Then run `php scripts\migrate.php` and the `php -l` checks and `php tests/run.php` listed in `README.md`.
 8. Create the first admin only when one does not already exist.
 9. Sign in as admin and check the portal using an empty database first.
 10. Register a test recruiter, approve the account/company, then publish a test job.

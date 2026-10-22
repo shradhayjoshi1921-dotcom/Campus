@@ -16,7 +16,7 @@ namespace App\Services;
  */
 final class ReadinessService
 {
-    public function __construct(private readonly ScoringModel $model)
+    public function __construct(private ScoringModel $model)
     {
     }
 

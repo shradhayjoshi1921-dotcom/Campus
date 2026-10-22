@@ -14,7 +14,7 @@ namespace App\Services;
  */
 final class MockInterviewService
 {
-    public function __construct(private readonly InterviewKitService $kit)
+    public function __construct(private InterviewKitService $kit)
     {
     }
 

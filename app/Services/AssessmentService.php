@@ -12,7 +12,7 @@ namespace App\Services;
  */
 final class AssessmentService
 {
-    public function __construct(private readonly ScoringModel $model)
+    public function __construct(private ScoringModel $model)
     {
     }
 

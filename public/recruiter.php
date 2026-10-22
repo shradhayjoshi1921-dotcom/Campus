@@ -118,7 +118,7 @@ function recruiter_job_skills(PDO $db, array $jobIds): array
     return $map;
 }
 
-function recruiter_flash_redirect(string $section, string $kind, string $message, array $query = []): never
+function recruiter_flash_redirect(string $section, string $kind, string $message, array $query = []): void
 {
     $_SESSION['recruiter_flash'] = ['kind' => $kind, 'message' => $message];
     $query['section'] = recruiter_section($section);

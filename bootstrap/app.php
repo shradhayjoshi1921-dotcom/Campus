@@ -1,6 +1,37 @@
 <?php
 declare(strict_types=1);
 
+// Fail with a readable message instead of a raw parse error. Everything below
+// uses PHP 8.0 syntax (constructor promotion, match, str_contains), so an older
+// server would otherwise die halfway through an include with something like
+// "unexpected identifier, expecting variable" and no hint about the cause.
+if (PHP_VERSION_ID < 80000) {
+    $campusMinimum = '8.0';
+    if (PHP_SAPI === 'cli') {
+        fwrite(STDERR, sprintf(
+            "Campus needs PHP %s or newer; this is PHP %s. Upgrade PHP and run the command again.\n",
+            $campusMinimum,
+            PHP_VERSION,
+        ));
+    } else {
+        http_response_code(500);
+        header('Content-Type: text/html; charset=utf-8');
+        echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            . '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            . '<title>PHP upgrade required</title></head>'
+            . '<body style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:2.5rem 1.25rem;max-width:44rem;margin:0 auto;line-height:1.6">'
+            . '<h1>PHP upgrade required</h1>'
+            . '<p>This site needs <strong>PHP ' . htmlspecialchars($campusMinimum, ENT_QUOTES) . ' or newer</strong>, '
+            . 'but the web server is running <strong>PHP ' . htmlspecialchars(PHP_VERSION, ENT_QUOTES) . '</strong>. '
+            . 'That is a server setting, so upgrading your browser will not help.</p>'
+            . '<p>On XAMPP: install a current XAMPP (8.2 or newer) or point Apache at a newer PHP folder, '
+            . 'then restart Apache from the XAMPP Control Panel. Check with '
+            . '<code>php -v</code> in the XAMPP shell.</p>'
+            . '</body></html>';
+    }
+    exit(1);
+}
+
 use App\Core\Env;
 use App\Core\Database;
 use App\Core\Security;

@@ -19,9 +19,9 @@ use Throwable;
 final class StudentData
 {
     public function __construct(
-        private readonly PDO $db,
-        private readonly ScoringModel $model,
-        private readonly EvidenceService $evidence,
+        private PDO $db,
+        private ScoringModel $model,
+        private EvidenceService $evidence,
     ) {
     }
 

@@ -27,7 +27,7 @@ final class InstitutionReport
     private InstitutionService $service;
     private EvidenceService $evidence;
 
-    public function __construct(private readonly PDO $db, private readonly ScoringModel $model)
+    public function __construct(private PDO $db, private ScoringModel $model)
     {
         $this->service = new InstitutionService();
         $this->evidence = new EvidenceService($model);

@@ -77,7 +77,7 @@ function admin_notify(PDO $db, int $userId, string $title, string $body): void
     $statement->execute([$userId, $title, $body]);
 }
 
-function admin_flash_redirect(string $section, string $kind, string $message, array $query = []): never
+function admin_flash_redirect(string $section, string $kind, string $message, array $query = []): void
 {
     $_SESSION['admin_flash'] = ['kind' => $kind, 'message' => $message];
     $query['section'] = admin_section($section);
@@ -154,7 +154,7 @@ function admin_status_label(string $status): string
     };
 }
 
-function admin_export_csv(string $filename, array $header, array $rows): never
+function admin_export_csv(string $filename, array $header, array $rows): void
 {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="' . $filename . '"');

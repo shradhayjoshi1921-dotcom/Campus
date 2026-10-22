@@ -13,7 +13,7 @@ namespace App\Services;
  */
 final class EvidenceService
 {
-    public function __construct(private readonly ScoringModel $model)
+    public function __construct(private ScoringModel $model)
     {
     }
 

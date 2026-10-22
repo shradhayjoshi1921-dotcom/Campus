@@ -120,6 +120,17 @@ Safety properties:
 The application still works without the migrations: every optional table read
 returns empty and the UI says which feature is waiting for them.
 
+### PHP version
+
+The intelligence layer needs **PHP 8.0 or newer** — the whole application does.
+Constructor promotion, `match` and `str_contains` are 8.0 features; promoted
+`readonly` properties and `never` return types would have needed 8.1, so they
+were replaced with plain promoted properties and `void` when this layer was
+reviewed against a stock XAMPP 8.0 build. `bootstrap/app.php` checks
+`PHP_VERSION_ID` before it includes anything else and prints a readable
+"PHP upgrade required" page instead of a raw parse error, and
+`scripts/doctor.php` reports the version the CLI sees.
+
 ### Reaching the studio
 
 `career.php`, `resume-review.php` and `practice.php` are standalone student
