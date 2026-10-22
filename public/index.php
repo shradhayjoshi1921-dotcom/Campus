@@ -20,6 +20,18 @@ $user = Security::currentUser();
 $error = '';
 $success = '';
 
+// The career studio pages are standalone scripts with their own student guard.
+// Keep old or bookmarked index.php links working instead of returning a 404.
+$studioRedirects = [
+    'career' => 'career.php',
+    'resume-review' => 'resume-review.php',
+    'practice' => 'practice.php',
+];
+if (isset($studioRedirects[$page]) && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    header('Location: ' . $studioRedirects[$page], true, 302);
+    exit;
+}
+
 // Handle state-changing requests before route data is loaded.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -594,7 +606,9 @@ $notifications = [];
 $unreadNotifications = 0;
 $upcomingInterviews = [];
 $studentOffers = [];
-if ($user && $user['role'] === 'student' && in_array($page, ['dashboard', 'profile', 'jobs', 'applications', 'notifications'], true)) {
+$isStudentWorkspace = $user && $user['role'] === 'student'
+    && in_array($page, ['dashboard', 'profile', 'jobs', 'applications', 'notifications'], true);
+if ($isStudentWorkspace) {
     try {
         $db = Database::connection();
         $statement = $db->prepare('SELECT * FROM resumes WHERE student_id = ? ORDER BY created_at DESC LIMIT 1');
@@ -729,40 +743,9 @@ if (!in_array($page, $knownPages, true)) {
  */
 function sviet_student_dock(string $active, int $unread): void
 {
-    $tabs = [
-        'dashboard' => ['label' => 'Home', 'href' => 'index.php?page=dashboard', 'icon' => '<path d="M4 11.2 12 4l8 7.2V20a1 1 0 0 1-1 1h-4.6v-5.6H9.6V21H5a1 1 0 0 1-1-1z"/>'],
-        'jobs' => ['label' => 'Jobs', 'href' => 'index.php?page=jobs', 'icon' => '<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8.5 7V5.2A1.7 1.7 0 0 1 10.2 3.5h3.6a1.7 1.7 0 0 1 1.7 1.7V7M3 12.5h18"/>'],
-        'applications' => ['label' => 'Applications', 'href' => 'index.php?page=applications', 'icon' => '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h4M10 12.5h5M10 16.5h4"/>'],
-        'notifications' => ['label' => 'Alerts', 'href' => 'index.php?page=notifications', 'icon' => '<path d="M6 9a6 6 0 1 1 12 0c0 4 1.6 5.6 1.6 5.6H4.4S6 13 6 9Z"/><path d="M10 18.5a2.2 2.2 0 0 0 4 0"/>'],
-        'profile' => ['label' => 'Profile', 'href' => 'index.php?page=profile', 'icon' => '<circle cx="12" cy="8.2" r="3.7"/><path d="M4.8 20.6a7.2 7.2 0 0 1 14.4 0"/>'],
-    ];
-    ?>
-    <nav class="sv-dock" data-glass-dock aria-label="Student workspace">
-        <span class="lg-indicator" aria-hidden="true">
-            <span class="lg-smoke"></span>
-            <span class="lg-specular"></span>
-            <span class="lg-rim"></span>
-            <span class="lg-caustic"></span>
-            <span class="lg-glint"></span>
-        </span>
-        <div class="sv-dock-track" id="sv-dock-track">
-            <?php foreach ($tabs as $key => $tab): ?>
-                <a class="sv-dock-link <?= $active === $key ? 'is-active' : '' ?>"
-                   data-sv-section="<?= htmlspecialchars($key, ENT_QUOTES) ?>"
-                   href="<?= htmlspecialchars($tab['href'], ENT_QUOTES) ?>"
-                   <?= $active === $key ? 'aria-current="page"' : '' ?>>
-                    <span class="sv-dock-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><?= $tab['icon'] ?></svg>
-                    </span>
-                    <span class="sv-dock-label"><?= htmlspecialchars($tab['label'], ENT_QUOTES) ?></span>
-                    <?php if ($key === 'notifications' && $unread > 0): ?>
-                        <span class="sv-dock-badge" aria-label="<?= $unread ?> unread notifications"><?= $unread > 99 ? '99+' : $unread ?></span>
-                    <?php endif; ?>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    </nav>
-    <?php
+    // The markup (and the tab list) lives in one partial so the career studio
+    // shell renders exactly the same dock.
+    require __DIR__ . '/views/partials/student-dock-markup.php';
 }
 
 function e(?string $s): string
@@ -812,7 +795,7 @@ $pageTitle = match ($page) {
     <?php if ($page === 'home'): ?>
         <link rel="stylesheet" href="assets/css/homepage.css?v=<?= e($appCssVersion) ?>">
     <?php endif; ?>
-    <?php if ($user && $user['role'] === 'student' && in_array($page, ['dashboard', 'profile', 'jobs', 'applications', 'notifications'], true)): ?>
+    <?php if ($isStudentWorkspace): ?>
         <link rel="stylesheet" href="assets/css/water-dock.css?v=<?= e($appCssVersion) ?>">
     <?php endif; ?>
     <link rel="stylesheet" href="assets/css/liquid-glass.css?v=<?= e($appCssVersion) ?>">
@@ -867,6 +850,8 @@ $pageTitle = match ($page) {
                     <a href="index.php?page=jobs"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8.5 7V5.2A1.7 1.7 0 0 1 10.2 3.5h3.6a1.7 1.7 0 0 1 1.7 1.7V7"/></svg></span>Opportunities</a>
                     <a href="index.php?page=applications"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h4"/></svg></span>Applications</a>
                     <a href="career.php"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V9M10 19V4M16 19v-7M22 19H2"/></svg></span>Career insights</a>
+                    <a href="resume-review.php"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h4M9.5 13h5M9.5 17h3.5"/></svg></span>Resume review</a>
+                    <a href="practice.php"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a3.4 3.4 0 0 1 3.4 3.4v4.3a3.4 3.4 0 0 1-6.8 0V6.4A3.4 3.4 0 0 1 12 3Z"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M8.5 21h7"/></svg></span>Interview practice</a>
                 <?php elseif ($user['role'] === 'recruiter'): ?>
                     <a href="recruiter.php"><span class="bubble-sheet__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M3 12h18"/></svg></span>Recruiter workspace</a>
                 <?php elseif (in_array($user['role'], ['admin', 'tpo'], true)): ?>
@@ -1805,6 +1790,7 @@ $pageTitle = match ($page) {
         <?php endif; ?>
         <?php if ($user['role'] === 'student'): ?>
             <a class="secondary-btn" href="index.php?page=jobs">Browse open opportunities</a>
+            <a class="secondary-btn" href="career.php">Open the career studio</a>
         <?php elseif (in_array($user['role'], ['admin', 'tpo'], true)): ?>
             <a class="secondary-btn" href="admin.php">Open Admin / TPO workspace <span aria-hidden="true">↗</span></a>
         <?php elseif ($user['role'] === 'recruiter'): ?>
@@ -1821,7 +1807,7 @@ $pageTitle = match ($page) {
     </div>
 </main>
 <?php endif; ?>
-<?php if ($user && $user['role'] === 'student' && in_array($page, ['dashboard', 'profile', 'jobs', 'applications', 'notifications'], true)): ?>
+<?php if ($isStudentWorkspace): ?>
     <?php sviet_student_dock($page, (int) $unreadNotifications); ?>
     <script src="assets/js/liquid-glass.js?v=<?= e($appCssVersion) ?>" defer></script>
     <script src="assets/js/student-nav.js?v=<?= e($appCssVersion) ?>" defer></script>

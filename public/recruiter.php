@@ -32,7 +32,7 @@ function recruiter_get(string $key): string
 
 function recruiter_section(string $candidate, string $fallback = 'overview'): string
 {
-    $sections = ['overview', 'company', 'jobs', 'applicants', 'interviews'];
+    $sections = ['overview', 'company', 'jobs', 'applicants', 'interviews', 'ai'];
     return in_array($candidate, $sections, true) ? $candidate : $fallback;
 }
 
@@ -942,12 +942,125 @@ if ($companyId > 0 && $section === 'interviews' && !$companyLoadError) {
     }
 }
 
+/* ------------------------------------------------------------------ AI tools */
+/*
+ * These three tools read and draft only — none of them writes a job, a score or
+ * a candidate decision. A draft is returned for the recruiter to paste into the
+ * existing job form, so the normal validation, approval state and audit trail
+ * still apply. Resume comparison runs on the applicant's own stored PDF, which
+ * this recruiter may already open, and each read is audited.
+ */
+$aiTool = in_array(recruiter_get('tool'), ['jd', 'kit', 'compare'], true) ? recruiter_get('tool') : 'jd';
+$aiDraft = null;
+$aiKit = null;
+$aiCompare = null;
+$aiJobId = recruiter_positive_id(recruiter_get('job'));
+$aiJobs = [];
+$aiApplicants = [];
+$aiNotice = '';
+
+if ($section === 'ai') {
+    if ($companyId > 0 && !$companyLoadError) {
+        try {
+            $statement = $db->prepare(
+                'SELECT id, title, status, location, employment_type, min_cgpa, eligible_branch, graduation_year, closes_at '
+                . 'FROM jobs WHERE company_id = ? ORDER BY created_at DESC LIMIT 50',
+            );
+            $statement->execute([$companyId]);
+            $aiJobs = $statement->fetchAll(PDO::FETCH_ASSOC);
+            $statement = $db->prepare(
+                'SELECT a.id, a.status, u.name AS student_name, j.id AS job_id, j.title, r.id AS resume_id '
+                . 'FROM applications a JOIN jobs j ON j.id = a.job_id JOIN users u ON u.id = a.student_id '
+                . 'LEFT JOIN resumes r ON r.student_id = a.student_id '
+                . 'WHERE j.company_id = ? ORDER BY a.applied_at DESC LIMIT 100',
+            );
+            $statement->execute([$companyId]);
+            $aiApplicants = $statement->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $exception) {
+            error_log('Recruiter AI tool query failure: ' . $exception->getMessage());
+            $error = $error ?: 'The AI tools could not load your jobs and applicants.';
+        }
+    }
+
+    $aiAction = $_SERVER['REQUEST_METHOD'] === 'POST' ? recruiter_post('ai_action') : '';
+    if ($aiAction !== '' && !Security::verifyCsrf($_POST['_csrf'] ?? null)) {
+        http_response_code(419);
+        $error = 'Your session expired. Refresh the page and try again.';
+        $aiAction = '';
+    }
+    if ($aiAction === 'draft') {
+        $jdText = mb_substr(recruiter_post('jd_text'), 0, 8000);
+        if (trim($jdText) === '') {
+            $error = $error ?: 'Paste the role description first.';
+        } else {
+            $aiDraft = (new App\Services\JobDescriptionService(new App\Services\SkillListService()))->draft($jdText);
+        }
+    } elseif ($aiAction === 'kit') {
+        $kitJob = null;
+        foreach ($aiJobs as $candidateJob) {
+            if ((int) $candidateJob['id'] === $aiJobId) {
+                $kitJob = $candidateJob;
+                break;
+            }
+        }
+        if ($kitJob === null) {
+            $error = $error ?: 'Choose one of your own jobs to build an interview kit.';
+        } else {
+            $skills = recruiter_job_skills($db, [(int) $kitJob['id']])[(int) $kitJob['id']] ?? [];
+            $aiKit = (new App\Services\InterviewKitService())->build(
+                $skills['required'] ?? [],
+                $skills['preferred'] ?? [],
+                (string) $kitJob['title'],
+            );
+        }
+    } elseif ($aiAction === 'compare') {
+        $applicantId = recruiter_positive_id(recruiter_post('application_id'));
+        $applicant = null;
+        foreach ($aiApplicants as $candidateApplicant) {
+            if ((int) $candidateApplicant['id'] === $applicantId) {
+                $applicant = $candidateApplicant;
+                break;
+            }
+        }
+        if ($applicant === null || (int) ($applicant['resume_id'] ?? 0) === 0) {
+            $error = $error ?: 'Pick an applicant who has uploaded a resume.';
+        } else {
+            $resumeStatement = $db->prepare('SELECT id, stored_name, student_id FROM resumes WHERE id = ? AND student_id = (SELECT student_id FROM applications WHERE id = ?) LIMIT 1');
+            $resumeStatement->execute([(int) $applicant['resume_id'], $applicantId]);
+            $resumeRow = $resumeStatement->fetch(PDO::FETCH_ASSOC);
+            $path = $resumeRow ? dirname(__DIR__) . '/storage/uploads/resumes/' . basename((string) $resumeRow['stored_name']) : '';
+            $text = $path !== '' ? (new App\Services\ResumeTextService())->extract($path) : ['ok' => false, 'text' => '', 'pages' => 0, 'reason' => 'That resume file is no longer available.'];
+            if (!$text['ok']) {
+                $aiNotice = (string) $text['reason'];
+            } else {
+                $jobSkills = recruiter_job_skills($db, [(int) $applicant['job_id']])[(int) $applicant['job_id']] ?? [];
+                $comparison = (new App\Services\ResumeAnalysisService(new App\Services\EvidenceService(new App\Services\ScoringModel())))
+                    ->compare($text['text'], [
+                        'title' => (string) $applicant['title'],
+                        'required_skills' => $jobSkills['required'] ?? [],
+                        'preferred_skills' => $jobSkills['preferred'] ?? [],
+                    ]);
+                $aiCompare = ['applicant' => $applicant, 'pages' => (int) $text['pages']] + $comparison;
+                try {
+                    recruiter_audit($db, (int) $user['id'], 'resume.analysed', 'resume', (int) $applicant['resume_id'], [
+                        'application_id' => $applicantId,
+                        'tool' => 'requirement_compare',
+                    ]);
+                } catch (Throwable $exception) {
+                    error_log('Recruiter resume-read audit failure: ' . $exception->getMessage());
+                }
+            }
+        }
+    }
+}
+
 $pageTitles = [
     'overview' => ['Overview', 'Your hiring activity, next steps, and recent applicants.'],
     'company' => ['Company profile', 'Manage your organization details and review status.'],
     'jobs' => ['Your jobs', 'Create, update, and track opportunities for SVIET students.'],
     'applicants' => ['Applicants', 'Review candidates and move applications through your hiring pipeline.'],
     'interviews' => ['Interviews', 'Schedule, reschedule, and follow up on candidate interviews.'],
+    'ai' => ['AI tools', 'Draft a role description, build an interview kit, and compare a resume with your requirements.'],
 ];
 [$pageTitle, $pageDescription] = $pageTitles[$section];
 $appCssVersion = asset_version();

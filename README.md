@@ -97,7 +97,11 @@ For deployment, set the Apache document root to `Campus/public/`. If using the l
 - Portal home: `http://localhost/Campus/public/`
 - Sign in / register: `http://localhost/Campus/public/index.php?page=login` / `?page=register`
 - Student profile, jobs, and applications: available after student sign-in
-- Career insights: `http://localhost/Campus/public/career.php` (student sign-in required)
+- Career studio: `http://localhost/Campus/public/career.php` (student sign-in required) — readiness, recommendations, career graph, saved roadmap, what-if simulator, copilot
+- Resume review: `http://localhost/Campus/public/resume-review.php` (student)
+- Practice: `http://localhost/Campus/public/practice.php` (student) — mock interviews and published assessments
+- Recruiter AI tools: `http://localhost/Campus/public/recruiter.php?section=ai` (recruiter)
+- Institutional intelligence: `http://localhost/Campus/public/admin.php?section=intelligence` (TPO or admin)
 - Recruiter workspace: `http://localhost/Campus/public/recruiter.php` (recruiter sign-in required)
 - TPO/Admin workspace: `http://localhost/Campus/public/admin.php` (TPO or admin sign-in required)
 
@@ -108,7 +112,11 @@ For deployment, set the Apache document root to `Campus/public/`. If using the l
 - Recruiter company review, approved-company direct job publishing with T&P moderation, company-owned job management, an applicant pipeline with history/notifications, and interview scheduling, rescheduling, cancellation, and completion.
 - Jobs carry required and preferred skills, which drive the student's fit score, skill gap and learning roadmap; recruiters can read the PDF resume of any candidate who applied to their company.
 - TPO/Admin account and company decisions, job moderation, summaries, reports, announcements, notifications, and audit activity.
-- Rule-based career-fit estimates, skill-gap views, roadmap suggestions, and what-if skill simulation. These are explainable heuristics, **not trained AI or hiring probabilities**.
+- Rule-based career-fit estimates with printed weights, skill-gap priorities, week-by-week roadmaps, a readiness scorecard, a career graph and a what-if simulator that writes nothing. These are explainable heuristics, **not trained AI or hiring probabilities**.
+- Resume intelligence: local PDF text extraction, a review checklist, tick-to-approve profile updates, a word-boundary comparison against one open role, and a bullet rewrite that never invents a metric.
+- Practice: text mock interviews scored against a five-criterion rubric (no voice, face or emotion analysis) and the assessments the placement cell publishes.
+- An optional AI layer that is off by default: with no provider configured every AI-touchpoint falls back to deterministic rules, and the key is server-side only.
+- A read-only institutional report for the TPO: readiness by branch, employer demand, training gaps, employer coverage, application volume and records worth a human look. No student is named.
 - Empty states are used instead of fabricated portal data.
 
 ## UI update in 2.0.0
@@ -143,6 +151,7 @@ The top of every page is flush with the viewport edge: `html` and `body` share o
 - Resume files live on local disk and there is no virus scanning. A recruiter can open a resume only for a student who applied to their own company's jobs (each view is audited); there is no in-page PDF preview beyond the browser's own viewer.
 - The admin CSV import covers accounts (students and recruiters). Placement drives, eligibility-based bulk shortlisting, announcement read receipts and editable `system_settings` are not built yet, and `jobs` still has no salary column, so CTC lives only on offers.
 - The `offers` table arrives through the migration in `database/migrations/`; importing only `schema.sql` into an existing database will not add it.
+- The intelligence layer adds optional tables and columns through three additive migrations. Apply them with `php scripts/migrate.php` (or inspect with `--status`); the site keeps working without them and says which feature is waiting. Nothing is dropped, truncated or rewritten. See `docs/CAREER-INTELLIGENCE.md` for the full list and `docs/SCORING.md` for every weight.
 - Do not use this project with real personal data until you have tested and reviewed the deployment configuration.
 
 ## Verify locally
@@ -171,6 +180,14 @@ node tests\js\liquid-glass.test.js
 ```
 
 It covers 14 scenarios: boot geometry, click flight, one-tab width, drag and release, reversal/cancel, vertical gestures, synthetic-click suppression, GET filters and history, rapid switching, reduced motion, keyboard preview, cross-page handoff, option groups and mounting before layout.
+
+The dock is sized from the viewport, not from a desktop constant, so it is worth checking that arithmetic after any change to its tokens:
+
+```bat
+node tests\js\dock-geometry.test.js
+```
+
+It resolves the declared `--dock-*` values at 1536, 1024, 768, 480 and 360 px (and sweeps continuously between the extremes) and asserts that the capsule fits the window, every tab keeps a usable target, the active pill stays inside one tab, and each portal's footer reserves the dock's clearance.
 
 A second harness covers the student workspace:
 

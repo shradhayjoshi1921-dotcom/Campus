@@ -132,7 +132,7 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
 .rec-signout:hover { transform: translateY(-1px); border-color: var(--rec-line-strong); background: rgba(255, 255, 255,.08); }
 
 .rec-workspace { position: relative; z-index: 1; width: min(100%, 1380px); margin: 0 auto; }
-.rec-main { min-height: 72vh; padding: clamp(28px, 4.2vw, 58px) clamp(16px, 3.2vw, 42px) 148px; touch-action: pan-y; }
+.rec-main { min-height: 72vh; padding: clamp(28px, 4.2vw, 58px) clamp(16px, 3.2vw, 42px) clamp(24px, 3vw, 40px); touch-action: pan-y; }
 .rec-page-content {
   transform: translate3d(0, 0, 0);
   transform-origin: center top;
@@ -404,15 +404,16 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
    shared liquid-glass.css; the spring lives in assets/js/liquid-glass.js.
 --------------------------------------------------------------------------- */
 .rec-bottom-nav {
+  --dock-max: 820px;
   position: fixed;
   z-index: 100;
-  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--dock-bottom) + env(safe-area-inset-bottom, 0px));
   left: 50%;
   display: grid;
-  width: min(820px, calc(100% - 32px));
+  width: min(var(--dock-max, 820px), calc(100% - var(--dock-gutter, 24px)));
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 4px;
-  padding: 9px;
+  gap: var(--dock-gap);
+  padding: var(--dock-pad);
   transform: translateX(-50%);
   touch-action: pan-y;
   -webkit-user-select: none;
@@ -426,13 +427,13 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
   z-index: 1;
   display: grid;
   min-width: 0;
-  min-height: 66px;
+  min-height: var(--dock-tab-height);
   justify-items: center;
   align-content: center;
-  gap: 6px;
-  padding: 6px 9px;
+  gap: clamp(3px, 0.6vw, 6px);
+  padding: 4px clamp(2px, 0.9vw, 9px);
   border-radius: 999px;
-  font-size: 10px;
+  font-size: var(--dock-label-size);
   font-weight: 640;
   letter-spacing: .01em;
   text-align: center;
@@ -443,11 +444,11 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
   position: relative;
   z-index: 1;
   display: grid;
-  width: 27px;
-  height: 27px;
+  width: var(--dock-icon);
+  height: var(--dock-icon);
   place-items: center;
 }
-.rec-nav-icon svg { width: 25px; height: 25px; }
+.rec-nav-icon svg { width: 100%; height: 100%; }
 .rec-nav-label {
   position: relative;
   z-index: 1;
@@ -459,7 +460,16 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
   transition: opacity .2s ease;
 }
 
-.rec-footer { display: flex; justify-content: space-between; gap: 15px; width: min(100%, 1300px); margin: -92px auto 0; padding: 0 30px 24px; color: var(--rec-dim); font-size: 9px; }
+.rec-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  width: min(100%, 1300px);
+  margin: 0 auto;
+  padding: 0 clamp(16px, 3.2vw, 42px) var(--dock-clearance, 118px);
+  color: var(--rec-dim);
+  font-size: 9px;
+}
 
 .rec-unavailable { width: min(720px, 100%); margin: 9vh auto; }
 .rec-unavailable .rec-card { margin-top: 16px; }
@@ -489,7 +499,7 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
   .rec-account-name, .rec-company-state { display: none; }
   .rec-topbar-right { gap: 8px; }
   .rec-signout { padding: 7px 9px; font-size: 10px; }
-  .rec-main { padding: 32px 13px 136px; }
+  .rec-main { padding: 32px 13px 24px; }
   .rec-page-heading { align-items: flex-start; flex-direction: column; gap: 13px; margin-bottom: 21px; }
   .rec-page-heading h1 { font-size: clamp(30px, 8vw, 39px); }
   .rec-page-description { margin-top: 7px; font-size: 11px; }
@@ -531,11 +541,7 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
   .rec-reschedule-details { width: 100%; }
   .rec-reschedule-details summary { width: fit-content; }
   .rec-reschedule-form { right: auto; left: 0; }
-  .rec-bottom-nav { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: calc(100% - 16px); gap: 2px; padding: 7px; }
-  .rec-nav-link { min-height: 58px; gap: 4px; padding: 4px 5px; font-size: 9px; }
-  .rec-nav-icon { width: 24px; height: 24px; }
-  .rec-nav-icon svg { width: 22px; height: 22px; }
-  .rec-footer { flex-direction: column; gap: 3px; margin-top: -94px; padding: 0 18px 20px; font-size: 8px; }
+  .rec-footer { flex-direction: column; gap: 3px; font-size: 8px; }
 }
 @media (max-width: 380px) {
   .rec-brand-copy { display: none; }
@@ -547,4 +553,60 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
   .rec-orb, .rec-page-content, [data-reveal] { animation: none !important; }
   .rec-button, .rec-signout, .rec-nav-link, .rec-nav-icon, .rec-nav-label, .rec-job-card, .rec-page-content { transition: none !important; }
   .rec-page-content.is-pending[data-direction], .rec-page-content.is-entering[data-direction] { opacity: 1; filter: none; transform: none; }
+}
+
+/* ---------- AI tools (read-only helpers) ---------- */
+
+.rec-ai-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+
+.rec-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.rec-key-values {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+
+.rec-key-values dt { color: var(--sv-muted, #a2a6ad); }
+.rec-key-values dd { margin: 0; }
+
+.rec-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.rec-list li + li { margin-top: 4px; }
+
+.rec-card textarea[readonly] { font-family: var(--sv-font-mono, ui-monospace, monospace); font-size: 11.5px; }
+
+/* Six tabs in a 350 px capsule leave ~55 px each: the label would ellipsis to
+   three letters, so it moves to screen readers only and the icon carries the
+   tab. Same treatment the student dock uses below 380 px. */
+@media (max-width: 420px) {
+  .rec-nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+  .rec-nav-link { gap: 0; padding-block: 2px; }
 }

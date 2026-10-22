@@ -2,19 +2,42 @@
 declare(strict_types=1);
 
 require dirname(__DIR__) . '/app/Services/EligibilityService.php';
+require dirname(__DIR__) . '/app/Services/SkillListService.php';
+require dirname(__DIR__) . '/app/Services/ScoringModel.php';
+require dirname(__DIR__) . '/app/Services/EvidenceService.php';
 require dirname(__DIR__) . '/app/Services/CareerFitService.php';
 require dirname(__DIR__) . '/app/Services/SkillGapService.php';
 require dirname(__DIR__) . '/app/Services/RecommendationService.php';
-require dirname(__DIR__) . '/app/Services/SkillListService.php';
 require dirname(__DIR__) . '/app/Services/RoadmapService.php';
+require dirname(__DIR__) . '/app/Services/ReadinessService.php';
+require dirname(__DIR__) . '/app/Services/WhatIfService.php';
+require dirname(__DIR__) . '/app/Services/CareerGraphService.php';
+require dirname(__DIR__) . '/app/Services/ResumeAnalysisService.php';
+require dirname(__DIR__) . '/app/Services/JobDescriptionService.php';
+require dirname(__DIR__) . '/app/Services/InterviewKitService.php';
+require dirname(__DIR__) . '/app/Services/MockInterviewService.php';
+require dirname(__DIR__) . '/app/Services/AssessmentService.php';
+require dirname(__DIR__) . '/app/Services/InstitutionService.php';
 require dirname(__DIR__) . '/app/Services/AdminImportService.php';
 
 use App\Services\CareerFitService;
 use App\Services\EligibilityService;
+use App\Services\EvidenceService;
 use App\Services\RecommendationService;
 use App\Services\RoadmapService;
+use App\Services\ScoringModel;
 use App\Services\SkillGapService;
+use App\Services\SkillListService;
 use App\Services\AdminImportService;
+use App\Services\AssessmentService;
+use App\Services\CareerGraphService;
+use App\Services\InstitutionService;
+use App\Services\InterviewKitService;
+use App\Services\JobDescriptionService;
+use App\Services\MockInterviewService;
+use App\Services\ReadinessService;
+use App\Services\ResumeAnalysisService;
+use App\Services\WhatIfService;
 
 $passed = 0;
 $failed = 0;
@@ -55,10 +78,14 @@ $test('Missing qualification is not silently eligible', static function () use (
 });
 
 $test('Fit score uses documented weights and reports gaps', static function () use ($assert): void {
+    // weights: skills .45, evidence .20, academic .20, role .15 (config/scoring.php)
+    // skills 50%, evidence 25% (two claims), academic 80, role 100 => 58.5
     $result = (new CareerFitService())->score(['PHP', 'SQL'], ['php', 'javascript'], 80, 100);
-    $assert($result['score'] === 65.0, (string) $result['score']);
+    $assert($result['score'] === 58.5, (string) $result['score']);
     $assert($result['matched_skills'] === ['php']);
     $assert($result['missing_skills'] === ['javascript']);
+    $assert(isset($result['weights']['skills']) && abs($result['weights']['skills'] - 0.45) < 0.0001, 'the weights are reported with the score');
+    $assert($result['explanation'] !== [], 'every component is explained');
 });
 
 $test('An employer with no listed skills is never scored as a perfect match', static function () use ($assert): void {
@@ -68,7 +95,14 @@ $test('An employer with no listed skills is never scored as a perfect match', st
     $assert($result['score'] < 100, 'an empty requirement list must not read as 100%');
     $assert(str_contains($result['notice'], 'not listed required skills'), 'the page can explain the fallback');
     $listed = (new CareerFitService())->score(['PHP'], ['PHP'], 100, 100);
-    $assert($listed['skills_listed'] === true && $listed['score'] === 100.0, 'a real match still scores 100');
+    $assert($listed['skills_listed'] === true, 'a listed requirement is matched');
+    $assert($listed['components']['skills'] === 100.0, 'the skill itself matches fully');
+    $assert($listed['components']['evidence'] === 25.0, 'a claim alone is worth a quarter of the evidence weight');
+    $assert($listed['score'] === 85.0, 'a listed skill whose only evidence is a claim is not a perfect match');
+    $demonstrated = (new CareerFitService())->score(['PHP'], ['PHP'], 100, 100, [
+        'evidence' => ['php' => ['level' => 'project', 'value' => 0.6, 'sources' => ['Portfolio project']]],
+    ]);
+    $assert($demonstrated['components']['evidence'] === 60.0, 'a demonstrated skill raises the evidence component');
 });
 
 $test('The job skills parser cleans and de-duplicates free text', static function () use ($assert): void {
@@ -226,10 +260,17 @@ $test('Homepage uses local assets, avoids unverified campus photography, and kee
 });
 
 $test('Workspace sign-out forms submit a CSRF-protected POST', static function () use ($assert, $root): void {
-    foreach (['public/index.php', 'public/career.php'] as $file) {
+    foreach (['public/index.php', 'public/views/partials/studio-start.php'] as $file) {
         $contents = file_get_contents($root . '/' . $file);
         $assert(str_contains($contents, 'name="action" value="logout"'), "logout action missing in {$file}");
         $assert(str_contains($contents, 'name="_csrf"'), "CSRF token missing in {$file}");
+    }
+    // Every career studio page takes its chrome (and its sign-out form) from
+    // that same shell, so there is exactly one place to protect.
+    foreach (['career', 'resume-review', 'practice'] as $studioPage) {
+        $contents = file_get_contents($root . '/public/' . $studioPage . '.php');
+        $assert(str_contains($contents, 'views/partials/studio-start.php'), "{$studioPage}.php does not use the studio shell");
+        $assert(str_contains($contents, "Security::requireRole(['student'])"), "{$studioPage}.php is not student-only");
     }
     $adminLayout = file_get_contents($root . '/public/views/admin/layout-start.php');
     $assert(str_contains($adminLayout, 'name="action" value="logout"'), 'logout action missing in admin layout');
@@ -422,8 +463,12 @@ $test('Admin portal keeps role guards, CSRF and consistent audit coverage', stat
     $assert(!str_contains($adminController, 'password_hash($password, PASSWORD_DEFAULT)  ??'), 'no placeholder hashing');
 });
 
-$test('Admin portal has eight routed sections with all views on disk', static function () use ($assert, $adminController, $adminLayoutEnd, $adminLayoutStart, $root): void {
-    $sections = ['overview', 'approvals', 'students', 'placements', 'jobs', 'reports', 'comms', 'governance'];
+$test('Admin portal has nine routed sections with all views on disk', static function () use ($assert, $adminController, $adminLayoutEnd, $adminLayoutStart, $root): void {
+    $sections = ['overview', 'approvals', 'students', 'placements', 'jobs', 'reports', 'comms', 'governance', 'intelligence'];
+    foreach (['overview', 'company', 'jobs', 'applicants', 'interviews', 'ai'] as $recruiterSection) {
+        $assert(is_file($root . '/public/views/recruiter/' . $recruiterSection . '.php'), "missing recruiter view {$recruiterSection}");
+        $assert(str_contains((string) file_get_contents($root . '/public/recruiter.php'), "'{$recruiterSection}'"), "recruiter section {$recruiterSection} is not routable");
+    }
     foreach ($sections as $section) {
         $assert(str_contains($adminController, "'{$section}'"), "section {$section} is not routable");
         $assert(is_file($root . '/public/views/admin/' . $section . '.php'), "missing admin view {$section}");
@@ -506,7 +551,7 @@ $test('Every portal ships the same light-orange and dark-water appearance switch
     $assert(str_contains($script, "root.dataset.theme"));
     $assert(str_contains($script, 'prefers-color-scheme: dark'));
 
-    foreach (['public/index.php', 'public/career.php', 'public/views/recruiter/layout-start.php', 'public/views/admin/layout-start.php'] as $file) {
+    foreach (['public/index.php', 'public/views/partials/studio-start.php', 'public/views/recruiter/layout-start.php', 'public/views/admin/layout-start.php'] as $file) {
         $contents = file_get_contents($root . '/' . $file);
         $assert(str_contains($contents, 'assets/css/theme.css'), "theme.css missing in {$file}");
         $assert(str_contains($contents, "saved === 'dark'"), "pre-paint bootstrap missing in {$file}");
@@ -728,7 +773,7 @@ $test('One shared liquid-glass capsule drives every dock and option group', stat
 
     // Compact, one-tab-wide geometry rather than the full bar.
     $assert(str_contains($liquidGlassScript, 'metrics[0].width - insetX'));
-    $assert(str_contains($liquidGlassScript, 'Math.max(isGroup ? 40 : 46'));
+    $assert(str_contains($liquidGlassScript, 'Math.max(isGroup ? 30 : 28'), 'the pill floor fits the narrowest responsive tab');
     $assert(str_contains($liquidGlassScript, 'Math.min(isGroup ? 9 : 18, insetX)'), 'the stretch budget never exceeds the tab inset');
     $assert(str_contains($liquidGlassScript, 'scale3d('), 'the pill stretches with a transform, not by resizing the box');
     $assert(!preg_match('/indicator\.style\.width\s*=\s*\$\{state\.width/', $liquidGlassScript), 'no layout write per spring frame');
@@ -744,7 +789,9 @@ $test('One shared liquid-glass capsule drives every dock and option group', stat
         $assert(str_contains($layout, 'class="lg-indicator"'));
     }
     $index = file_get_contents($root . '/public/index.php');
-    $assert(str_contains($index, 'data-glass-dock'));
+    $studentDock = file_get_contents($root . '/public/views/partials/student-dock-markup.php');
+    $assert(str_contains($index, 'student-dock-markup.php'), 'index.php renders the shared student dock');
+    $assert(str_contains($studentDock, 'data-glass-dock'));
     $adminNav = file_get_contents($root . '/public/assets/js/admin-nav.js');
     $assert(str_contains($adminNav, 'LiquidGlass.refresh(content)'), 'filter groups are remounted after an in-place section swap');
     $assert(str_contains($index, 'assets/js/liquid-glass.js'));
@@ -816,22 +863,340 @@ $test('One asset version busts every cached stylesheet and script', static funct
     $bootstrap = file_get_contents($root . '/bootstrap/app.php');
     $assert(str_contains($bootstrap, 'function asset_version()'), 'assets share one version token');
     $assert(str_contains($bootstrap, "glob(dirname(__DIR__) . '/public/assets/' . \$kind . '/*.' . \$kind)"), 'the token follows the newest css and js file');
-    foreach (['public/index.php', 'public/admin.php', 'public/recruiter.php', 'public/career.php'] as $file) {
+    foreach (['public/index.php', 'public/admin.php', 'public/recruiter.php', 'public/views/partials/studio-start.php', 'public/views/partials/studio-end.php'] as $file) {
         $markup = file_get_contents($root . '/' . $file);
         $assert(str_contains($markup, 'asset_version()'), "{$file} uses the shared token");
         $assert(!str_contains($markup, "filemtime(__DIR__ . '/assets/"), "{$file} no longer pins the token to one file");
     }
 });
 
-$test('The capsule geometry matches the wider Instagram-style track', static function () use ($assert, $root): void {
+$test('The capsule geometry is viewport-driven, not a fixed desktop width', static function () use ($assert, $root): void {
     $student = file_get_contents($root . '/public/assets/css/water-dock.css');
     $recruiter = file_get_contents($root . '/public/assets/css/recruiter.css');
     $admin = file_get_contents($root . '/public/assets/css/admin.css');
-    $assert(str_contains($student, 'width: min(820px, calc(100% - 32px))'), 'the student capsule is wide');
-    $assert(str_contains($recruiter, 'width: min(820px, calc(100% - 32px))'), 'the recruiter capsule matches it');
-    $assert(str_contains($admin, 'width: min(960px, calc(100% - 32px))'), 'the eight-tab admin rail is wider still');
-    $assert(str_contains($student, 'min-height: 66px'), 'tabs keep a usable touch target');
-    $assert(str_contains($recruiter, 'min-height: 66px'));
+    $glass = file_get_contents($root . '/public/assets/css/liquid-glass.css');
+
+    $assert(str_contains($glass, '--dock-gutter: clamp('), 'the side gutter scales with the viewport');
+    $assert(str_contains($glass, '--dock-tab-height: clamp('), 'tab height scales with the viewport');
+    $assert(str_contains($glass, '--dock-icon: clamp('), 'icons scale with the viewport');
+    $assert(str_contains($glass, '--dock-clearance: calc(var(--dock-shell-height)'), 'clearance is derived from the real dock height');
+
+    foreach (['student' => [$student, '820px'], 'recruiter' => [$recruiter, '820px'], 'admin' => [$admin, '960px']] as $name => [$css, $max]) {
+        $assert(str_contains($css, 'width: min(var(--dock-max'), "the {$name} capsule shrinks with the window");
+        $assert(str_contains($css, '--dock-max: ' . $max), "the {$name} capsule keeps its wide desktop ceiling");
+        $selector = ['student' => '.sv-dock', 'recruiter' => '.rec-bottom-nav', 'admin' => '.admin-dock'][$name];
+        $assert(preg_match('/' . preg_quote($selector, '/') . '\s*\{([^}]*)\}/', $css, $block) === 1, "the {$name} dock rule is present");
+        $assert(!preg_match('/(?<![a-z-])(?:min-)?width:\s*\d+px/', $block[1]), "the {$name} dock rule sets no hard-coded width");
+    }
+    $assert(str_contains($student, 'min-height: var(--dock-tab-height)'), 'tabs keep a usable touch target');
+    $assert(str_contains($recruiter, 'min-height: var(--dock-tab-height)'));
+    $assert(str_contains($admin, 'min-height: var(--dock-tab-height)'));
+
+    // A fixed per-tab floor is what stopped the narrow docks from shrinking.
+    $assert(!preg_match('/\.sv-dock-link\s*\{[^}]*min-width:\s*\d+px/', $student), 'student tabs have no fixed floor');
+    $assert(!preg_match('/\.rec-nav-link\s*\{[^}]*min-width:\s*\d+px/', $recruiter), 'recruiter tabs have no fixed floor');
+    $assert(!preg_match('/\.admin-dock-link\s*\{[^}]*min-width:\s*\d+px/', $admin), 'admin tabs have no fixed floor');
+});
+
+$test('No portal footer can end up underneath the floating dock', static function () use ($assert, $root): void {
+    $student = file_get_contents($root . '/public/assets/css/water-dock.css');
+    $recruiter = file_get_contents($root . '/public/assets/css/recruiter.css');
+    $admin = file_get_contents($root . '/public/assets/css/admin.css');
+
+    // A negative top margin pulled the footer into the dock's band; the footer
+    // now reserves the dock's own measured clearance instead.
+    foreach (['recruiter' => $recruiter, 'admin' => $admin] as $name => $css) {
+        $assert(!preg_match('/\.(rec|admin)-footer\s*\{[^}]*margin(?:-top)?:\s*-\d+px/', $css), "the {$name} footer is no longer pulled up under the dock");
+        $assert(str_contains($css, 'var(--dock-clearance, 118px)'), "the {$name} footer reserves the dock clearance");
+    }
+    $assert(str_contains($student, '.dashboard { padding-bottom: var(--dock-clearance, 118px); }'), 'the student canvas reserves it too');
+    $assert(str_contains($student, '.site-footer { padding-bottom: calc(var(--dock-bottom) + 26px); }'), 'and the student footer keeps its own spacing');
+});
+
+$test('The dock switches to a compact layout before labels can clip', static function () use ($assert, $root): void {
+    $student = file_get_contents($root . '/public/assets/css/water-dock.css');
+    $admin = file_get_contents($root . '/public/assets/css/admin.css');
+    $engine = file_get_contents($root . '/public/assets/js/liquid-glass.js');
+    $assert(str_contains($student, '@media (max-width: 380px)'), 'the five-tab dock drops labels on the narrowest phones');
+    $assert(str_contains($student, 'clip-path: inset(50%)'), 'the label stays available to screen readers');
+    $assert(str_contains($admin, '.admin-dock-label'), 'the eight-tab rail compacts earlier than the five-tab docks');
+    $assert(str_contains($admin, 'clip-path: inset(50%)'));
+    $assert(str_contains($student, '@media (max-height: 460px)'), 'a short split pane gets a shorter capsule');
+    $assert(str_contains($engine, 'window.visualViewport'), 'split-screen changes the visual viewport, not just the window');
+    $assert(str_contains($engine, 'resizeFrame = window.requestAnimationFrame(applyResize)'), 'continuous resizing is coalesced to one measurement per frame');
+    $assert(str_contains($engine, 'state.baseWidth = Math.max(isGroup ? 30 : 28'), 'the pill stays inside one tab at every width');
+});
+
+/*
+ * ---------------------------------------------------------------------------
+ * Intelligence layer (phases 1–4).
+ *
+ * These services are deterministic and dependency-free, so they can be tested
+ * here without a database or a browser. Each test asserts a behaviour the UI
+ * depends on — a null instead of a fabricated 0, a band instead of a decimal,
+ * a claim that stays a claim, a flag that stays a review prompt.
+ * ---------------------------------------------------------------------------
+ */
+
+$test('Scoring weights come from one config and stay normalised', static function () use ($assert): void {
+    $model = new ScoringModel();
+    $weights = $model->weights();
+    $assert(abs(array_sum($weights) - 1.0) < 0.0001, 'default weights must sum to 1');
+    $assert($model->weights() === $weights, 'resolved once, not per component');
+    $overridden = new ScoringModel([], ['scoring.weights.skills' => '0.2']);
+    $assert(abs(array_sum($overridden->weights()) - 1.0) < 0.0001, 'an override is renormalised');
+    $assert($overridden->weights()['skills'] < $weights['skills'], 'the override is applied');
+    $ignored = new ScoringModel([], ['scoring.weights.skills' => 'not-a-number']);
+    $assert($ignored->weights()['skills'] === $weights['skills'], 'a malformed override is ignored');
+    $assert($model->band(85) !== $model->band(35), 'bands differ at the extremes');
+    $assert($model->demonstratedThreshold() === 0.6, 'a claim is not a demonstration');
+});
+
+$test('Evidence separates a claim from a demonstrated skill', static function () use ($assert): void {
+    $model = new ScoringModel();
+    $service = new EvidenceService($model);
+    $map = $service->build(
+        [['name' => 'PHP', 'proficiency' => 'advanced', 'verified' => 0], ['name' => 'SQL', 'proficiency' => 'beginner', 'verified' => 0]],
+        [['title' => 'Portal', 'description' => 'Built a portal', 'skills_json' => '["PHP"]']],
+        [],
+        []
+    );
+    $assert(isset($map['php']), 'a claimed skill is present in the map');
+    $assert($map['php']['value'] >= $model->demonstratedThreshold(), 'a project raises PHP above the threshold');
+    $assert($map['sql']['value'] < $model->demonstratedThreshold(), 'SQL without evidence stays a claim');
+    $demonstrated = $service->demonstrated($map);
+    $assert(count($demonstrated) === 1 && $demonstrated[0]['level'] !== 'claimed', 'only PHP counts as demonstrated');
+    $assert($service->normalise('  Node.JS ') === 'node.js', 'skill keys are normalised for lookup');
+    $assert(in_array('sql', $service->skillsFromText('Wrote SQL queries and PHP scripts'), true), 'skills can be read from free text');
+});
+
+$test('Skill gaps rank mandatory gaps above preferred ones and drop the demonstrated', static function () use ($assert): void {
+    $model = new ScoringModel();
+    $evidenceService = new EvidenceService($model);
+    $evidence = $evidenceService->build(
+        [['name' => 'PHP', 'proficiency' => 'advanced', 'verified' => 0], ['name' => 'SQL', 'proficiency' => 'beginner', 'verified' => 0]],
+        [['title' => 'Portal', 'skills_json' => '["PHP"]']],
+        [],
+        []
+    );
+    $rows = (new SkillGapService())->prioritise(['PHP', 'Docker'], ['Kubernetes'], $evidence, $evidenceService, $model);
+    $skills = array_column($rows, 'skill');
+    $assert(in_array('Docker', $skills, true), 'a missing required skill is listed');
+    $assert(!in_array('PHP', $skills, true), 'a demonstrated skill is not listed as a gap');
+    $assert($rows[0]['type'] === 'required', 'required gaps come first');
+    $assert($rows[0]['priority'] === 'High', 'one required gap is high priority');
+    $assert(str_contains($rows[0]['why'], 'required'), 'the reason names the requirement type');
+});
+
+$test('A six-week roadmap has real tasks for every week', static function () use ($assert): void {
+    $plan = (new RoadmapService())->plan(['Docker', 'SQL'], ['weeks' => 6, 'target' => 'Backend Engineer']);
+    $assert(count($plan) === 6, 'six weeks are planned');
+    foreach ($plan as $week) {
+        $assert($week['tasks'] !== [], 'every week has at least one task');
+        foreach ($week['tasks'] as $task) {
+            $assert(in_array($task['type'], ['technical', 'practice', 'interview', 'portfolio', 'resume'], true), 'task types are known');
+            $assert($task['hours'] > 0, 'each task carries an estimate');
+        }
+    }
+    $assert(str_contains($plan[5]['tasks'][0]['title'], 'Tailor your resume') || $plan[5]['theme'] === 'Interview ready', 'the last week closes the loop');
+    $assert((new RoadmapService())->resourceFor('docker') !== '', 'a known skill has a study resource');
+});
+
+$test('The what-if simulator changes nothing and says it is a simulation', static function () use ($assert): void {
+    $model = new ScoringModel();
+    $service = new WhatIfService(new CareerFitService($model), new EligibilityService(), $model);
+    $job = [
+        'id' => 1, 'title' => 'Backend', 'company_name' => 'ACME', 'status' => 'published',
+        'min_cgpa' => 7.0, 'required_skills' => ['PHP', 'Docker'], 'preferred_skills' => [],
+    ];
+    $state = ['profile' => ['cgpa' => 7.4, 'branch' => 'CSE'], 'skills' => ['PHP'], 'evidence' => [], 'jobs' => [$job]];
+    $result = $service->simulate($state, ['add_skills' => ['Docker']]);
+    $assert($result['after_total'] > $result['before_total'], 'adding a required skill raises the estimate');
+    $assert($result['simulated_skills'] === ['Docker'], 'only the imagined skills are reported');
+    $assert(str_contains($result['notice'], 'Simulated only'), 'the result is labelled a simulation');
+    $assert(str_contains($result['notice'], 'does not guarantee'), 'no outcome is promised');
+    // A CGPA change can move eligibility, which is evaluated separately.
+    $cgpa = $service->simulate($state, ['cgpa' => 6.0]);
+    $assert($cgpa['rows'] !== [] && $cgpa['rows'][0]['eligibility_changed'] === true, 'a lower CGPA flips hard eligibility');
+});
+
+$test('Readiness reports null categories instead of inventing zeros', static function () use ($assert): void {
+    $model = new ScoringModel();
+    $service = new ReadinessService($model);
+    $empty = $service->score(['profile' => [], 'resume' => null, 'skills' => [], 'evidence' => [], 'projects' => [], 'certifications' => [], 'assessments' => [], 'practice' => []]);
+    $assert($empty['total'] !== null, 'a profile score still exists');
+    $keys = array_column($empty['categories'], 'key');
+    $assert(in_array('assessments', $keys, true), 'assessment category is listed');
+    foreach ($empty['categories'] as $category) {
+        if ($category['key'] === 'assessments' || $category['key'] === 'interview') {
+            $assert($category['score'] === null, $category['key'] . ' has no evidence yet');
+        }
+        $assert($category['next'] !== '', 'every category suggests a next step');
+    }
+    $assert(str_contains($empty['notice'], 'not a placement prediction'), 'readiness is not a promise');
+});
+
+$test('Resume analysis reads structure and never invents a metric', static function () use ($assert): void {
+    $model = new ScoringModel();
+    $service = new ResumeAnalysisService(new EvidenceService($model));
+    $text = "Priya Sharma\npriya@example.com | +91 98765 43210\n\nSkills\nPHP, MySQL, Git\n\nProjects\n- Built a booking portal for 120 students.\n\nEducation\nB.Tech CSE, 2027";
+    $fields = $service->extract($text);
+    $assert(in_array('php', $fields['skills'], true), 'a listed skill is recognised');
+    $assert($fields['projects'] !== [], 'the projects section is captured');
+    $assert(in_array('skills', $fields['sections_found'], true), 'headings are tracked');
+    $comparison = $service->compare($text, ['required_skills' => ['PHP', 'Docker'], 'preferred_skills' => ['Git']]);
+    $assert($comparison['matched'] === ['PHP'], 'a word-boundary match, not a substring');
+    $assert($comparison['missing'] === ['Docker'], 'a skill absent from the resume is missing');
+    $notes = $service->review($text);
+    $assert($notes !== [], 'review returns observations');
+    foreach ($notes as $note) {
+        $assert(isset($note['level'], $note['message']), 'each observation is labelled');
+    }
+    $bullet = $service->improveBullet('worked on the college website');
+    $assert(str_starts_with($bullet['suggestion'], 'Built'), 'a weak verb is replaced');
+    $assert(!preg_match('/\d{2,}/', $bullet['suggestion']), 'no number is invented');
+});
+
+$test('A pasted job description becomes fields, with the gaps named', static function () use ($assert): void {
+    $draft = (new JobDescriptionService(new SkillListService()))->draft(
+        "Job title: Backend Engineer\nLocation: Mohali\nEmployment type: Full-time\nMinimum CGPA: 7.0\n"
+        . "Required skills: PHP, MySQL\nPreferred skills: Docker\nResponsibilities:\n- Build APIs\n- Review code"
+    );
+    $assert($draft['title'] === 'Backend Engineer', 'title is extracted');
+    $assert($draft['min_cgpa'] === 7.0, 'the CGPA bar is extracted');
+    $assert(in_array('PHP', $draft['required_skills'], true), 'required skills are parsed');
+    $assert(in_array('Docker', $draft['preferred_skills'], true), 'preferred skills are parsed');
+    $assert($draft['responsibilities'] !== [], 'responsibilities are captured');
+    $assert($draft['missing'] === [], 'nothing is reported missing when everything is present');
+    $sparse = (new JobDescriptionService(new SkillListService()))->draft('We need someone good.');
+    $assert($sparse['missing'] !== [], 'unknown fields are listed rather than guessed');
+});
+
+$test('The interview kit and mock coach use a rubric, not a personality test', static function () use ($assert): void {
+    $kit = (new InterviewKitService())->build(['PHP'], ['Docker'], 'Backend');
+    $assert($kit !== [], 'a kit is generated from the requirements');
+    foreach ($kit as $question) {
+        $assert(in_array($question['type'], ['technical', 'coding', 'aptitude', 'behavioural', 'role'], true), 'question types are known');
+        $assert(count($question['rubric']) >= 1, 'every question carries a rubric');
+        $assert(!preg_match('/\b(emotion|personality|face|voice|accent)\b/i', $question['prompt']), 'no invasive question types');
+    }
+    $questions = (new MockInterviewService(new InterviewKitService()))->questions(['PHP'], [], 'Backend');
+    $assert(count($questions) <= 4 && $questions !== [], 'a session stays short');
+    $feedback = (new MockInterviewService(new InterviewKitService()))->evaluate(
+        'First I profiled the slow query, then added an index because the table scan was the bottleneck; the result was a 40% drop in response time.',
+        $questions[0]
+    );
+    $assert(isset($feedback['criteria']['structure']), 'the rubric is explicit');
+    $assert($feedback['score'] >= 0 && $feedback['score'] <= 100, 'the rubric is a percentage of criteria met');
+    $assert(str_contains($feedback['feedback'], 'Guidance') || $feedback['score'] === 100, 'the wording is guidance, not a verdict');
+    $assert($feedback['improved'] !== '', 'an improved skeleton is offered');
+});
+
+$test('Assessment levels are withheld when there is not enough evidence', static function () use ($assert): void {
+    $service = new AssessmentService(new ScoringModel());
+    $assert($service->level(100, 4) === 'Not enough evidence', 'four questions prove nothing');
+    $assert($service->level(90, 5) === 'Advanced');
+    $assert($service->level(70, 5) === 'Intermediate');
+    $assert($service->level(45, 5) === 'Developing');
+    $assert($service->level(20, 5) === 'Beginner');
+    $scored = $service->score(
+        [['id' => 1, 'correct' => 1, 'points' => 2], ['id' => 2, 'correct' => 0, 'points' => 1]],
+        [1 => 1, 2 => 1]
+    );
+    $assert($scored['percent'] === 66.7, (string) $scored['percent']);
+    $assert($scored['review'][1]['is_correct'] === false, 'a wrong answer is recorded, not hidden');
+    $assert($service->isDemonstrated(60.0) && !$service->isDemonstrated(59.9), 'the 60% evidence line is explicit');
+});
+
+$test('Institution insights describe and never forecast', static function () use ($assert): void {
+    $service = new InstitutionService();
+    $short = $service->trend([['period' => '2026-01', 'count' => 4], ['period' => '2026-02', 'count' => 6]]);
+    $assert($short['status'] === 'insufficient', 'two points are not a trend');
+    $assert($short['direction'] === null, 'no direction is inferred');
+    $series = [];
+    for ($month = 1; $month <= 8; $month++) {
+        $series[] = ['period' => '2026-' . str_pad((string) $month, 2, '0', STR_PAD_LEFT), 'count' => $month * 2];
+    }
+    $long = $service->trend($series);
+    $assert($long['status'] === 'descriptive', 'eight points are described');
+    $assert(str_contains($long['note'], 'not a forecast'), 'the note refuses to predict');
+    $readiness = $service->readinessMap([
+        ['branch' => 'CSE', 'readiness' => 70.0], ['branch' => 'CSE', 'readiness' => 50.0], ['branch' => 'ECE', 'readiness' => null],
+    ]);
+    $assert($readiness[0]['branch'] === 'CSE' && $readiness[0]['average'] === 60.0, 'branches are averaged');
+    $assert($readiness[1]['average'] === null && $readiness[1]['measured'] === 0, 'an unmeasured branch shows no average');
+    $flags = $service->anomalies([['type' => 'Test', 'detail' => 'Detail', 'record' => 'Job #1']]);
+    $assert(str_contains($flags[0]['action'], 'not a finding of wrongdoing'), 'a flag is a review prompt');
+    $demand = $service->skillDemand([
+        ['skill' => 'PHP', 'type' => 'required', 'job' => '1'],
+        ['skill' => 'PHP', 'type' => 'required', 'job' => '2'],
+        ['skill' => 'Docker', 'type' => 'preferred', 'job' => '1'],
+    ]);
+    $assert($demand['skills'][0]['skill'] === 'PHP' && $demand['skills'][0]['required'] === 2, 'demand is counted per role');
+    $assert($demand['combinations'][0]['pair'] === 'docker + php', 'co-occurrence is reported');
+});
+
+$test('Career graph marks requirement status from real evidence', static function () use ($assert): void {
+    $model = new ScoringModel();
+    $evidence = (new EvidenceService($model))->build(
+        [['name' => 'PHP', 'proficiency' => 'advanced', 'verified' => 0], ['name' => 'SQL', 'proficiency' => 'beginner', 'verified' => 0]],
+        [['title' => 'Portal', 'skills_json' => '["PHP"]']],
+        [],
+        []
+    );
+    $graph = (new CareerGraphService(new RoadmapService()))->build(
+        ['title' => 'Backend', 'company_name' => 'ACME', 'required_skills' => ['PHP', 'Docker'], 'preferred_skills' => ['Redis']],
+        $evidence,
+        [['title' => 'Portal', 'skills_json' => '["PHP"]']],
+        []
+    );
+    $skills = [];
+    foreach ($graph['nodes'] as $node) {
+        if ($node['kind'] === 'skill') {
+            $skills[$node['label']] = $node['status'];
+        }
+    }
+    $assert($skills['PHP'] === 'demonstrated', 'a project-backed skill is demonstrated');
+    $assert($skills['Docker'] === 'missing', 'an unlisted skill is missing');
+    $assert($skills['Redis'] === 'missing', 'preferred skills are shown too');
+    $assert(str_contains($graph['notice'], 'not a guarantee'), 'the graph is a suggestion');
+});
+
+$test('Intelligence pages are student-scoped, CSRF-protected and free of client keys', static function () use ($assert, $root): void {
+    foreach (['public/career.php', 'public/resume-review.php', 'public/practice.php'] as $file) {
+        $contents = file_get_contents($root . '/' . $file);
+        $assert(str_contains($contents, 'Security::verifyCsrf'), "{$file} verifies CSRF");
+        $assert(str_contains($contents, 'student_id') || str_contains($contents, 'studentId'), "{$file} scopes queries to the student");
+        $assert(!preg_match('/sk-[A-Za-z0-9_-]{16,}/', $contents), "{$file} carries no API key material");
+    }
+    foreach (['public/views/partials/studio-start.php', 'public/views/partials/studio-end.php', 'public/views/recruiter/ai.php', 'public/views/admin/intelligence.php'] as $view) {
+        $contents = file_get_contents($root . '/' . $view);
+        $assert(!str_contains($contents, 'AI_API_KEY'), "{$view} must never touch the API key");
+    }
+    $report = file_get_contents($root . '/public/views/admin/intelligence.php');
+    $assert(str_contains($report, 'InstitutionReport') || str_contains($report, '$institutionReport'), 'the admin view reads the read-only report');
+    $assert(!str_contains($report, 'student_name'), 'the cohort view never names a student');
+    $admin = file_get_contents($root . '/public/admin.php');
+    $assert(str_contains($admin, "Security::requireRole(['tpo','admin'])"), 'the intelligence section stays TPO/admin only');
+    $recruiter = file_get_contents($root . '/public/views/recruiter/ai.php');
+    $assert(str_contains($recruiter, 'never publishes') || str_contains($recruiter, 'does not create a job'), 'the recruiter tools cannot publish');
+    foreach (['database/migrations/2026-10-22-ai-intelligence.sql', 'database/migrations/2026-10-22-roadmap-columns.sql', 'database/migrations/2026-10-22-assessment-skill.sql'] as $file) {
+        $sql = file_get_contents($root . '/' . $file);
+        $assert(!preg_match('/\b(DROP\s+TABLE|TRUNCATE|DELETE\s+FROM)\b/i', $sql), "{$file} is additive only");
+    }
+});
+
+$test('Career studio pages are linked from the public site and never 404', static function () use ($assert, $root): void {
+    $front = file_get_contents($root . '/public/index.php');
+    // Bookmarked index.php?page=… links hand off to the standalone scripts.
+    foreach (['career' => 'career.php', 'resume-review' => 'resume-review.php', 'practice' => 'practice.php'] as $slug => $target) {
+        $assert(str_contains($front, "'{$slug}' => '{$target}'"), "no redirect for {$slug}");
+        $assert(file_exists($root . '/public/' . $target), "{$target} does not exist");
+        // The menu is the only way into the studio from the portal itself.
+        $assert(str_contains($front, 'href="' . $target . '"'), "{$target} is not linked from the menu");
+    }
+    $assert(str_contains($front, ") === 'GET')"), 'the studio redirect must never swallow a POST body');
+    $assert(substr_count($front, 'header(') >= 1, 'the redirect uses a Location header');
 });
 
 $test('No merge-conflict markers remain in key project files', static function () use ($assert, $root): void {
