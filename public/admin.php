@@ -52,7 +52,7 @@ function admin_ids(mixed $value): array
 
 function admin_section(string $candidate): string
 {
-    $sections = ['overview', 'approvals', 'students', 'placements', 'jobs', 'reports', 'comms', 'governance'];
+    $sections = ['overview', 'approvals', 'students', 'placements', 'jobs', 'reports', 'comms', 'governance', 'intelligence'];
     return in_array($candidate, $sections, true) ? $candidate : 'overview';
 }
 
@@ -885,6 +885,17 @@ try {
     $sectionError = 'Some of this section could not be loaded. Check the schema and logs, then refresh.';
 }
 
+// Institutional intelligence is computed once, read-only, for the TPO view.
+$institutionReport = null;
+if ($section === 'intelligence') {
+    try {
+        $institutionReport = (new App\Data\InstitutionReport($db, new App\Services\ScoringModel()))->build();
+    } catch (Throwable $exception) {
+        error_log('Admin intelligence failure: ' . $exception->getMessage());
+        $sectionError = 'The intelligence report could not be built. Check the database connection and schema, then refresh.';
+    }
+}
+
 $sectionTitles = [
     'overview' => ['Control centre', 'Approvals, placements and governance for the SVIET Training & Placement Cell.'],
     'approvals' => ['Approvals', 'Review accounts and companies, and send a reason with every decision.'],
@@ -894,6 +905,7 @@ $sectionTitles = [
     'reports' => ['Reports', 'Branch and company funnels with exportable numbers for accreditation.'],
     'comms' => ['Announcements', 'Publish targeted notices and see how many accounts were reached.'],
     'governance' => ['Governance', 'Every state change is audited. Search the trail here.'],
+    'intelligence' => ['Intelligence', 'Readiness, employer demand, training gaps and records worth a human look.'],
 ];
 [$pageTitle, $pageDescription] = $sectionTitles[$section];
 

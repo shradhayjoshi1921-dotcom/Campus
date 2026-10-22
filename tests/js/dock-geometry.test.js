@@ -69,9 +69,9 @@ const metrics = (viewport) => {
 };
 
 const portals = [
-  { name: 'student', tabs: 5, max: 820, css: student, selector: '.sv-dock', labelsUntil: 380, contentRule: 'body:has(.sv-dock) .dashboard { padding-bottom: var(--dock-clearance); }' },
-  { name: 'recruiter', tabs: 5, max: 820, css: recruiter, selector: '.rec-bottom-nav', labelsUntil: 0, contentRule: 'var(--dock-clearance)' },
-  { name: 'admin', tabs: 8, max: 960, css: admin, selector: '.admin-dock', labelsUntil: 720, contentRule: 'var(--dock-clearance)' },
+  { name: 'student', tabs: 6, max: 820, css: student, selector: '.sv-dock', labelsUntil: 380, contentRule: 'body:has(.sv-dock) .dashboard { padding-bottom: var(--dock-clearance); }' },
+  { name: 'recruiter', tabs: 6, max: 820, css: recruiter, selector: '.rec-bottom-nav', labelsUntil: 420, contentRule: 'var(--dock-clearance)' },
+  { name: 'admin', tabs: 9, max: 960, css: admin, selector: '.admin-dock', labelsUntil: 720, contentRule: 'var(--dock-clearance)' },
 ];
 
 const WIDTHS = [

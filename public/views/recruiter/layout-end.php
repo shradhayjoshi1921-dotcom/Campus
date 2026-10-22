@@ -31,6 +31,10 @@
         <span class="rec-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18m4 4 2 2 4-4"/></svg></span>
         <span class="rec-nav-label">Interviews</span>
     </a>
+    <a class="rec-nav-link <?= $section === 'ai' ? 'is-active' : '' ?>" data-rec-section="ai" href="recruiter.php?section=ai" <?= $section === 'ai' ? 'aria-current="page"' : '' ?>>
+        <span class="rec-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span>
+        <span class="rec-nav-label">AI tools</span>
+    </a>
 </nav>
 
 <footer class="rec-footer">

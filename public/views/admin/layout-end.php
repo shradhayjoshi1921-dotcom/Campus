@@ -22,6 +22,7 @@
             'reports' => ['label' => 'Reports', 'icon' => '<path d="M4 20V9M10 20V4M16 20v-7M22 20H2"/>'],
             'comms' => ['label' => 'Comms', 'icon' => '<path d="M4 10v4a1 1 0 0 0 1 1h2l6 4V5L7 9H5a1 1 0 0 0-1 1z"/><path d="M17.5 8.5a5 5 0 0 1 0 7"/>'],
             'governance' => ['label' => 'Governance', 'icon' => '<path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.4 7.5 9.5 4.4-1.1 7.5-4.9 7.5-9.5V6z"/><path d="M12 8v4.5M12 16h.01"/>'],
+            'intelligence' => ['label' => 'Insights', 'icon' => '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/>'],
         ];
         ?>
         <?php foreach ($adminTabs as $tabSection => $tab): ?>
