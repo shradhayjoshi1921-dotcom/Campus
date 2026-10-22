@@ -521,6 +521,18 @@ html[data-theme="light"] body.recruiter-portal .rec-status-pill--closed {
   border-color: var(--sv-line-strong);
   background: var(--sv-surface-2);
 }
+html[data-theme="light"] body.recruiter-portal .rec-skill-chip {
+  border-color: rgba(201, 111, 45, .3);
+  color: #8a4a1c;
+  background: rgba(253, 234, 218, .8);
+}
+html[data-theme="light"] body.recruiter-portal .rec-skill-chip--preferred {
+  border-color: var(--sv-line-strong);
+  color: var(--sv-muted);
+  background: var(--sv-surface-2);
+}
+html[data-theme="light"] body.recruiter-portal :is(.rec-form-hint, .rec-job-note) { color: var(--sv-muted); }
+html[data-theme="light"] body.recruiter-portal .rec-form-hint span { color: var(--sv-ink-soft); }
 html[data-theme="light"] body.recruiter-portal .rec-button--quiet-danger {
   color: #8f2318;
   border-color: rgba(176, 42, 29, .3);

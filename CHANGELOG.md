@@ -8,6 +8,10 @@
 - `tests/js/student-nav.test.js` (7 jsdom scenarios) covering the in-place student page swap.
 - Sign in and registration now share one two-panel entry layout: a role-aware product panel on the left (what the student, recruiter and administrator each get, plus a privacy line) and a focused form card on the right with a password reveal button, inline validation states and a role summary that reads the account's role rather than asking for it on sign-in.
 - The auth submit button reports progress: it switches to "Signing in…" / "Creating account…", sets `aria-busy`, and turns enabled again if the page is restored from the back/forward cache.
+- Recruiters can list **required and preferred skills** on a job. Both lists are parsed by one shared service (`app/Services/SkillListService.php`) and written to the existing `skills` / `job_skills` tables inside the job's transaction, so an existing spelling is reused instead of duplicated. This is what makes career fit, skill gaps, roadmaps and the what-if simulation real: `job_skills` was previously read by `career.php` and written by nothing.
+- Students now see the skills a role asks for on the job board, and the roles they browse are tagged required vs preferred.
+- Students can see **their own scheduled interviews and offers**, including the CTC a recruiter recorded, on the applications page and in the dashboard's Next steps panel.
+- Recruiters can open a candidate's PDF resume from the applicant card. Access is scoped to the recruiter's own company and audited as `resume.viewed`; anyone else still gets a 404.
 - `tests/js/liquid-glass.test.js` gains a tap-vs-drag scenario and a retargeted-click scenario; `tests/js/student-nav.test.js` gains the same retargeted-click case; `tests/run.php` now asserts the pointer model and the shared auth layout.
 
 ### Changed
@@ -27,6 +31,7 @@
 ### Fixed
 - Removed the strip of bare canvas above the first row of chrome at its source: `html` and `body` now share one top colour, `body` is `display: flow-root`, `.bubble-top` uses padding instead of a collapsing top margin, and the dark canvas is pinned to `#0b0c0e` for overscroll.
 - Removed the blanket `sv-page-in` animation from the student canvas: a finished CSS animation was out-ranking the states the swap sets, which made the old cross-fade inconsistent.
+- Career fit no longer reports a perfect skill match for a job with no listed skills. `CareerFitService` used to score an empty requirement list as 100%, so every student "matched" every role with nothing to fix; the skill component is now reported as `null`, the estimate falls back to academics and role alignment, and the page says why.
 - Tapping a dock tab now navigates. The engine captured the pointer on pointerdown, which made the browser retarget the follow-up click to the dock itself, so a press shorter than the drag threshold was swallowed while a drag still worked. The press is now tracked from `window` with no capture, and a click that is still retargeted falls back to `elementFromPoint`.
 - Dragging from a tab still works and still suppresses the click that follows it for 260 ms.
 - The landing page's role cards were white text on a white card: `.homepage .feature-card` now carries an explicit light palette with dark overrides, and the hero feature card's step titles and status line follow the same fix. `career.php`'s skill chips, error strip and input text were also authored light-on-dark and are now readable in the light theme.

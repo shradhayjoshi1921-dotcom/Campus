@@ -76,6 +76,19 @@ $currentJobStatus = (string) ($editJob['status'] ?? 'draft');
                                 <span><?= (int) $job['applicant_count'] ?> applicants</span>
                                 <span>Min CGPA <?= recruiter_h((string) $job['min_cgpa']) ?></span>
                             </div>
+                            <?php $jobSkills = $jobSkillMap[(int) $job['id']] ?? []; ?>
+                            <?php if (!empty($jobSkills['required']) || !empty($jobSkills['preferred'])): ?>
+                                <p class="rec-skill-chips">
+                                    <?php foreach (($jobSkills['required'] ?? []) as $skillName): ?>
+                                        <span class="rec-skill-chip"><?= recruiter_h((string) $skillName) ?></span>
+                                    <?php endforeach; ?>
+                                    <?php foreach (($jobSkills['preferred'] ?? []) as $skillName): ?>
+                                        <span class="rec-skill-chip rec-skill-chip--preferred"><?= recruiter_h((string) $skillName) ?><span class="sr-only"> (preferred)</span></span>
+                                    <?php endforeach; ?>
+                                </p>
+                            <?php else: ?>
+                                <p class="rec-job-note">No skills listed yet. Students see an academic-only fit score for this role until you add required skills.</p>
+                            <?php endif; ?>
                             <?php if (!$canPublish && $job['status'] === 'published'): ?>
                                 <p class="rec-job-note">This listing is hidden from students while the company profile is under review.</p>
                             <?php endif; ?>
@@ -155,6 +168,27 @@ $currentJobStatus = (string) ($editJob['status'] ?? 'draft');
                     <label for="job-description">Role description <span aria-hidden="true">*</span>
                         <textarea id="job-description" name="description" rows="6" maxlength="12000" required placeholder="Responsibilities, required skills, and what candidates can expect."><?= recruiter_h((string) ($editJob['description'] ?? '')) ?></textarea>
                     </label>
+                    <div class="rec-form-grid">
+                        <label for="job-required-skills">Required skills
+                            <input id="job-required-skills" name="required_skills" maxlength="600"
+                                   value="<?= recruiter_h(implode(', ', $editJobSkills['required'] ?? [])) ?>"
+                                   placeholder="e.g. PHP, SQL, Git">
+                            <small>Comma separated. These drive every student's fit score, skill gap and learning roadmap.</small>
+                        </label>
+                        <label for="job-preferred-skills">Preferred skills
+                            <input id="job-preferred-skills" name="preferred_skills" maxlength="600"
+                                   value="<?= recruiter_h(implode(', ', $editJobSkills['preferred'] ?? [])) ?>"
+                                   placeholder="e.g. Docker, AWS">
+                            <small>Nice to have. A skill listed as required is never duplicated here.</small>
+                        </label>
+                    </div>
+                    <?php if ($knownSkills): ?>
+                        <p class="rec-form-hint">
+                            Already used on the portal:
+                            <span><?= recruiter_h(implode(', ', array_slice($knownSkills, 0, 12))) ?></span><?= count($knownSkills) > 12 ? '…' : '' ?>
+                            Reuse these spellings so students' skills match.
+                        </p>
+                    <?php endif; ?>
                     <label for="job-status">Listing status
                         <select id="job-status" name="status" required>
                             <?php if ($canPublish): ?>

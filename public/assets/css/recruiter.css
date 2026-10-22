@@ -303,6 +303,28 @@ body.recruiter-portal :focus-visible { outline: 3px solid #e0b48f; outline-offse
 .rec-job-title-row h3 { margin: 0; color: var(--rec-ink); font-size: 14px; font-weight: 650; }
 .rec-job-meta { display: flex; flex-wrap: wrap; gap: 6px 13px; margin-top: 11px; color: var(--rec-dim); font-size: 9px; }
 .rec-job-note { margin: 9px 0 0; color: var(--rec-mint); font-size: 10px; }
+.rec-skill-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 0; }
+.rec-skill-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 21px;
+  padding: 2px 9px;
+  border: 1px solid rgba(226, 178, 130, .24);
+  border-radius: 999px;
+  color: var(--rec-mint);
+  background: rgba(150, 96, 50, .14);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+.rec-skill-chip--preferred {
+  border-color: rgba(176, 184, 194, .2);
+  color: var(--rec-ink-soft);
+  background: rgba(86, 96, 108, .16);
+}
+.rec-skill-chip--preferred::before { content: "○"; margin-right: 4px; font-size: 8px; opacity: .7; }
+.rec-form-hint { margin: 0; color: var(--rec-dim); font-size: 10px; line-height: 1.65; }
+.rec-form-hint span { color: var(--rec-ink-soft); }
 .rec-status-pill { min-height: 24px; padding: 4px 9px; font-size: 9px; }
 .rec-status-pill--published, .rec-status-pill--selected, .rec-status-pill--completed { color: var(--rec-mint); border-color: rgba(226, 178, 130,.22); background: rgba(150, 96, 50,.18); }
 .rec-status-pill--draft, .rec-status-pill--under_review, .rec-status-pill--scheduled { color: var(--rec-ink-soft); border-color: rgba(176, 184, 194,.2); background: rgba(86, 96, 108,.2); }
