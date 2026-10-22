@@ -20,6 +20,7 @@ require_once dirname(__DIR__) . '/app/Services/SkillGapService.php';
 require_once dirname(__DIR__) . '/app/Services/RecommendationService.php';
 require_once dirname(__DIR__) . '/app/Services/RoadmapService.php';
 require_once dirname(__DIR__) . '/app/Services/AdminImportService.php';
+require_once dirname(__DIR__) . '/app/Services/SkillListService.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     $secure = filter_var(Env::get('SESSION_SECURE', 'false'), FILTER_VALIDATE_BOOLEAN);

@@ -74,6 +74,50 @@ function recruiter_notify(PDO $db, int $userId, string $title, string $body): vo
     $statement->execute([$userId, $title, $body]);
 }
 
+/**
+ * Replace a job's skill requirements in the caller's transaction.
+ *
+ * `skills` is a shared vocabulary, so an existing name is reused instead of
+ * duplicated: the ON DUPLICATE KEY trick hands back the existing id.
+ */
+function recruiter_save_job_skills(PDO $db, int $jobId, array $required, array $preferred): void
+{
+    $db->prepare('DELETE FROM job_skills WHERE job_id = ?')->execute([$jobId]);
+    $requiredKeys = array_map('mb_strtolower', $required);
+    $preferred = array_values(array_filter(
+        $preferred,
+        static fn (string $name): bool => !in_array(mb_strtolower($name), $requiredKeys, true),
+    ));
+    $insertSkill = $db->prepare('INSERT INTO skills (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)');
+    $insertLink = $db->prepare('INSERT INTO job_skills (job_id, skill_id, requirement_type) VALUES (?, ?, ?)');
+    foreach (['required' => $required, 'preferred' => $preferred] as $type => $names) {
+        foreach ($names as $name) {
+            $insertSkill->execute([$name]);
+            $insertLink->execute([$jobId, (int) $db->lastInsertId(), $type]);
+        }
+    }
+}
+
+/** The skills attached to a set of jobs, keyed by job id. */
+function recruiter_job_skills(PDO $db, array $jobIds): array
+{
+    $jobIds = array_values(array_unique(array_filter(array_map('intval', $jobIds))));
+    if (!$jobIds) {
+        return [];
+    }
+    $placeholders = implode(',', array_fill(0, count($jobIds), '?'));
+    $statement = $db->prepare(
+        'SELECT js.job_id, js.requirement_type, s.name FROM job_skills js JOIN skills s ON s.id = js.skill_id '
+        . 'WHERE js.job_id IN (' . $placeholders . ') ORDER BY s.name',
+    );
+    $statement->execute($jobIds);
+    $map = [];
+    foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $map[(int) $row['job_id']][$row['requirement_type'] === 'preferred' ? 'preferred' : 'required'][] = (string) $row['name'];
+    }
+    return $map;
+}
+
 function recruiter_flash_redirect(string $section, string $kind, string $message, array $query = []): never
 {
     $_SESSION['recruiter_flash'] = ['kind' => $kind, 'message' => $message];
@@ -313,6 +357,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $graduationYear = recruiter_post('graduation_year');
                 $closingValue = recruiter_post('closes_at');
                 $status = recruiter_post('status') ?: 'draft';
+                $skillParser = new \App\Services\SkillListService();
+                $requiredSkills = $skillParser->parse($_POST['required_skills'] ?? null);
+                $preferredSkills = $skillParser->parse($_POST['preferred_skills'] ?? null);
+                // Only rewrite the requirement list when the form actually sent
+                // the fields, so a stale cached form cannot silently wipe them.
+                $skillsSubmitted = array_key_exists('required_skills', $_POST) || array_key_exists('preferred_skills', $_POST);
 
                 if (
                     $title === '' ||
@@ -393,6 +443,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $jobId = (int) $db->lastInsertId();
                     recruiter_audit($db, (int) $user['id'], 'job.created', 'job', $jobId, ['status' => $status]);
                     $message = $status === 'published' ? 'Job published to eligible students.' : 'Draft job saved.';
+                }
+                if ($skillsSubmitted) {
+                    recruiter_save_job_skills($db, $jobId, $requiredSkills, $preferredSkills);
                 }
                 $db->commit();
                 recruiter_flash_redirect('jobs', 'success', $message);
@@ -732,6 +785,9 @@ $jobTotal = 0;
 $jobPages = 1;
 $jobs = [];
 $editJob = null;
+$jobSkillMap = [];
+$editJobSkills = [];
+$knownSkills = [];
 $editJobId = recruiter_positive_id($_GET['edit'] ?? null);
 if ($companyId > 0 && $section === 'jobs' && !$companyLoadError) {
     try {
@@ -765,6 +821,14 @@ if ($companyId > 0 && $section === 'jobs' && !$companyLoadError) {
             $statement->execute([$editJobId, $companyId]);
             $editJob = $statement->fetch(PDO::FETCH_ASSOC) ?: null;
         }
+
+        $skillMapIds = array_map(static fn (array $job): int => (int) $job['id'], $jobs);
+        if ($editJob) {
+            $skillMapIds[] = (int) $editJob['id'];
+        }
+        $jobSkillMap = recruiter_job_skills($db, $skillMapIds);
+        $editJobSkills = $editJob ? ($jobSkillMap[(int) $editJob['id']] ?? []) : [];
+        $knownSkills = $db->query('SELECT name FROM skills ORDER BY name LIMIT 400')->fetchAll(PDO::FETCH_COLUMN);
     } catch (Throwable $exception) {
         error_log('Recruiter jobs query failure: ' . $exception->getMessage());
         $companyLoadError = true;
@@ -807,6 +871,7 @@ if ($companyId > 0 && $section === 'applicants' && !$companyLoadError) {
         $statement = $db->prepare(
             'SELECT a.id, a.student_id, a.status, a.applied_at, a.cover_note, u.name AS student_name, u.email, '
             . 'p.branch, p.cgpa, p.graduation_year, j.title, j.id AS job_id, '
+            . '(SELECT r.id FROM resumes r WHERE r.student_id = a.student_id ORDER BY r.created_at DESC LIMIT 1) AS resume_id, '
             . "EXISTS (SELECT 1 FROM interviews future_i WHERE future_i.application_id = a.id AND future_i.status = 'scheduled' AND future_i.scheduled_at >= NOW()) AS has_upcoming_interview"
             . $from . ' WHERE ' . $where
             . ' ORDER BY a.applied_at DESC LIMIT ' . $applicationPageSize . ' OFFSET ' . $offset,

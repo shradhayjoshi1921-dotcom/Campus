@@ -5,6 +5,7 @@ require dirname(__DIR__) . '/app/Services/EligibilityService.php';
 require dirname(__DIR__) . '/app/Services/CareerFitService.php';
 require dirname(__DIR__) . '/app/Services/SkillGapService.php';
 require dirname(__DIR__) . '/app/Services/RecommendationService.php';
+require dirname(__DIR__) . '/app/Services/SkillListService.php';
 require dirname(__DIR__) . '/app/Services/RoadmapService.php';
 require dirname(__DIR__) . '/app/Services/AdminImportService.php';
 
@@ -58,6 +59,26 @@ $test('Fit score uses documented weights and reports gaps', static function () u
     $assert($result['score'] === 65.0, (string) $result['score']);
     $assert($result['matched_skills'] === ['php']);
     $assert($result['missing_skills'] === ['javascript']);
+});
+
+$test('An employer with no listed skills is never scored as a perfect match', static function () use ($assert): void {
+    $result = (new CareerFitService())->score(['PHP', 'SQL'], [], 80, 100);
+    $assert($result['skills_listed'] === false, 'the caller can tell there was nothing to match');
+    $assert($result['components']['skills'] === null, 'no skill component is invented');
+    $assert($result['score'] < 100, 'an empty requirement list must not read as 100%');
+    $assert(str_contains($result['notice'], 'not listed required skills'), 'the page can explain the fallback');
+    $listed = (new CareerFitService())->score(['PHP'], ['PHP'], 100, 100);
+    $assert($listed['skills_listed'] === true && $listed['score'] === 100.0, 'a real match still scores 100');
+});
+
+$test('The job skills parser cleans and de-duplicates free text', static function () use ($assert): void {
+    $parser = new \App\Services\SkillListService();
+    $assert($parser->parse('PHP,  SQL ; php, Git') === ['PHP', 'SQL', 'Git'], 'case-insensitive duplicates collapse and whitespace is trimmed');
+    $assert($parser->parse("Node.js\nReact\n\nnode.js") === ['Node.js', 'React'], 'newlines separate entries too');
+    $assert($parser->parse('   ,  , ') === [], 'empty entries are dropped');
+    $assert($parser->parse(['PHP']) === [], 'a non-string field is ignored, never coerced');
+    $assert(count($parser->parse(implode(',', range(1, 40)))) === 20, 'one paste cannot exceed the cap');
+    $assert($parser->parse(str_repeat('a', 200))[0] === str_repeat('a', 60), 'long names are truncated, not rejected');
 });
 
 $test('Skill-gap analysis separates mandatory and preferred', static function () use ($assert): void {
@@ -552,6 +573,51 @@ $test('Students can upload, replace, download and remove a PDF resume', static f
     $assert(str_contains($index, 'AND r.student_id = ?'), 'students only download their own resume');
     $assert(str_contains($index, 'enctype="multipart/form-data"'));
     $assert(str_contains($index, 'accept="application/pdf,.pdf"'));
+});
+
+$test('A recruiter can read a resume only for their own applicants, and it is audited', static function () use ($assert, $root): void {
+    $index = file_get_contents($root . '/public/index.php');
+    $view = file_get_contents($root . '/public/views/recruiter/applicants.php');
+    $assert(str_contains($index, "\$isRecruiter = \$user['role'] === 'recruiter'"), 'recruiters get a scoped branch, not the review branch');
+    $assert(str_contains($index, 'JOIN recruiter_profiles rp ON rp.company_id = j.company_id'), 'access is limited to their own company');
+    $assert(str_contains($index, 'WHERE a.student_id = r.student_id AND rp.user_id = ?'), 'only students who applied to them');
+    $assert(str_contains($index, "'resume.viewed'"), 'every recruiter view is audited');
+    $assert(str_contains($index, "hash('sha256', (string) \$_SERVER['REMOTE_ADDR'])"), 'the audit row stores a hashed IP, not a raw one');
+    $assert(!preg_match('/\$canReview\s*=\s*in_array\(\$user\[.role.\], \[.tpo., .admin., .recruiter./', $index), 'recruiters are not folded into the unrestricted review list');
+    $assert(str_contains($view, 'index.php?page=resume&amp;id=') || str_contains($view, 'index.php?page=resume&id='), 'the applicant card links to the resume');
+    $assert(str_contains($view, 'rel="noopener"'), 'the resume opens safely in a new tab');
+});
+
+$test('The recruiter job editor records required and preferred skills', static function () use ($assert, $root): void {
+    $recruiter = file_get_contents($root . '/public/recruiter.php');
+    $view = file_get_contents($root . '/public/views/recruiter/jobs.php');
+    $assert(str_contains($recruiter, 'function recruiter_save_job_skills'), 'skills are written to the shared vocabulary');
+    $assert(str_contains($recruiter, 'INSERT INTO skills (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)'), 'an existing skill name is reused, never duplicated');
+    $assert(str_contains($recruiter, 'INSERT INTO job_skills (job_id, skill_id, requirement_type)'), 'the link row carries required/preferred');
+    $assert(str_contains($recruiter, "recruiter_post('status') ?: 'draft';"), 'the form still posts a status');
+    $assert(str_contains($recruiter, "\$skillParser->parse(\$_POST['required_skills'] ?? null)"), 'required skills are parsed from the form');
+    $assert(str_contains($recruiter, 'new \\App\\Services\\SkillListService()'), 'the shared parser is used');
+    $assert(str_contains($recruiter, 'recruiter_save_job_skills($db, $jobId, $requiredSkills, $preferredSkills)'), 'skills save inside the job transaction');
+    $assert(str_contains($recruiter, "array_key_exists('required_skills', \$_POST)"), 'a form that never sent the fields cannot wipe an existing list');
+    $assert(str_contains($recruiter, 'DELETE FROM job_skills WHERE job_id = ?'), 'editing replaces the list instead of appending');
+    $assert(str_contains($view, 'name="required_skills"') && str_contains($view, 'name="preferred_skills"'), 'both lists are editable');
+    $assert(str_contains($view, 'rec-skill-chips'), 'the role cards show the skills students will be scored on');
+    $assert(str_contains($view, 'No skills listed yet'), 'an empty list is stated, not silently scored');
+});
+
+$test('A student can see their own interviews and offers', static function () use ($assert, $root): void {
+    $index = file_get_contents($root . '/public/index.php');
+    $assert(str_contains($index, 'JOIN jobs j ON j.id = a.job_id JOIN companies c ON c.id = j.company_id'), 'interviews join back to the application');
+    $assert(str_contains($index, "a.student_id = ? AND i.status = 'scheduled' AND i.scheduled_at >= NOW()"), 'only the student\'s own upcoming interviews');
+    $assert(str_contains($index, 'FROM offers o JOIN applications a ON a.id = o.application_id'), 'offers are read for the same student');
+    $assert(str_contains($index, 'ORDER BY o.offer_date DESC'), 'the newest offer comes first');
+    $assert(preg_match('/catch \(Throwable \$exception\) \{\s*\$studentOffers = \[\];/', $index) === 1, 'a database without the offers migration still renders');
+    $assert(str_contains($index, 'ctc_lpa'), 'the CTC the recruiter recorded is shown to the candidate');
+    $assert(str_contains($index, 'sv-next-list'), 'both the dashboard and the applications page list them');
+    $assert(str_contains($index, 'sv-skill-row'), 'the browsable job list shows the skills the fit score uses');
+    $assert(str_contains($index, 'This employer has not listed required skills yet'), 'an empty requirement list is explained to the student');
+    $assert(str_contains($index, 'rel="noopener noreferrer"'), 'an interview link opens safely');
+    $assert(str_contains($index, "preg_match('~^https?://~i', \$joinLink)"), 'only http(s) links become join buttons');
 });
 
 $test('Student workspace adds strength, notifications and an application timeline', static function () use ($assert, $root): void {

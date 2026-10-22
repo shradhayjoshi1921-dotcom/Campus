@@ -77,6 +77,16 @@
                     <?php endif; ?>
 
                     <div class="rec-applicant-actions">
+                        <?php if (!empty($application['resume_id'])): ?>
+                            <a class="rec-button rec-button--secondary rec-button--compact"
+                               href="index.php?page=resume&id=<?= (int) $application['resume_id'] ?>"
+                               target="_blank" rel="noopener">
+                                View resume <span class="sr-only">for <?= recruiter_h($application['student_name']) ?></span>
+                                <span aria-hidden="true">↗</span>
+                            </a>
+                        <?php else: ?>
+                            <span class="rec-terminal-note">No resume uploaded</span>
+                        <?php endif; ?>
                         <?php if ($nextStatuses): ?>
                             <form class="rec-status-form" method="post" action="recruiter.php?section=applicants">
                                 <input type="hidden" name="_csrf" value="<?= recruiter_h($csrf) ?>">

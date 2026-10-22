@@ -104,8 +104,9 @@ For deployment, set the Apache document root to `Campus/public/`. If using the l
 ## Current scope
 
 - Student and recruiter registration/sign-in, session security, and CLI-only first-admin setup.
-- Student profile and skills editing; published job browsing, eligibility checks, applications, and application tracking.
+- Student profile and skills editing; published job browsing with each role's required and preferred skills, eligibility checks, applications, application tracking, and the scheduled interviews and offers the student is the subject of.
 - Recruiter company review, approved-company direct job publishing with T&P moderation, company-owned job management, an applicant pipeline with history/notifications, and interview scheduling, rescheduling, cancellation, and completion.
+- Jobs carry required and preferred skills, which drive the student's fit score, skill gap and learning roadmap; recruiters can read the PDF resume of any candidate who applied to their company.
 - TPO/Admin account and company decisions, job moderation, summaries, reports, announcements, notifications, and audit activity.
 - Rule-based career-fit estimates, skill-gap views, roadmap suggestions, and what-if skill simulation. These are explainable heuristics, **not trained AI or hiring probabilities**.
 - Empty states are used instead of fabricated portal data.
@@ -138,9 +139,8 @@ The top of every page is flush with the viewport edge: `html` and `body` share o
 
 ## Known limitations
 
-- Recruiters cannot yet enter required/preferred job skills in the job editor; the career-insights service reads skills from `job_skills`, so skill matching is limited until that workflow is added.
 - Resume upload/download, certification and project management, assessment workflows, a complete notification inbox, a migration runner, rate limiting, and full browser/database integration tests are not complete.
-- Resume files live on local disk; there is no virus scanning, and recruiters see the resume only through the student-owned download route today. A recruiter-side resume viewer is not built yet.
+- Resume files live on local disk and there is no virus scanning. A recruiter can open a resume only for a student who applied to their own company's jobs (each view is audited); there is no in-page PDF preview beyond the browser's own viewer.
 - The admin CSV import covers accounts (students and recruiters). Placement drives, eligibility-based bulk shortlisting, announcement read receipts and editable `system_settings` are not built yet, and `jobs` still has no salary column, so CTC lives only on offers.
 - The `offers` table arrives through the migration in `database/migrations/`; importing only `schema.sql` into an existing database will not add it.
 - Do not use this project with real personal data until you have tested and reviewed the deployment configuration.

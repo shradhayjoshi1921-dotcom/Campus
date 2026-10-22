@@ -442,17 +442,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($page === 'resume' && $user) {
     $resumeId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
     $canReview = in_array($user['role'], ['tpo', 'admin'], true);
+    // A recruiter may read a resume only when that student has applied to one
+    // of their own company's jobs. Anything else is a 404, not a 403 leak.
+    $isRecruiter = $user['role'] === 'recruiter';
     try {
-        $statement = Database::connection()->prepare(
-            $canReview
-                ? 'SELECT r.*, u.name AS owner_name FROM resumes r JOIN users u ON u.id = r.student_id WHERE r.id = ? LIMIT 1'
-                : 'SELECT r.*, u.name AS owner_name FROM resumes r JOIN users u ON u.id = r.student_id WHERE r.id = ? AND r.student_id = ? LIMIT 1',
-        );
+        $sql = match (true) {
+            $canReview => 'SELECT r.*, u.name AS owner_name FROM resumes r JOIN users u ON u.id = r.student_id WHERE r.id = ? LIMIT 1',
+            $isRecruiter => 'SELECT r.*, u.name AS owner_name FROM resumes r JOIN users u ON u.id = r.student_id '
+                . 'WHERE r.id = ? AND EXISTS (SELECT 1 FROM applications a JOIN jobs j ON j.id = a.job_id '
+                . 'JOIN recruiter_profiles rp ON rp.company_id = j.company_id '
+                . 'WHERE a.student_id = r.student_id AND rp.user_id = ?) LIMIT 1',
+            default => 'SELECT r.*, u.name AS owner_name FROM resumes r JOIN users u ON u.id = r.student_id WHERE r.id = ? AND r.student_id = ? LIMIT 1',
+        };
+        $statement = Database::connection()->prepare($sql);
         $statement->execute($canReview ? [$resumeId] : [$resumeId, (int) $user['id']]);
         $resume = $statement->fetch();
     } catch (Throwable $exception) {
         error_log('Resume lookup failure: ' . $exception->getMessage());
         $resume = false;
+    }
+    if ($resume && ($isRecruiter || $canReview)) {
+        try {
+            Database::connection()->prepare(
+                'INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, ip_hash, metadata_json) VALUES (?, ?, ?, ?, ?, ?)',
+            )->execute([
+                (int) $user['id'],
+                'resume.viewed',
+                'resume',
+                $resumeId,
+                isset($_SERVER['REMOTE_ADDR']) ? hash('sha256', (string) $_SERVER['REMOTE_ADDR']) : null,
+                json_encode(['viewer_role' => (string) $user['role']], JSON_UNESCAPED_SLASHES),
+            ]);
+        } catch (Throwable $exception) {
+            // An audit table problem must never block a legitimate download.
+            error_log('Resume audit failure: ' . $exception->getMessage());
+        }
     }
     $file = $resume
         ? dirname(__DIR__) . '/storage/uploads/resumes/' . basename((string) $resume['stored_name'])
@@ -517,6 +541,7 @@ if (
     http_response_code(403);
     $page = 'forbidden';
 }
+$jobSkillMap = [];
 if ($page === 'jobs' && $user && $user['role'] === 'student') {
     try {
         $db = Database::connection();
@@ -524,6 +549,18 @@ if ($page === 'jobs' && $user && $user['role'] === 'student') {
             "SELECT j.*,c.name AS company_name FROM jobs j JOIN companies c ON c.id=j.company_id WHERE j.status='published' AND c.approval_status='approved' AND (j.closes_at IS NULL OR j.closes_at>=NOW()) ORDER BY j.created_at DESC",
         );
         $jobs = $q->fetchAll();
+        if ($jobs) {
+            $jobIds = array_map(static fn (array $job): int => (int) $job['id'], $jobs);
+            $placeholders = implode(',', array_fill(0, count($jobIds), '?'));
+            $skillQuery = $db->prepare(
+                'SELECT js.job_id, js.requirement_type, s.name FROM job_skills js JOIN skills s ON s.id = js.skill_id '
+                . 'WHERE js.job_id IN (' . $placeholders . ') ORDER BY s.name',
+            );
+            $skillQuery->execute($jobIds);
+            foreach ($skillQuery->fetchAll(PDO::FETCH_ASSOC) as $skillRow) {
+                $jobSkillMap[(int) $skillRow['job_id']][$skillRow['requirement_type'] === 'preferred' ? 'preferred' : 'required'][] = (string) $skillRow['name'];
+            }
+        }
         $q = $db->prepare('SELECT job_id FROM applications WHERE student_id=?');
         $q->execute([(int) $user['id']]);
         $appliedJobIds = array_map(
@@ -555,6 +592,8 @@ $profileStrengthParts = [];
 $applicationTimeline = [];
 $notifications = [];
 $unreadNotifications = 0;
+$upcomingInterviews = [];
+$studentOffers = [];
 if ($user && $user['role'] === 'student' && in_array($page, ['dashboard', 'profile', 'jobs', 'applications', 'notifications'], true)) {
     try {
         $db = Database::connection();
@@ -598,6 +637,35 @@ if ($user && $user['role'] === 'student' && in_array($page, ['dashboard', 'profi
             $noticeStatement = $db->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ' . ($page === 'notifications' ? '100' : '4'));
             $noticeStatement->execute([(int) $user['id']]);
             $notifications = $noticeStatement->fetchAll();
+        }
+
+        // Scheduled interviews and offers the student is the subject of. The
+        // recruiter records both, so without this the person it concerns could
+        // only ever learn about them from an inbox message they might have missed.
+        $interviewStatement = $db->prepare(
+            "SELECT i.id, i.scheduled_at, i.mode, i.location_or_link, j.title, c.name AS company_name "
+            . 'FROM interviews i JOIN applications a ON a.id = i.application_id '
+            . 'JOIN jobs j ON j.id = a.job_id JOIN companies c ON c.id = j.company_id '
+            . "WHERE a.student_id = ? AND i.status = 'scheduled' AND i.scheduled_at >= NOW() "
+            . 'ORDER BY i.scheduled_at LIMIT 3',
+        );
+        $interviewStatement->execute([(int) $user['id']]);
+        $upcomingInterviews = $interviewStatement->fetchAll(PDO::FETCH_ASSOC);
+
+        // `offers` arrives through a migration, so an older database must still
+        // render the rest of the workspace instead of erroring.
+        try {
+            $offerStatement = $db->prepare(
+                'SELECT o.ctc_lpa, o.offer_date, o.status, o.joined_on, j.title, c.name AS company_name '
+                . 'FROM offers o JOIN applications a ON a.id = o.application_id '
+                . 'JOIN jobs j ON j.id = a.job_id JOIN companies c ON c.id = j.company_id '
+                . 'WHERE a.student_id = ? ORDER BY o.offer_date DESC, o.id DESC',
+            );
+            $offerStatement->execute([(int) $user['id']]);
+            $studentOffers = $offerStatement->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $exception) {
+            $studentOffers = [];
+            error_log('Student offers query failure: ' . $exception->getMessage());
         }
     } catch (Throwable $exception) {
         error_log('Student workspace data failure: ' . $exception->getMessage());
@@ -1337,6 +1405,20 @@ $pageTitle = match ($page) {
                             ) ?></span>
                         </div>
 
+                        <?php $thisJobSkills = $jobSkillMap[(int) $job['id']] ?? []; ?>
+                        <?php if (!empty($thisJobSkills['required']) || !empty($thisJobSkills['preferred'])): ?>
+                            <p class="sv-skill-row">
+                                <?php foreach (($thisJobSkills['required'] ?? []) as $skillName): ?>
+                                    <span class="sv-skill-chip"><?= e((string) $skillName) ?></span>
+                                <?php endforeach; ?>
+                                <?php foreach (($thisJobSkills['preferred'] ?? []) as $skillName): ?>
+                                    <span class="sv-skill-chip sv-skill-chip--soft"><?= e((string) $skillName) ?><span class="sr-only"> (preferred)</span></span>
+                                <?php endforeach; ?>
+                            </p>
+                        <?php else: ?>
+                            <p class="muted">This employer has not listed required skills yet, so your career-fit score covers academics only.</p>
+                        <?php endif; ?>
+
                         <p><?= nl2br(e($job['description'])) ?></p>
                         <?php if ($job['eligible_branch']): ?>
                             <p class="muted">Eligible branch: <?= e(
@@ -1436,6 +1518,83 @@ $pageTitle = match ($page) {
                 </tbody>
             </table>
         </div>
+    <?php endif; ?>
+
+    <?php if ($upcomingInterviews): ?>
+        <section class="panel mt-4" aria-labelledby="student-interviews-title">
+            <div class="strength-head">
+                <div>
+                    <p class="eyebrow">INTERVIEWS</p>
+                    <h2 id="student-interviews-title">Your scheduled interviews</h2>
+                </div>
+                <span class="status-pill">Next first</span>
+            </div>
+            <ul class="sv-next-list">
+                <?php foreach ($upcomingInterviews as $interview): ?>
+                    <?php $joinLink = trim((string) ($interview['location_or_link'] ?? '')); ?>
+                    <li class="sv-next-item">
+                        <div>
+                            <strong><?= e((string) $interview['title']) ?></strong>
+                            <span class="muted"> · <?= e((string) $interview['company_name']) ?></span>
+                            <p class="muted">
+                                <time datetime="<?= e(date('c', strtotime((string) $interview['scheduled_at']))) ?>"><?= e(date('D d M Y, H:i', strtotime((string) $interview['scheduled_at']))) ?></time>
+                                <?php if (!empty($interview['mode'])): ?> · <?= e((string) $interview['mode']) ?><?php endif; ?>
+                            </p>
+                        </div>
+                        <?php if ($joinLink !== '' && preg_match('~^https?://~i', $joinLink)): ?>
+                            <a class="secondary-btn" href="<?= e($joinLink) ?>" target="_blank" rel="noopener noreferrer">Join link <span aria-hidden="true">↗</span></a>
+                        <?php elseif ($joinLink !== ''): ?>
+                            <span class="muted"><?= e($joinLink) ?></span>
+                        <?php endif; ?>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($studentOffers): ?>
+        <section class="panel mt-4" aria-labelledby="student-offers-title">
+            <div class="strength-head">
+                <div>
+                    <p class="eyebrow">OFFERS</p>
+                    <h2 id="student-offers-title">Your offers</h2>
+                </div>
+                <span class="status-pill"><?= count($studentOffers) ?> recorded</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Role</th>
+                            <th scope="col">Company</th>
+                            <th scope="col">CTC</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Offer date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($studentOffers as $offer): ?>
+                            <tr>
+                                <td><?= e((string) $offer['title']) ?></td>
+                                <td><?= e((string) $offer['company_name']) ?></td>
+                                <td>
+                                    <?= $offer['ctc_lpa'] !== null
+                                        ? e(number_format((float) $offer['ctc_lpa'], 2)) . ' LPA'
+                                        : 'Not disclosed' ?>
+                                </td>
+                                <td>
+                                    <span class="status-pill"><?= e(ucfirst((string) $offer['status'])) ?></span>
+                                    <?php if (!empty($offer['joined_on'])): ?>
+                                        <div class="muted">Joined <?= e(date('d M Y', strtotime((string) $offer['joined_on']))) ?></div>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?= !empty($offer['offer_date']) ? e(date('d M Y', strtotime((string) $offer['offer_date']))) : '—' ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
     <?php endif; ?>
 
     <?php if (!empty($applicationTimeline)): ?>
@@ -1612,7 +1771,38 @@ $pageTitle = match ($page) {
 
     <section class="panel mt-4" aria-labelledby="dashboard-next-steps-title">
         <h2 id="dashboard-next-steps-title">Next steps</h2>
-        <p class="muted">The portal starts with an empty database. Your workspace will fill as real profiles, jobs, and applications are added.</p>
+        <?php if ($user['role'] === 'student' && ($upcomingInterviews || $studentOffers)): ?>
+            <ul class="sv-next-list">
+                <?php foreach ($upcomingInterviews as $interview): ?>
+                    <li class="sv-next-item">
+                        <div>
+                            <strong>Interview · <?= e((string) $interview['title']) ?></strong>
+                            <span class="muted"> · <?= e((string) $interview['company_name']) ?></span>
+                            <p class="muted">
+                                <time datetime="<?= e(date('c', strtotime((string) $interview['scheduled_at']))) ?>"><?= e(date('D d M Y, H:i', strtotime((string) $interview['scheduled_at']))) ?></time>
+                                <?php if (!empty($interview['mode'])): ?> · <?= e((string) $interview['mode']) ?><?php endif; ?>
+                            </p>
+                        </div>
+                        <a class="secondary-btn" href="index.php?page=applications">Details</a>
+                    </li>
+                <?php endforeach; ?>
+                <?php foreach ($studentOffers as $offer): ?>
+                    <li class="sv-next-item">
+                        <div>
+                            <strong>Offer · <?= e((string) $offer['title']) ?></strong>
+                            <span class="muted"> · <?= e((string) $offer['company_name']) ?></span>
+                            <p class="muted">
+                                <?= $offer['ctc_lpa'] !== null ? e(number_format((float) $offer['ctc_lpa'], 2)) . ' LPA' : 'CTC not disclosed' ?>
+                                · <?= e(ucfirst((string) $offer['status'])) ?>
+                            </p>
+                        </div>
+                        <a class="secondary-btn" href="index.php?page=applications">Details</a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php else: ?>
+            <p class="muted">The portal starts with an empty database. Your workspace will fill as real profiles, jobs, and applications are added.</p>
+        <?php endif; ?>
         <?php if ($user['role'] === 'student'): ?>
             <a class="secondary-btn" href="index.php?page=jobs">Browse open opportunities</a>
         <?php elseif (in_array($user['role'], ['admin', 'tpo'], true)): ?>
