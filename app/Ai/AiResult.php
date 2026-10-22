@@ -10,15 +10,15 @@ namespace App\Ai;
 final class AiResult
 {
     public function __construct(
-        public readonly bool $ok,
-        public readonly string $text = '',
-        public readonly array $json = [],
-        public readonly string $provider = 'none',
-        public readonly string $model = '',
-        public readonly int $promptTokens = 0,
-        public readonly int $completionTokens = 0,
-        public readonly int $latencyMs = 0,
-        public readonly string $error = '',
+        public bool $ok,
+        public string $text = '',
+        public array $json = [],
+        public string $provider = 'none',
+        public string $model = '',
+        public int $promptTokens = 0,
+        public int $completionTokens = 0,
+        public int $latencyMs = 0,
+        public string $error = '',
     ) {
     }
 

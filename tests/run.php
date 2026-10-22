@@ -1199,6 +1199,40 @@ $test('Career studio pages are linked from the public site and never 404', stati
     $assert(substr_count($front, 'header(') >= 1, 'the redirect uses a Location header');
 });
 
+$test('The application stays runnable on PHP 8.0 and says so when it cannot run', static function () use ($assert, $root): void {
+    $scanned = [];
+    foreach (['app', 'public', 'scripts', 'bootstrap'] as $folder) {
+        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/' . $folder, FilesystemIterator::SKIP_DOTS));
+        foreach ($iterator as $file) {
+            if ($file->isFile() && $file->getExtension() === 'php') {
+                $scanned[] = $file->getPathname();
+            }
+        }
+    }
+    $assert(count($scanned) > 30, 'the syntax scan should cover the whole application');
+    foreach ($scanned as $file) {
+        $contents = file_get_contents($file) ?: '';
+        $relative = str_replace($root . '/', '', $file);
+        // 8.1-only: promoted readonly properties and never-returning functions.
+        $assert(!preg_match('/\breadonly\s+(?:[?\\\\A-Za-z_][A-Za-z0-9_\\\\]*\s+)?\$/', $contents), "{$relative} uses a readonly property (PHP 8.1)");
+        $assert(!preg_match('/\)\s*:\s*never\b/', $contents), "{$relative} returns never (PHP 8.1)");
+        $assert(!preg_match('/\benum\s+[A-Z][A-Za-z0-9_]*\s*(?::|\{)/', $contents), "{$relative} declares an enum (PHP 8.1)");
+    }
+
+    $bootstrap = file_get_contents($root . '/bootstrap/app.php');
+    $guardAt = strpos($bootstrap, 'PHP_VERSION_ID');
+    $firstRequire = strpos($bootstrap, 'require_once');
+    $assert($guardAt !== false, 'bootstrap/app.php must check the PHP version');
+    $assert($firstRequire !== false && $guardAt < $firstRequire, 'the version guard must run before the first include');
+    $assert(str_contains($bootstrap, "'8.0'") || str_contains($bootstrap, '80000'), 'the guard names the minimum version');
+
+    $doctor = file_get_contents($root . '/scripts/doctor.php');
+    $assert(str_contains($doctor, 'PHP_VERSION_ID'), 'doctor reports the PHP version');
+    $assert(str_contains($doctor, '--no-db'), 'doctor can skip the database');
+    $assert(!preg_match('/\b(INSERT\s+INTO|UPDATE\s+[a-z_]+\s+SET|DELETE\s+FROM|DROP\s+TABLE)\b/i', $doctor), 'doctor is read-only');
+    $assert(!preg_match('/DB_PASS[^\n]*echo/', $doctor), 'doctor never prints the password');
+});
+
 $test('No merge-conflict markers remain in key project files', static function () use ($assert, $root): void {
     foreach (['README.md', 'scripts/create-admin.php', 'tests/run.php'] as $file) {
         $contents = file_get_contents($root . '/' . $file);

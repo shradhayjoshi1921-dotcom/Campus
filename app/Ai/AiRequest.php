@@ -13,13 +13,13 @@ namespace App\Ai;
 final class AiRequest
 {
     public function __construct(
-        public readonly string $feature,
-        public readonly string $systemPrompt,
-        public readonly string $userPrompt,
-        public readonly int $maxTokens = 700,
-        public readonly float $temperature = 0.2,
-        public readonly ?array $jsonShape = null,
-        public readonly ?int $userId = null,
+        public string $feature,
+        public string $systemPrompt,
+        public string $userPrompt,
+        public int $maxTokens = 700,
+        public float $temperature = 0.2,
+        public ?array $jsonShape = null,
+        public ?int $userId = null,
     ) {
     }
 

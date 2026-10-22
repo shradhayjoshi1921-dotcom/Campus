@@ -1,6 +1,6 @@
 # Campus — Placement & Career Intelligence
 
-**Version 2.0.0** · PHP 8.2+ · MySQL/MariaDB · Apache/XAMPP
+**Version 2.0.0** · PHP 8.0+ (8.2 recommended) · MySQL/MariaDB · Apache/XAMPP
 
 Campus is a server-rendered placement portal for students, recruiters, and placement teams. The interface uses one warm ember-and-slate appearance (light by default, matte dark available everywhere), responsive navigation, restrained frosted-glass accents, and reduced-motion-aware transitions. The homepage uses a CSS-built abstract hero rather than unverified campus photography. The website does not depend on remote font, Bootstrap, icon, or hero-image CDNs.
 
@@ -86,7 +86,15 @@ When a recruiter moves an application to **selected**, the applicant form now ac
    Use your own unique password of at least 14 characters. The bootstrap command works only when no admin exists. Avoid running it on a shared machine with a real password in command history.
 6. Visit **http://localhost/Campus/public/**.
 
-XAMPP must have PHP 8.2+, PDO MySQL, `mbstring`, and JSON enabled. Composer is not required to run the current application.
+XAMPP must have PHP 8.0+, PDO MySQL, `mbstring`, and JSON enabled. Composer is not required to run the current application. If the page shows a parse error or a "PHP upgrade required" screen, the Apache PHP build is too old — switch it to a 8.2 build in XAMPP and restart Apache.
+
+Before signing in, run the environment check. It is read-only and prints no passwords:
+
+```bat
+C:\xampp\php\php.exe scripts\doctor.php
+```
+
+It reports the PHP version, extensions, `.env`, the database connection, missing `schema.sql` tables, pending migrations and whether an admin account exists.
 
 ### Safer Apache configuration
 
@@ -156,7 +164,7 @@ The top of every page is flush with the viewport edge: `html` and `body` share o
 
 ## Verify locally
 
-From the project root, using PHP 8.2+:
+From the project root, using the same PHP that Apache uses (`C:\xampp\php\php.exe`):
 
 ```bat
 C:\xampp\php\php.exe -l public\index.php

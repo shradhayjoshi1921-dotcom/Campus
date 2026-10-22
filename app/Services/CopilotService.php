@@ -17,7 +17,7 @@ use App\Ai\AiService;
  */
 final class CopilotService
 {
-    public function __construct(private readonly AiService $ai)
+    public function __construct(private AiService $ai)
     {
     }
 

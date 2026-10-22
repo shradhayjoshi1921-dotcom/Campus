@@ -16,7 +16,7 @@ use Throwable;
  */
 final class CareerStore
 {
-    public function __construct(private readonly PDO $db)
+    public function __construct(private PDO $db)
     {
     }
 

@@ -14,11 +14,11 @@ namespace App\Ai;
 final class HttpProvider implements AiProvider
 {
     public function __construct(
-        private readonly string $baseUrl,
-        private readonly string $apiKey,
-        private readonly string $model,
-        private readonly int $timeoutSeconds = 20,
-        private readonly string $providerName = 'openai-compatible',
+        private string $baseUrl,
+        private string $apiKey,
+        private string $model,
+        private int $timeoutSeconds = 20,
+        private string $providerName = 'openai-compatible',
     ) {
     }
 

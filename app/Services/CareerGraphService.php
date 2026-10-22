@@ -13,7 +13,7 @@ namespace App\Services;
  */
 final class CareerGraphService
 {
-    public function __construct(private readonly RoadmapService $roadmaps)
+    public function __construct(private RoadmapService $roadmaps)
     {
     }
 
