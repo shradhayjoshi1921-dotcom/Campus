@@ -12,7 +12,7 @@
 - Three additive migrations (`skill_evidence`, `resume_analyses`, `ai_usage_logs`, `practice_sessions`, `practice_answers`, `career_targets`, roadmap task columns, assessment skill tag) with `scripts/migrate.php` (`--status`, per-statement duplicate tolerance, no fake transaction around DDL, a file recorded only after its last statement succeeds).
 - A sixth student dock tab (**Career**) and a sixth recruiter tab (**AI tools**), plus a ninth admin tab (**Insights**). `tests/js/dock-geometry.test.js` now verifies 6 / 6 / 9 tabs and still fits at 360 px.
 - `docs/CAREER-INTELLIGENCE.md` (what shipped, how to migrate, what was and was not verified) and `docs/SCORING.md` (every weight, the worked arithmetic, and what the numbers are not).
-- Fourteen new tests in `tests/run.php` covering the scoring model, evidence levels, gap priority, roadmaps, what-if, readiness, resume analysis, the job-description drafter, the interview kit, assessments, the institution service, the career graph, the studio routing, and the CSRF/ownership/migration invariants (76 assertions total, all passing).
+- Fourteen new tests in `tests/run.php` covering the scoring model, evidence levels, gap priority, roadmaps, what-if, readiness, resume analysis, the job-description drafter, the interview kit, assessments, the institution service, the career graph, the studio routing, and the CSRF/ownership/migration invariants (80 assertions total, all passing).
 
 ### Fixed
 - **The intelligence layer no longer needs PHP 8.1.** Promoted `readonly` properties and `never` return types (both 8.1) are gone, so the whole application parses and runs on **PHP 8.0**, which is what a stock XAMPP 8.0 install provides. `bootstrap/app.php` now checks `PHP_VERSION_ID` before any other include and prints a readable "PHP upgrade required" page (and a one-line CLI error) instead of a bare parse error.
@@ -20,6 +20,12 @@
 - `index.php?page=career|resume-review|practice` redirects to the studio scripts instead of returning 404.
 
 ### Changed
+- **LogicBloom "Light Ice Blue" theme.** `public/assets/css/logicbloom.css` re-points every existing token set (`--sv-*`, the legacy `--bg`/`--text`/`--mint` palette, and the `--rec-*`/`--adm-*` portal sets) at the ice palette and restyles the components whose geometry the palette changes. Loaded last on every page; no `!important`, no second styling system, no markup rewrite in the workspaces. Light only: both theme attributes resolve to the same tokens and the appearance switch is hidden.
+- **Self-hosted Inter** (`public/assets/fonts/`, SIL OFL, 400-800, `font-display: swap`). No font CDN and no external request anywhere.
+- **New landing page.** `public/assets/css/homepage.css` was rewritten for `public/index.php`: a two-column hero with the student workflow card, three role cards, a "how an opportunity reaches a student" band and a quiet footer — same copy, same links, same anchor ids.
+- **`public/assets/js/theme-guard.js`** hides the floating dock if its own stylesheet never arrives, so a blocked or stale CSS request can never leave a wall of raw links over the page. The bubble menu stays as the fallback navigation.
+- **Every inline `<svg>` now carries intrinsic `width`/`height`/`viewBox` and an explicit `fill`** (43 icons across the views), so a missing stylesheet degrades to small outlines instead of a large solid block.
+- `meta[name="theme-color"]` is `#edf8fc`; the studio, recruiter and admin heads load the theme last like the public site.
 - `public/career.php` is now a career studio with a shared shell (`public/views/partials/studio-start.php` / `studio-end.php`), so the student dock and its sign-out form exist in exactly one place. `public/views/partials/student-dock-markup.php` holds the six tabs used by both `index.php` and the studio.
 - Recruiter dock labels move to screen-reader-only below 420 px, where six tabs leave ~55 px each.
 - Two-theme design system for every portal: premium warm light orange (ivory paper, white cards, ember accent) and premium matte black (charcoal surfaces, silver glass, warm accent used sparingly). The teal/green palette, navy hero gradients and glowing orbs are removed.

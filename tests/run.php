@@ -843,20 +843,148 @@ $test('Every portal starts flush with the viewport edge', static function () use
     $assert(!preg_match('/html\[data-theme="light"\] body\.admin-portal \.admin-dock\s*\{/s', $theme), 'the light theme leaves the dock material alone');
 });
 
-$test('Dark mode is matte black and light mode is warm ivory', static function () use ($assert, $root): void {
-    foreach (['app.css', 'recruiter.css', 'admin.css', 'homepage.css'] as $file) {
+$test('LogicBloom is the only palette, and it stays light', static function () use ($assert, $root): void {
+    foreach (['app.css', 'recruiter.css', 'admin.css', 'homepage.css', 'logicbloom.css'] as $file) {
         $css = file_get_contents($root . '/public/assets/css/' . $file);
         $assert(!preg_match('/(?:#0[4-9][0-9a-f]{2}2[0-9a-f]|rgba\(\s*(?:46, 156, 150|58, 168, 158|84, 168, 147))/i', $css), "{$file} still paints a teal background");
     }
-    $recruiter = file_get_contents($root . '/public/assets/css/recruiter.css');
-    $admin = file_get_contents($root . '/public/assets/css/admin.css');
-    foreach ([$recruiter, $admin] as $css) {
-        $assert(str_contains($css, '#0b0c0e'), 'portal paper is near-black');
-        $assert(str_contains($css, '#f2f3f5'), 'portal ink is soft white');
+    $ice = file_get_contents($root . '/public/assets/css/logicbloom.css');
+    // The palette is declared once and re-points the project's own tokens.
+    $assert(str_contains($ice, '--lb-accent: #2f7291'), 'the slate-teal accent is the specified one');
+    $assert(str_contains($ice, '--sv-orange: var(--lb-accent)'), 'theme.css tokens are re-pointed');
+    $assert(str_contains($ice, '--mint: var(--lb-accent)'), 'the legacy app tokens are re-pointed at the same accent');
+    $assert(str_contains($ice, '--rec-mint: var(--lb-accent)'), 'the recruiter portal follows the same accent');
+    $assert(str_contains($ice, '--adm-mint: var(--lb-accent)'), 'the admin portal follows the same accent');
+    // Light only: both attribute states get the same values.
+    $assert((bool) preg_match('/html\[data-theme="light"\],\s*html\[data-theme="dark"\]\s*\{/s', $ice), 'the palette ignores the stored theme');
+    $assert(substr_count($ice, '--lb-ink: #19394c') === 1, 'ink is declared once');
+    // No pure black and no saturated blue game-pad palette.
+    $assert(!preg_match('/#000(?:000)?\b/i', $ice), 'no pure black token');
+    $assert(!str_contains($ice, '#6366f1'), 'no indigo');
+    $assert(!str_contains($ice, '#0ea5e9'), 'no sky blue accent');
+    // Self-hosted type only.
+    $assert(str_contains($ice, '../fonts/inter-latin-400-normal.woff2'), 'Inter is self-hosted');
+    $assert(!preg_match('#(?:fonts\.googleapis|fonts\.gstatic|cdn\.|unpkg|jsdelivr)#i', $ice), 'no third-party asset host');
+    foreach (['inter-latin-400-normal.woff2', 'inter-latin-500-normal.woff2', 'inter-latin-600-normal.woff2', 'inter-latin-700-normal.woff2', 'inter-latin-800-normal.woff2', 'Inter-OFL.txt'] as $asset) {
+        $assert(is_file($root . '/public/assets/fonts/' . $asset), "assets/fonts/{$asset} is missing");
     }
+});
+
+$test('Every themed page loads LogicBloom last and can survive without it', static function () use ($assert, $root): void {
+    $heads = [
+        'public/index.php',
+        'public/views/partials/studio-start.php',
+        'public/views/recruiter/layout-start.php',
+        'public/views/admin/layout-start.php',
+    ];
+    foreach ($heads as $file) {
+        $markup = file_get_contents($root . '/' . $file);
+        $assert(str_contains($markup, 'assets/css/logicbloom.css'), "{$file} does not load the theme");
+        $assert(str_contains($markup, 'name="theme-color" content="#edf8fc"'), "{$file} keeps the warm theme colour");
+        $lastCss = strrpos($markup, 'assets/css/');
+        $themeAt = strpos($markup, 'assets/css/logicbloom.css');
+        $assert($themeAt !== false && $themeAt === $lastCss, "{$file} must load logicbloom.css after every other stylesheet");
+    }
+    foreach (['public/index.php', 'public/views/partials/studio-end.php', 'public/views/recruiter/layout-end.php', 'public/views/admin/layout-end.php'] as $file) {
+        $assert(str_contains(file_get_contents($root . '/' . $file), 'theme-guard.js'), "{$file} must ship the theme guard");
+    }
+    $guard = file_get_contents($root . '/public/assets/js/theme-guard.js');
+    $assert(str_contains($guard, "'--lb-accent'"), 'the guard probes a token the theme publishes');
+    $assert(str_contains($guard, 'dock.style.display = '), 'a dock without its stylesheet is hidden');
+    $assert(str_contains($guard, 'data-theme-guard'), 'the guard leaves evidence on the element it hid');
+});
+
+$test('Text meets WCAG AA contrast on the ice palette', static function () use ($assert, $root): void {
+    $luminance = static function (string $hex): float {
+        $hex = ltrim($hex, '#');
+        if (strlen($hex) === 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+        $channels = [];
+        foreach ([0, 2, 4] as $offset) {
+            $value = hexdec(substr($hex, $offset, 2)) / 255;
+            $channels[] = $value <= 0.03928 ? $value / 12.92 : (($value + 0.055) / 1.055) ** 2.4;
+        }
+        return 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
+    };
+    $ratio = static function (string $a, string $b) use ($luminance): float {
+        $la = $luminance($a);
+        $lb = $luminance($b);
+        return (max($la, $lb) + 0.05) / (min($la, $lb) + 0.05);
+    };
+
+    // Backgrounds the text actually sits on.
+    $surface = '#ffffff';
+    $canvas = '#edf8fc';
+    $heroDeep = '#c8e5f1'; // darkest stop of the landing hero gradient
+    $pairs = [
+        ['body text on a card', '#19394c', $surface, 4.5],
+        ['body text on the canvas', '#19394c', $canvas, 4.5],
+        ['paragraph copy on a card', '#405f70', $surface, 4.5],
+        ['paragraph copy on the hero gradient', '#405f70', $heroDeep, 4.5],
+        ['muted label on a card', '#446575', $surface, 4.5],
+        ['muted label on the hero gradient', '#446575', $heroDeep, 4.5],
+        ['eyebrow on the canvas', '#2f6680', $canvas, 4.5],
+        ['eyebrow on the deep canvas', '#2f6680', '#e4f2f8', 4.5],
+        ['eyebrow on the hero gradient', '#2f6680', $heroDeep, 4.5],
+        ['eyebrow on a card', '#2f6680', $surface, 4.5],
+        ['body text on the deep canvas', '#405f70', '#e4f2f8', 4.5],
+        ['muted label on the deep canvas', '#446575', '#e4f2f8', 4.5],
+        ['headings on a card', '#1a3b4d', $surface, 4.5],
+        ['primary button label', '#ffffff', '#2f7291', 4.5],
+        ['link on a card', '#23647f', $surface, 4.5],
+        ['link on the hero gradient', '#23647f', $heroDeep, 4.5],
+        ['active dock label', '#075985', $surface, 4.5],
+        ['danger message', '#991b1b', '#fef2f2', 4.5],
+        ['success message', '#11624b', '#e8f7f0', 4.5],
+        ['info message', '#075985', '#e0f2fe', 4.5],
+        // Non-text graphics need 3:1, not 4.5:1.
+        ['card icon on its tile', '#2f7291', '#e4f4fa', 3.0],
+        ['status dot on a card', '#1f8360', $surface, 3.0],
+        ['status dot on the hero gradient', '#1f8360', $heroDeep, 3.0],
+        ['focus ring on the canvas', '#0284c7', $canvas, 3.0],
+    ];
+    foreach ($pairs as [$label, $ink, $paper, $minimum]) {
+        $value = round($ratio($ink, $paper), 2);
+        $assert($value >= $minimum, "{$label} is {$value}:1, below {$minimum}:1");
+    }
+});
+
+$test('The theme is self-sufficient, warm-free and request-free', static function () use ($assert, $root): void {
+    $theme = file_get_contents($root . '/public/assets/css/logicbloom.css');
     $home = file_get_contents($root . '/public/assets/css/homepage.css');
-    $assert(str_contains($home, '#fff7f0'), 'the landing page shares the ivory paper');
-    $assert(str_contains($home, '#f59a55'), 'the landing page shares the apricot accent');
+
+    // No warm palette survives in the ice theme, and nothing is fetched off-site.
+    foreach (['#f2c8a4', '#f7dcc6', '#fff7f0', '#c96f2d', '#0b0c0e', '#090a0c'] as $warm) {
+        $assert(stripos($theme, $warm) === false, "logicbloom.css still contains the old colour {$warm}");
+    }
+    foreach (['logicbloom' => $theme, 'homepage' => $home] as $name => $css) {
+        $assert(!preg_match('#https?://#i', $css), "{$name}.css makes no external request");
+        $assert(!str_contains($css, '100vw'), "{$name}.css avoids 100vw");
+        $assert(!preg_match('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/u', $css), "{$name}.css uses no emoji");
+    }
+
+    // Every custom property the landing page reads is actually declared.
+    preg_match_all('/(--lb-[a-z0-9-]+)\s*:/', $theme, $declared);
+    preg_match_all('/var\((--lb-[a-z0-9-]+)/', $home . $theme, $used);
+    $missing = array_diff(array_unique($used[1]), array_unique($declared[1]));
+    $assert($missing === [], 'undeclared theme tokens: ' . implode(', ', $missing));
+
+    // !important is confined to the reduced-motion block.
+    $outside = preg_replace('/@media \(prefers-reduced-motion: reduce\).*?\n}/s', '', $theme);
+    $assert(substr_count($outside, '!important') === 1, 'the only !important outside reduced-motion is the comment that explains it');
+
+    // The fonts are local, and the licence travels with them.
+    foreach (['inter-latin-400-normal.woff2', 'inter-latin-500-normal.woff2', 'inter-latin-600-normal.woff2', 'inter-latin-700-normal.woff2', 'inter-latin-800-normal.woff2', 'Inter-OFL.txt'] as $file) {
+        $assert(is_file($root . '/public/assets/fonts/' . $file), "public/assets/fonts/{$file} is self-hosted");
+    }
+    $assert(substr_count($theme, '@font-face') === 5, 'logicbloom.css declares the five Inter weights it uses');
+    $assert(str_contains($theme, 'font-display: swap'), 'Inter swaps in rather than blocking paint');
+
+    // Component rules win by prefix, not by force.
+    $scoped = preg_match_all('/^html\[data-theme\]/m', $theme);
+    $assert($scoped >= 100, "components are scoped to the theme attribute ({$scoped} scoped rules)");
+    $assert(str_contains($theme, 'prefers-reduced-motion: reduce'), 'motion can be switched off');
 });
 
 $test('One asset version busts every cached stylesheet and script', static function () use ($assert, $root): void {

@@ -6,7 +6,7 @@
                 <h2 id="rec-schedule-title">Schedule an interview</h2>
             </div>
             <span class="rec-stat-icon rec-stat-icon--amber" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
             </span>
         </div>
 

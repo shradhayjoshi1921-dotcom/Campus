@@ -1,7 +1,7 @@
 <section class="rec-stat-grid" aria-label="Recruiter overview metrics">
     <article class="rec-stat-card" data-reveal>
         <span class="rec-stat-icon rec-stat-icon--mint" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4m8-4v4M3 9h18M8 13h3m-3 4h7"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4m8-4v4M3 9h18M8 13h3m-3 4h7"/></svg>
         </span>
         <p>Live roles</p>
         <strong><?= (int) $statistics['live_jobs'] ?></strong>
@@ -9,7 +9,7 @@
     </article>
     <article class="rec-stat-card" data-reveal>
         <span class="rec-stat-icon rec-stat-icon--blue" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/><circle cx="9.5" cy="7" r="4"/><path d="M17 11a4 4 0 1 0-1.1-7.8M21 20v-1.5a4 4 0 0 0-3-3.9"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"/><circle cx="9.5" cy="7" r="4"/><path d="M17 11a4 4 0 1 0-1.1-7.8M21 20v-1.5a4 4 0 0 0-3-3.9"/></svg>
         </span>
         <p>New applicants</p>
         <strong><?= (int) $statistics['new_applicants'] ?></strong>
@@ -17,7 +17,7 @@
     </article>
     <article class="rec-stat-card" data-reveal>
         <span class="rec-stat-icon rec-stat-icon--violet" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
         </span>
         <p>Active pipeline</p>
         <strong><?= (int) $statistics['active_pipeline'] ?></strong>
@@ -25,7 +25,7 @@
     </article>
     <article class="rec-stat-card" data-reveal>
         <span class="rec-stat-icon rec-stat-icon--amber" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18M8 14h3m2 0h3m-8 4h3"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18M8 14h3m2 0h3m-8 4h3"/></svg>
         </span>
         <p>Upcoming interviews</p>
         <strong><?= (int) $statistics['upcoming_interviews'] ?></strong>

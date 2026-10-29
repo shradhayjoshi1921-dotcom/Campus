@@ -11,7 +11,7 @@
         <input type="hidden" name="section" value="applicants">
         <label class="rec-search-field" for="applicant-search">
             <span class="sr-only">Search applicants</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
             <input id="applicant-search" name="q" type="search" maxlength="80" placeholder="Search candidate or role" value="<?= recruiter_h($applicationSearch) ?>">
         </label>
         <label class="sr-only" for="applicant-status-filter">Filter applicants by status</label>

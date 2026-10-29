@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#fff7f0">
+    <meta name="theme-color" content="#edf8fc">
     <script>
         (function () {
             try {
@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="assets/css/app.css?v=<?= recruiter_h($appCssVersion) ?>">
     <link rel="stylesheet" href="assets/css/recruiter.css?v=<?= recruiter_h($recruiterCssVersion) ?>">
     <link rel="stylesheet" href="assets/css/liquid-glass.css?v=<?= recruiter_h($recruiterCssVersion) ?>">
+    <link rel="stylesheet" href="assets/css/logicbloom.css?v=<?= recruiter_h($appCssVersion) ?>">
 </head>
 <body class="recruiter-portal">
 <?php require dirname(__DIR__) . '/partials/glass-defs.php'; ?>
