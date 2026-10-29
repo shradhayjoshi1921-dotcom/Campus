@@ -137,12 +137,21 @@ For deployment, set the Apache document root to `Campus/public/`. If using the l
 
 ## Appearance and navigation
 
-The whole portal now runs on one two-theme design system, declared once in `public/assets/css/theme.css`.
+The portal runs on **LogicBloom "Light Ice Blue"**, declared once in
+`public/assets/css/logicbloom.css` and loaded last on every page.
 
-- **Light** — warm ivory paper (`#FFF7F0` / `#FFF0E3`), white cards, `#24201D` ink and a restrained ember accent (`#C96F2D` deep, `#F59A55` apricot). Orange is a highlight, never a page wash.
-- **Dark** — premium matte black (`#0B0C0E` / `#090A0C`) with charcoal surfaces, graphite borders, soft-white text and silver glass reflections. The old teal gradients and glowing orbs are gone.
-- Every card, table, form, modal, badge, button and dock reads from the same tokens, so the student, recruiter and TPO/admin workspaces match. `public/career.php` no longer carries its own dark-only stylesheet.
-- The theme is applied by an inline bootstrap before first paint in `public/index.php`, `public/career.php`, `public/views/admin/layout-start.php` and `public/views/recruiter/layout-start.php`, then persisted in `localStorage` under `sviet-theme`. There is no flash of the wrong theme, and `meta[name="theme-color"]` follows the theme.
+- **Canvas** — three stacked layers on a pale cyan field (`#EDF8FC` → `#E4F2F8` → `#F2F9FC`): a white radial at the top-left, a soft cyan tint at the right, and a 165° linear wash. Nothing is a flat fill.
+- **Glass** — frosted surfaces floating on the canvas (`rgba(255,255,255,.77)`, `blur(18px) saturate(140%)`) with 18 px cards, 24 px hero blocks and wide, cyan-tinted shadows (`rgba(83,132,154,.055)`). Borders are white hairlines, not grey rules.
+- **Ink** — `#19394C` body, `#405F70` secondary, `#446575` labels, `#1A3B4D` headings. No pure black anywhere; heading tracking is negative (`-.06em`), body copy is 13 px / 1.65.
+- **Accent** — one slate teal (`#2F7291`, deep `#075985`) for actions, links and active states, plus `#0284C7` for focus rings only.
+- **Type** — Inter, self-hosted from `public/assets/fonts/` (SIL OFL, weights 400–800, `font-display: swap`). No font CDN, so the portal renders the same offline in XAMPP.
+- **Light only, by design.** The tokens are declared for both theme attributes, so a stored preference cannot paint a half-dark page, and the appearance switch is hidden. Dark rules in the older stylesheets are untouched and unused.
+
+The theme re-points the project's existing tokens (`--sv-*` from `theme.css`, the legacy `--bg`/`--text`/`--mint` set from `app.css`, and the `--rec-*`/`--adm-*` portal sets) rather than introducing a second styling system, so every card, table, form, badge, button and dock follows it. Component rules carry an `html[data-theme]` prefix so they tie — and therefore win — against the older light-theme overrides, without a single `!important`.
+
+`public/assets/js/theme-guard.js` is the safety net: if the theme stylesheet or the dock's own stylesheet never arrives, it hides the dock (the bubble menu is plain markup and keeps working), unsizes nothing, and leaves `data-theme-guard` on the element it hid. Icons carry intrinsic `width`/`height`/`viewBox` attributes so a blocked stylesheet can never turn a path into a 300×150 black block.
+
+The landing page (`public/assets/css/homepage.css`, scoped to `body.homepage`) is built from the same tokens: a two-column hero with a workflow card, three role cards, and a "how an opportunity reaches a student" band.
 
 The bottom navigation is one shared material (`public/assets/css/liquid-glass.css`) driven by one shared engine (`public/assets/js/liquid-glass.js`):
 

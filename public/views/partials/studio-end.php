@@ -17,5 +17,6 @@ require __DIR__ . '/student-dock-markup.php';
 <script src="assets/js/site.js" defer></script>
 <script src="assets/js/liquid-glass.js?v=<?= $escape($appCssVersion) ?>" defer></script>
 <script src="assets/js/student-nav.js?v=<?= $escape($appCssVersion) ?>" defer></script>
+<script src="assets/js/theme-guard.js?v=<?= $escape($appCssVersion) ?>" defer></script>
 </body>
 </html>

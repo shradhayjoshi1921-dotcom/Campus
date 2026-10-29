@@ -37,7 +37,7 @@ $currentJobStatus = (string) ($editJob['status'] ?? 'draft');
             <input type="hidden" name="section" value="jobs">
             <label class="rec-search-field" for="job-search">
                 <span class="sr-only">Search jobs</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
                 <input id="job-search" name="q" type="search" maxlength="80" placeholder="Search job title or location" value="<?= recruiter_h($jobSearch) ?>">
             </label>
             <label class="sr-only" for="job-status-filter">Filter jobs by status</label>
@@ -94,7 +94,7 @@ $currentJobStatus = (string) ($editJob['status'] ?? 'draft');
                             <?php endif; ?>
                         </div>
                         <a class="rec-icon-action" href="recruiter.php?section=jobs&edit=<?= (int) $job['id'] ?>" aria-label="Edit <?= recruiter_h($job['title']) ?>">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+                            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
                             <span>Edit</span>
                         </a>
                     </article>

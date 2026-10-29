@@ -31,7 +31,7 @@
                href="admin.php?section=<?= admin_h($tabSection) ?>"
                <?= $section === $tabSection ? 'aria-current="page"' : '' ?>>
                 <span class="admin-dock-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><?= $tab['icon'] ?></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24"><?= $tab['icon'] ?></svg>
                 </span>
                 <span class="admin-dock-label"><?= admin_h($tab['label']) ?></span>
                 <?php if ($tabSection === 'approvals' && $pendingApprovals > 0): ?>
@@ -49,5 +49,6 @@
 <script src="assets/js/theme.js?v=<?= admin_h($adminNavJsVersion) ?>" defer></script>
 <script src="assets/js/liquid-glass.js?v=<?= admin_h($adminNavJsVersion) ?>" defer></script>
 <script src="assets/js/admin-nav.js?v=<?= admin_h($adminNavJsVersion) ?>" defer></script>
+<script src="assets/js/theme-guard.js?v=<?= admin_h($adminNavJsVersion) ?>" defer></script>
 </body>
 </html>
