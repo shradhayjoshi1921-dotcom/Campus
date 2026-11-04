@@ -843,34 +843,56 @@ $test('Every portal starts flush with the viewport edge', static function () use
     $assert(!preg_match('/html\[data-theme="light"\] body\.admin-portal \.admin-dock\s*\{/s', $theme), 'the light theme leaves the dock material alone');
 });
 
-$test('LogicBloom is the only palette, and it stays light', static function () use ($assert, $root): void {
-    foreach (['app.css', 'recruiter.css', 'admin.css', 'homepage.css', 'logicbloom.css'] as $file) {
+$test('Aurora declares two complete palettes and re-points the project tokens', static function () use ($assert, $root): void {
+    foreach (['app.css', 'recruiter.css', 'admin.css', 'homepage.css'] as $file) {
         $css = file_get_contents($root . '/public/assets/css/' . $file);
         $assert(!preg_match('/(?:#0[4-9][0-9a-f]{2}2[0-9a-f]|rgba\(\s*(?:46, 156, 150|58, 168, 158|84, 168, 147))/i', $css), "{$file} still paints a teal background");
     }
-    $ice = file_get_contents($root . '/public/assets/css/logicbloom.css');
-    // The palette is declared once and re-points the project's own tokens.
-    $assert(str_contains($ice, '--lb-accent: #2f7291'), 'the slate-teal accent is the specified one');
-    $assert(str_contains($ice, '--sv-orange: var(--lb-accent)'), 'theme.css tokens are re-pointed');
-    $assert(str_contains($ice, '--mint: var(--lb-accent)'), 'the legacy app tokens are re-pointed at the same accent');
-    $assert(str_contains($ice, '--rec-mint: var(--lb-accent)'), 'the recruiter portal follows the same accent');
-    $assert(str_contains($ice, '--adm-mint: var(--lb-accent)'), 'the admin portal follows the same accent');
-    // Light only: both attribute states get the same values.
-    $assert((bool) preg_match('/html\[data-theme="light"\],\s*html\[data-theme="dark"\]\s*\{/s', $ice), 'the palette ignores the stored theme');
-    $assert(substr_count($ice, '--lb-ink: #19394c') === 1, 'ink is declared once');
-    // No pure black and no saturated blue game-pad palette.
-    $assert(!preg_match('/#000(?:000)?\b/i', $ice), 'no pure black token');
-    $assert(!str_contains($ice, '#6366f1'), 'no indigo');
-    $assert(!str_contains($ice, '#0ea5e9'), 'no sky blue accent');
-    // Self-hosted type only.
-    $assert(str_contains($ice, '../fonts/inter-latin-400-normal.woff2'), 'Inter is self-hosted');
-    $assert(!preg_match('#(?:fonts\.googleapis|fonts\.gstatic|cdn\.|unpkg|jsdelivr)#i', $ice), 'no third-party asset host');
-    foreach (['inter-latin-400-normal.woff2', 'inter-latin-500-normal.woff2', 'inter-latin-600-normal.woff2', 'inter-latin-700-normal.woff2', 'inter-latin-800-normal.woff2', 'Inter-OFL.txt'] as $asset) {
-        $assert(is_file($root . '/public/assets/fonts/' . $asset), "assets/fonts/{$asset} is missing");
+    $theme = file_get_contents($root . '/public/assets/css/aurora.css');
+
+    // Light — Arctic Aurora.
+    $assert(str_contains($theme, '--au-bg-1: #eaf7ff'), 'Arctic Aurora starts on icy white-blue');
+    $assert(str_contains($theme, '--au-bg-2: #ddf2ff'), 'Arctic Aurora keeps the pale blue floor');
+    $assert(str_contains($theme, '--au-bg-3: #f7fbff'), 'Arctic Aurora has a near-white top layer');
+    $assert(str_contains($theme, '--au-ink: #0a2540'), 'light ink is deep navy, not black');
+    $assert(str_contains($theme, '--au-accent: #0ea5e9'), 'the electric-cyan accent is the specified one');
+    $assert(str_contains($theme, '--au-accent-2: #38bdf8'), 'the sky-blue secondary accent is the specified one');
+
+    // Dark — Midnight Ocean.
+    $assert(str_contains($theme, '--au-bg-1: #030712'), 'Midnight Ocean starts on genuine near-black');
+    $assert(str_contains($theme, '--au-bg-2: #071426'), 'Midnight Ocean has the midnight-navy layer');
+    $assert(str_contains($theme, '--au-bg-3: #0b1930'), 'Midnight Ocean has an elevated surface');
+    $assert(str_contains($theme, '--au-ink: #eaf6ff'), 'dark ink is soft ice white');
+    $assert(str_contains($theme, '--au-accent: #38bdf8'), 'the dark theme leads with cyan');
+    $assert(str_contains($theme, '--au-accent-2: #3b82f6'), 'the dark theme secondary accent is electric blue');
+
+    // Both themes are declared, each exactly once.
+    $assert(substr_count($theme, '--au-bg-1:') === 2, 'exactly two canvases are declared');
+    $assert(substr_count($theme, 'html[data-theme="dark"] {') >= 2, 'the dark theme is a full block, not a patch');
+
+    // The project's own token sets are re-pointed rather than duplicated.
+    foreach ([
+        '--sv-orange: var(--au-accent)',
+        '--mint: var(--au-accent)',
+        '--rec-mint: var(--au-accent)',
+        '--adm-mint: var(--au-accent)',
+        '--sv-ink: var(--au-ink)',
+        '--text: var(--au-ink)',
+    ] as $alias) {
+        $assert(str_contains($theme, $alias), "the project token {$alias} is re-pointed");
     }
+
+    // The dock keeps its own glass layer, re-tinted rather than rebuilt.
+    $assert(str_contains($theme, '.lg-indicator'), 'the dock indicator is re-tinted');
+    $assert(str_contains($theme, '--lg-fill-top'), 'the dock glass follows the theme');
+
+    // No pure black, no game-pad palette, no third-party host.
+    $assert(!preg_match('/#000(?:000)?\b/i', $theme), 'no pure black token');
+    $assert(!str_contains($theme, '#6366f1'), 'no indigo');
+    $assert(!preg_match('#(?:fonts\.googleapis|fonts\.gstatic|cdn\.|unpkg|jsdelivr)#i', $theme), 'no third-party asset host');
 });
 
-$test('Every themed page loads LogicBloom last and can survive without it', static function () use ($assert, $root): void {
+$test('Every themed page loads Aurora last, in the right appearance', static function () use ($assert, $root): void {
     $heads = [
         'public/index.php',
         'public/views/partials/studio-start.php',
@@ -879,29 +901,94 @@ $test('Every themed page loads LogicBloom last and can survive without it', stat
     ];
     foreach ($heads as $file) {
         $markup = file_get_contents($root . '/' . $file);
-        $assert(str_contains($markup, 'assets/css/logicbloom.css'), "{$file} does not load the theme");
-        $assert(str_contains($markup, 'name="theme-color" content="#edf8fc"'), "{$file} keeps the warm theme colour");
+        $assert(str_contains($markup, 'assets/css/aurora.css'), "{$file} does not load the theme");
+        $assert(str_contains($markup, 'name="theme-color" content="#eaf7ff"'), "{$file} ships the light theme colour");
         $lastCss = strrpos($markup, 'assets/css/');
-        $themeAt = strpos($markup, 'assets/css/logicbloom.css');
-        $assert($themeAt !== false && $themeAt === $lastCss, "{$file} must load logicbloom.css after every other stylesheet");
+        $themeAt = strpos($markup, 'assets/css/aurora.css');
+        $assert($themeAt !== false && $themeAt === $lastCss, "{$file} must load aurora.css after every other stylesheet");
+
+        // The appearance is decided before paint, from storage or the OS.
+        $assert(str_contains($markup, "localStorage.getItem('sviet-theme')"), "{$file} remembers an explicit choice");
+        $assert(str_contains($markup, "prefers-color-scheme: dark"), "{$file} follows the operating system by default");
+        $assert(str_contains($markup, "dataset.theme = theme"), "{$file} applies the theme before first paint");
+        $assert(str_contains($markup, "'#030712' : '#eaf7ff'"), "{$file} repaints the browser chrome with the theme");
     }
     foreach (['public/index.php', 'public/views/partials/studio-end.php', 'public/views/recruiter/layout-end.php', 'public/views/admin/layout-end.php'] as $file) {
         $assert(str_contains(file_get_contents($root . '/' . $file), 'theme-guard.js'), "{$file} must ship the theme guard");
     }
     $guard = file_get_contents($root . '/public/assets/js/theme-guard.js');
-    $assert(str_contains($guard, "'--lb-accent'"), 'the guard probes a token the theme publishes');
+    $assert(str_contains($guard, "'--au-accent'"), 'the guard probes a token the theme publishes');
     $assert(str_contains($guard, 'dock.style.display = '), 'a dock without its stylesheet is hidden');
     $assert(str_contains($guard, 'data-theme-guard'), 'the guard leaves evidence on the element it hid');
+
+    // The switch is wired for two real states, and both are described.
+    $js = file_get_contents($root . '/public/assets/js/theme.js');
+    $assert(str_contains($js, "const CHROME = { light: '#eaf7ff', dark: '#030712' }"), 'the switch keeps the browser chrome in step');
+    $assert(str_contains($js, 'media.matches'), 'the switch follows the system while no choice is stored');
+    $assert(!str_contains(file_get_contents($root . '/public/assets/css/aurora.css'), 'theme-toggle {\n  display: none'), 'the appearance switch is visible again');
 });
 
-$test('Text meets WCAG AA contrast on the ice palette', static function () use ($assert, $root): void {
+$test('The theme is self-sufficient, warm-free and request-free', static function () use ($assert, $root): void {
+    $theme = file_get_contents($root . '/public/assets/css/aurora.css');
+    $home = file_get_contents($root . '/public/assets/css/homepage.css');
+
+    // No warm palette survives in the ice theme, and nothing is fetched off-site.
+    foreach (['#f2c8a4', '#f7dcc6', '#fff7f0', '#c96f2d', '#0b0c0e', '#090a0c'] as $warm) {
+        $assert(stripos($theme, $warm) === false, "aurora.css still contains the old colour {$warm}");
+    }
+    foreach (['aurora' => $theme, 'homepage' => $home] as $name => $css) {
+        $assert(!preg_match('#https?://#i', $css), "{$name}.css makes no external request");
+        $assert(!preg_match('/\b(?:width|min-width|max-width)\s*:\s*100vw/i', $css), "{$name}.css avoids a 100vw box");
+        $assert(!preg_match('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/u', $css), "{$name}.css uses no emoji");
+    }
+
+    // Every custom property the landing page reads is actually declared.
+    preg_match_all('/(--au-[a-z0-9-]+)\s*:/', $theme, $declared);
+    preg_match_all('/var\((--au-[a-z0-9-]+)/', $home . $theme, $used);
+    $missing = array_diff(array_unique($used[1]), array_unique($declared[1]));
+    $assert($missing === [], 'undeclared theme tokens: ' . implode(', ', $missing));
+
+    // !important is confined to the reduced-motion blocks. Every declaration in
+    // the file that carries one has to be one of the four override forms, and the
+    // only other mention may be prose in a comment.
+    $lines = preg_split('/\R/', $theme);
+    $allowed = [
+        'animation-duration: .001ms !important;',
+        'animation-iteration-count: 1 !important;',
+        'transition-duration: .001ms !important;',
+        'scroll-behavior: auto !important;',
+        'animation: none !important;',
+    ];
+    foreach ($lines as $number => $line) {
+        if (!str_contains($line, '!important')) {
+            continue;
+        }
+        $trimmed = trim($line);
+        $isComment = str_starts_with($trimmed, '*') || str_starts_with($trimmed, '/*');
+        $assert($isComment || in_array($trimmed, $allowed, true), 'line ' . ($number + 1) . ' uses !important outside the reduced-motion overrides: ' . $trimmed);
+    }
+
+    // The fonts are local, and the licence travels with them.
+    foreach (['inter-latin-400-normal.woff2', 'inter-latin-500-normal.woff2', 'inter-latin-600-normal.woff2', 'inter-latin-700-normal.woff2', 'inter-latin-800-normal.woff2', 'Inter-OFL.txt'] as $file) {
+        $assert(is_file($root . '/public/assets/fonts/' . $file), "public/assets/fonts/{$file} is self-hosted");
+    }
+    $assert(substr_count($theme, '@font-face') === 5, 'aurora.css declares the five Inter weights it uses');
+    $assert(str_contains($theme, 'font-display: swap'), 'Inter swaps in rather than blocking paint');
+
+    // Component rules win by prefix, not by force.
+    $scoped = preg_match_all('/^html\[data-theme\]/m', $theme);
+    $assert($scoped >= 100, "components are scoped to the theme attribute ({$scoped} scoped rules)");
+    $assert(str_contains($theme, 'prefers-reduced-motion: reduce'), 'motion can be switched off');
+});
+
+$test('Text meets WCAG AA contrast in Arctic Aurora and Midnight Ocean', static function () use ($assert, $root): void {
     $luminance = static function (string $hex): float {
         $hex = ltrim($hex, '#');
         if (strlen($hex) === 3) {
             $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
         }
         $channels = [];
-        foreach ([0, 2, 4] as $offset) {
+        for ($offset = 0; $offset < 6; $offset += 2) {
             $value = hexdec(substr($hex, $offset, 2)) / 255;
             $channels[] = $value <= 0.03928 ? $value / 12.92 : (($value + 0.055) / 1.055) ** 2.4;
         }
@@ -913,78 +1000,116 @@ $test('Text meets WCAG AA contrast on the ice palette', static function () use (
         return (max($la, $lb) + 0.05) / (min($la, $lb) + 0.05);
     };
 
-    // Backgrounds the text actually sits on.
-    $surface = '#ffffff';
-    $canvas = '#edf8fc';
-    $heroDeep = '#c8e5f1'; // darkest stop of the landing hero gradient
     $pairs = [
-        ['body text on a card', '#19394c', $surface, 4.5],
-        ['body text on the canvas', '#19394c', $canvas, 4.5],
-        ['paragraph copy on a card', '#405f70', $surface, 4.5],
-        ['paragraph copy on the hero gradient', '#405f70', $heroDeep, 4.5],
-        ['muted label on a card', '#446575', $surface, 4.5],
-        ['muted label on the hero gradient', '#446575', $heroDeep, 4.5],
-        ['eyebrow on the canvas', '#2f6680', $canvas, 4.5],
-        ['eyebrow on the deep canvas', '#2f6680', '#e4f2f8', 4.5],
-        ['eyebrow on the hero gradient', '#2f6680', $heroDeep, 4.5],
-        ['eyebrow on a card', '#2f6680', $surface, 4.5],
-        ['body text on the deep canvas', '#405f70', '#e4f2f8', 4.5],
-        ['muted label on the deep canvas', '#446575', '#e4f2f8', 4.5],
-        ['headings on a card', '#1a3b4d', $surface, 4.5],
-        ['primary button label', '#ffffff', '#2f7291', 4.5],
-        ['link on a card', '#23647f', $surface, 4.5],
-        ['link on the hero gradient', '#23647f', $heroDeep, 4.5],
-        ['active dock label', '#075985', $surface, 4.5],
-        ['danger message', '#991b1b', '#fef2f2', 4.5],
-        ['success message', '#11624b', '#e8f7f0', 4.5],
-        ['info message', '#075985', '#e0f2fe', 4.5],
+        // Arctic Aurora — light
+        ['[light] body text on a card', '#0a2540', '#ffffff', 4.5],
+        ['[light] body text on the canvas', '#0a2540', '#eaf7ff', 4.5],
+        ['[light] body text on the deep canvas', '#0a2540', '#ddf2ff', 4.5],
+        ['[light] paragraph copy on a card', '#1b3b57', '#ffffff', 4.5],
+        ['[light] paragraph copy on the deep canvas', '#1b3b57', '#ddf2ff', 4.5],
+        ['[light] muted label on a card', '#476583', '#ffffff', 4.5],
+        ['[light] muted label on the deep canvas', '#476583', '#ddf2ff', 4.5],
+        ['[light] eyebrow on the canvas', '#0b6e93', '#eaf7ff', 4.5],
+        ['[light] eyebrow on a card', '#0b6e93', '#ffffff', 4.5],
+        ['[light] link on a card', '#0b6fa4', '#ffffff', 4.5],
+        ['[light] link on the deep canvas', '#0b6fa4', '#ddf2ff', 4.5],
+        ['[light] accent label on a card', '#075985', '#ffffff', 4.5],
+        ['[light] primary button label', '#ffffff', '#0670a8', 4.5],
+        ['[light] primary button label on hover', '#ffffff', '#055c8c', 4.5],
+        ['[light] success message', '#0f766e', '#e6fbf5', 4.5],
+        ['[light] warning message', '#9a5b06', '#fdf3e0', 4.5],
+        ['[light] error message', '#b42318', '#fee4e2', 4.5],
+
+        // Midnight Ocean — dark
+        ['[dark] body text on the base', '#eaf6ff', '#030712', 4.5],
+        ['[dark] body text on the navy layer', '#eaf6ff', '#071426', 4.5],
+        ['[dark] body text on an elevated surface', '#eaf6ff', '#0b1930', 4.5],
+        ['[dark] paragraph copy on the base', '#c3d6e9', '#030712', 4.5],
+        ['[dark] paragraph copy on an elevated surface', '#c3d6e9', '#0b1930', 4.5],
+        ['[dark] muted label on the base', '#9fb4cc', '#030712', 4.5],
+        ['[dark] muted label on an elevated surface', '#9fb4cc', '#0b1930', 4.5],
+        ['[dark] eyebrow on the base', '#7dd3fc', '#030712', 4.5],
+        ['[dark] eyebrow on an elevated surface', '#7dd3fc', '#0b1930', 4.5],
+        ['[dark] link on the navy layer', '#7dd3fc', '#071426', 4.5],
+        ['[dark] primary button label', '#04121f', '#38bdf8', 4.5],
+        ['[dark] primary button label on hover', '#04121f', '#5ecbfb', 4.5],
+        ['[dark] success message', '#5eead4', '#071426', 4.5],
+        ['[dark] warning message', '#fbbf24', '#071426', 4.5],
+        ['[dark] error message', '#fda4a2', '#071426', 4.5],
+
+        // Gradient headlines: both stops must clear 4.5:1 as text.
+        ['[light] headline gradient start', '#075985', '#eaf7ff', 4.5],
+        ['[light] headline gradient end', '#0670a8', '#eaf7ff', 4.5],
+        ['[light] brand mark label', '#ffffff', '#0670a8', 4.5],
+        ['[dark] headline gradient start', '#bae6fd', '#030712', 4.5],
+        ['[dark] headline gradient end', '#38bdf8', '#030712', 4.5],
+        ['[dark] brand mark label', '#04121f', '#38bdf8', 4.5],
+
         // Non-text graphics need 3:1, not 4.5:1.
-        ['card icon on its tile', '#2f7291', '#e4f4fa', 3.0],
-        ['status dot on a card', '#1f8360', $surface, 3.0],
-        ['status dot on the hero gradient', '#1f8360', $heroDeep, 3.0],
-        ['focus ring on the canvas', '#0284c7', $canvas, 3.0],
+        ['[light] accent dot on the canvas', '#0670a8', '#eaf7ff', 3.0],
+        ['[light] focus ring on the canvas', '#0284c7', '#eaf7ff', 3.0],
+        ['[light] success tick on its soft fill', '#0f766e', '#e6fbf5', 3.0],
+        ['[dark] accent dot on the base', '#38bdf8', '#030712', 3.0],
+        ['[dark] focus ring on the base', '#38bdf8', '#030712', 3.0],
+        ['[dark] success tick on its soft fill', '#5eead4', '#071426', 3.0],
     ];
     foreach ($pairs as [$label, $ink, $paper, $minimum]) {
         $value = round($ratio($ink, $paper), 2);
         $assert($value >= $minimum, "{$label} is {$value}:1, below {$minimum}:1");
     }
+
+    // The colours asserted above are the ones the stylesheet ships.
+    $theme = file_get_contents($root . '/public/assets/css/aurora.css');
+    foreach (['#eaf7ff', '#ddf2ff', '#f7fbff', '#0a2540', '#0ea5e9', '#38bdf8', '#030712', '#071426', '#0b1930', '#eaf6ff', '#3b82f6', '#0670a8'] as $token) {
+        $assert(stripos($theme, $token) !== false, "aurora.css ships {$token}");
+    }
 });
 
-$test('The theme is self-sufficient, warm-free and request-free', static function () use ($assert, $root): void {
-    $theme = file_get_contents($root . '/public/assets/css/logicbloom.css');
+$test('Aurora stays light on blur, honest about motion, and owns the landing page', static function () use ($assert, $root): void {
+    $theme = file_get_contents($root . '/public/assets/css/aurora.css');
     $home = file_get_contents($root . '/public/assets/css/homepage.css');
 
-    // No warm palette survives in the ice theme, and nothing is fetched off-site.
-    foreach (['#f2c8a4', '#f7dcc6', '#fff7f0', '#c96f2d', '#0b0c0e', '#090a0c'] as $warm) {
-        $assert(stripos($theme, $warm) === false, "logicbloom.css still contains the old colour {$warm}");
-    }
-    foreach (['logicbloom' => $theme, 'homepage' => $home] as $name => $css) {
-        $assert(!preg_match('#https?://#i', $css), "{$name}.css makes no external request");
-        $assert(!str_contains($css, '100vw'), "{$name}.css avoids 100vw");
-        $assert(!preg_match('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/u', $css), "{$name}.css uses no emoji");
-    }
+    // Both themes tell the browser which colour scheme to paint form controls and
+    // scrollbars with — that is half of what makes a dark theme feel dark.
+    $assert(substr_count($theme, 'color-scheme: light') >= 1, 'the light theme declares its colour scheme');
+    $assert(str_contains($theme, 'color-scheme: dark'), 'the dark theme declares its colour scheme');
 
-    // Every custom property the landing page reads is actually declared.
-    preg_match_all('/(--lb-[a-z0-9-]+)\s*:/', $theme, $declared);
-    preg_match_all('/var\((--lb-[a-z0-9-]+)/', $home . $theme, $used);
-    $missing = array_diff(array_unique($used[1]), array_unique($declared[1]));
-    $assert($missing === [], 'undeclared theme tokens: ' . implode(', ', $missing));
+    // Blur is reserved for surfaces that float over content. A dozen blurred
+    // cards in one scroller is the easiest way to lose a frame, so the card set
+    // must not carry backdrop-filter at all.
+    $blurred = preg_match_all('/^\s+backdrop-filter:/m', $theme);
+    $assert($blurred <= 8, "backdrop-filter is not sprayed across the product ({$blurred} surfaces)");
+    preg_match('/html\[data-theme\] \.feature-card,\s*\n\s*html\[data-theme\] \.step-card.*?\n\}/s', $theme, $cards);
+    $assert($cards !== [] && !str_contains($cards[0], 'backdrop-filter'), 'the card material uses fill and hairline, not blur');
+    $assert(str_contains($theme, 'backdrop-filter: var(--au-blur)'), 'the floating chrome keeps a real glass blur');
 
-    // !important is confined to the reduced-motion block.
-    $outside = preg_replace('/@media \(prefers-reduced-motion: reduce\).*?\n}/s', '', $theme);
-    $assert(substr_count($outside, '!important') === 1, 'the only !important outside reduced-motion is the comment that explains it');
-
-    // The fonts are local, and the licence travels with them.
-    foreach (['inter-latin-400-normal.woff2', 'inter-latin-500-normal.woff2', 'inter-latin-600-normal.woff2', 'inter-latin-700-normal.woff2', 'inter-latin-800-normal.woff2', 'Inter-OFL.txt'] as $file) {
-        $assert(is_file($root . '/public/assets/fonts/' . $file), "public/assets/fonts/{$file} is self-hosted");
-    }
-    $assert(substr_count($theme, '@font-face') === 5, 'logicbloom.css declares the five Inter weights it uses');
-    $assert(str_contains($theme, 'font-display: swap'), 'Inter swaps in rather than blocking paint');
-
-    // Component rules win by prefix, not by force.
-    $scoped = preg_match_all('/^html\[data-theme\]/m', $theme);
-    $assert($scoped >= 100, "components are scoped to the theme attribute ({$scoped} scoped rules)");
+    // Motion is browser-driven: two named elements survive a real page load, the
+    // reduced-motion query is honoured, and nothing polls a timer.
+    $assert(str_contains($theme, 'view-transition-name: campus-dock'), 'the dock is held still across navigations');
+    $assert(str_contains($theme, 'view-transition-name: campus-chrome'), 'the top chrome is held still across navigations');
     $assert(str_contains($theme, 'prefers-reduced-motion: reduce'), 'motion can be switched off');
+    $assert(str_contains($theme, 'prefers-contrast: more'), 'the palette answers a request for more contrast');
+    foreach (['setInterval', 'setTimeout("', 'requestAnimationFrame('] as $timer) {
+        $assert(!str_contains($theme, $timer), "aurora.css does not animate with {$timer}");
+    }
+
+    // No element may scroll sideways, and nothing may be fixed at a desktop width.
+    $assert(!preg_match('/(?<![\w-])(?:width|min-width)\s*:\s*(?:1[0-9]{3}px|[2-9][0-9]{3}px)/', $theme), 'nothing is pinned to a desktop pixel width');
+    $assert(str_contains($theme, 'min-width: 320px'), 'the layout has an honest floor');
+
+    // The landing page ships the new identity, and no stale class survives.
+    $landing = file_get_contents($root . '/public/index.php');
+    $assert(!preg_match('/\bclass="[^"]*\blb-/', $landing), 'no retired class survives in the landing markup');
+    $assert(str_contains($landing, 'au-hero'), 'the landing page uses the Aurora hero');
+    foreach (['au-hero', 'au-grid', 'au-card', 'au-band', 'au-btn--primary', 'au-eyebrow'] as $class) {
+        $assert(str_contains($home, '.' . $class), "homepage.css styles .{$class}");
+    }
+    $assert(str_contains($home, '@/prefers-reduced-motion') === false, 'homepage.css uses a plain media query');
+
+    // Type and radius are shared, not re-invented per page.
+    foreach (['--au-r-xl: 26px', '--au-r-lg: 20px', '--au-r-md: 14px', '--au-ease: cubic-bezier(.22, 1, .36, 1)'] as $token) {
+        $assert(str_contains($theme, $token), "the design token {$token} is declared once");
+    }
 });
 
 $test('One asset version busts every cached stylesheet and script', static function () use ($assert, $root): void {

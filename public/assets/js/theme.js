@@ -1,7 +1,11 @@
 /*
- * Appearance switching for every SVIET portal.
- * The actual theme is applied before paint by the inline bootstrap in each
- * layout; this file wires the visible switch and keeps it in sync.
+ * Appearance switching for every SVIET portal — Aurora Liquid Glass.
+ *
+ * The theme is applied before paint by the inline bootstrap in each layout, so
+ * there is never a flash of the wrong one. This file keeps the switch, the
+ * aria state and the browser's theme colour in sync afterwards, follows the
+ * operating system while the visitor has not chosen explicitly, and repaints
+ * without a reload when they do choose.
  */
 (() => {
   'use strict';
@@ -9,6 +13,9 @@
   const STORAGE_KEY = 'sviet-theme';
   const root = document.documentElement;
   const media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  /* The two theme colours, kept identical to the `theme-color` meta in the four
+     layouts. Arctic Aurora / Midnight Ocean. */
+  const CHROME = { light: '#eaf7ff', dark: '#030712' };
   let explicit = false;
 
   const stored = () => {
@@ -23,7 +30,8 @@
   const resolve = () => {
     const saved = stored();
     explicit = saved !== '';
-    return saved || 'light';
+    if (saved) return saved;
+    return media && media.matches ? 'dark' : 'light';
   };
 
   const paint = (theme) => {
@@ -38,7 +46,7 @@
       if (label) label.textContent = theme === 'dark' ? 'Dark' : 'Light';
     });
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0b0c0e' : '#fff7f0');
+    if (meta) meta.setAttribute('content', CHROME[theme] || CHROME.light);
   };
 
   paint(resolve());

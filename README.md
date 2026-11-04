@@ -137,21 +137,56 @@ For deployment, set the Apache document root to `Campus/public/`. If using the l
 
 ## Appearance and navigation
 
-The portal runs on **LogicBloom "Light Ice Blue"**, declared once in
-`public/assets/css/logicbloom.css` and loaded last on every page.
+The portal runs on **Campus — Aurora Liquid Glass**, declared once in
+`public/assets/css/aurora.css` and loaded last on every page. Two complete
+themes, one design system, no framework and no second styling system.
 
-- **Canvas** — three stacked layers on a pale cyan field (`#EDF8FC` → `#E4F2F8` → `#F2F9FC`): a white radial at the top-left, a soft cyan tint at the right, and a 165° linear wash. Nothing is a flat fill.
-- **Glass** — frosted surfaces floating on the canvas (`rgba(255,255,255,.77)`, `blur(18px) saturate(140%)`) with 18 px cards, 24 px hero blocks and wide, cyan-tinted shadows (`rgba(83,132,154,.055)`). Borders are white hairlines, not grey rules.
-- **Ink** — `#19394C` body, `#405F70` secondary, `#446575` labels, `#1A3B4D` headings. No pure black anywhere; heading tracking is negative (`-.06em`), body copy is 13 px / 1.65.
-- **Accent** — one slate teal (`#2F7291`, deep `#075985`) for actions, links and active states, plus `#0284C7` for focus rings only.
-- **Type** — Inter, self-hosted from `public/assets/fonts/` (SIL OFL, weights 400–800, `font-display: swap`). No font CDN, so the portal renders the same offline in XAMPP.
-- **Light only, by design.** The tokens are declared for both theme attributes, so a stored preference cannot paint a half-dark page, and the appearance switch is hidden. Dark rules in the older stylesheets are untouched and unused.
+| | Arctic Aurora (light) | Midnight Ocean (dark) |
+|---|---|---|
+| Canvas | `#EAF7FF` → `#DDF2FF`, near-white top layer `#F7FBFF` | `#030712` → `#071426`, elevated `#0B1930` |
+| Ink | deep navy `#0A2540` | ice white `#EAF6FF` |
+| Accent | electric cyan `#0EA5E9`, sky `#38BDF8` | cyan `#38BDF8`, electric blue `#3B82F6` |
+| Filled action | deep cyan `#0670A8` + white label (5.4:1) | bright cyan `#38BDF8` + near-black label (8.8:1) |
+| Glass | translucent white, hairline, blue-tinted shadow | smoky navy, cyan rim light, deep shadow |
 
-The theme re-points the project's existing tokens (`--sv-*` from `theme.css`, the legacy `--bg`/`--text`/`--mint` set from `app.css`, and the `--rec-*`/`--adm-*` portal sets) rather than introducing a second styling system, so every card, table, form, badge, button and dock follows it. Component rules carry an `html[data-theme]` prefix so they tie — and therefore win — against the older light-theme overrides, without a single `!important`.
+- **Light and dark both exist.** The appearance is decided before first paint from
+  the stored choice, then the operating system's `prefers-color-scheme`, then
+  Arctic Aurora. The switch is in the top chrome on every page, and
+  `meta[name="theme-color"]` follows (`#eaf7ff` / `#030712`).
+- **Atmosphere, not decoration.** Each theme paints three aurora washes — cyan,
+  sky, a restrained violet — over its canvas, fixed so scrolling never repaints
+  them. Nothing animates in the background.
+- **Glass where it earns its cost.** Blur is limited to surfaces that actually
+  float over content: the top chrome, the dock, sheets, the auth card, the
+  landing hero card. Cards use a translucent fill, a white hairline and a wide
+  blue-tinted shadow instead, because a dozen stacked `backdrop-filter`s is the
+  fastest way to lose a frame while scrolling.
+- **Type** — Inter, self-hosted from `public/assets/fonts/` (SIL OFL, 400–800,
+  `font-display: swap`). No CDN, so it renders identically offline in XAMPP.
+  Headings carry negative tracking down to `-.06em`; the only uppercase text in
+  the product is the 10 px eyebrow.
+- **Motion** — one easing family (`cubic-bezier(.22,1,.36,1)`), 160/260/420 ms,
+  transform and opacity only, driven by the browser's own frame clock.
 
-`public/assets/js/theme-guard.js` is the safety net: if the theme stylesheet or the dock's own stylesheet never arrives, it hides the dock (the bubble menu is plain markup and keeps working), unsizes nothing, and leaves `data-theme-guard` on the element it hid. Icons carry intrinsic `width`/`height`/`viewBox` attributes so a blocked stylesheet can never turn a path into a 300×150 black block.
+The theme re-points the tokens the project already used (`--sv-*` from
+`theme.css`, the legacy `--bg`/`--text`/`--mint` set from `app.css`, the
+`--rec-*`/`--adm-*` portal sets and the dock's `--lg-*` glass) rather than
+introducing a second system, so every card, table, form, badge, button and dock
+follows it. Component rules carry an `html[data-theme]` prefix so they tie with
+the older `html[data-theme="light"]` / `[data-theme="dark"]` blocks and win on
+source order — no `!important` anywhere outside the reduced-motion block.
+`tests/js/aurora-cascade.test.js` resolves the cascade statically and fails if a
+legacy sheet ever wins a material declaration again.
 
-The landing page (`public/assets/css/homepage.css`, scoped to `body.homepage`) is built from the same tokens: a two-column hero with a workflow card, three role cards, and a "how an opportunity reaches a student" band.
+`public/assets/js/theme-guard.js` is the safety net: if the theme stylesheet or
+the dock's own stylesheet never arrives, it hides the dock (the bubble menu is
+plain markup and keeps working) and leaves `data-theme-guard` on the element it
+hid. Icons carry intrinsic `width`/`height`/`viewBox` so a blocked stylesheet can
+never turn a path into a 300×150 black block.
+
+The landing page (`public/assets/css/homepage.css`, scoped to `body.homepage`)
+is built from the same tokens: an aurora-bloomed hero with a workflow card, three
+role cards, and a "how an opportunity reaches a student" band.
 
 The bottom navigation is one shared material (`public/assets/css/liquid-glass.css`) driven by one shared engine (`public/assets/js/liquid-glass.js`):
 

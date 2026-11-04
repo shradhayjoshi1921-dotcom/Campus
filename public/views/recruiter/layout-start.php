@@ -3,17 +3,30 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#edf8fc">
+    <meta name="theme-color" content="#eaf7ff">
     <script>
+        /* Aurora bootstrap: decide the appearance before the first paint, so
+           neither theme flashes. An explicit choice wins; otherwise the
+           operating system's preference decides, and only then does it fall
+           back to Arctic Aurora. The meta theme colour follows, so the browser
+           chrome matches the page on mobile. */
         (function () {
+            var dark = false;
             try {
                 var saved = localStorage.getItem('sviet-theme');
-                var theme = saved === 'dark' || saved === 'light' ? saved : 'light';
-                document.documentElement.dataset.theme = theme;
-                document.documentElement.style.colorScheme = theme;
+                if (saved === 'dark' || saved === 'light') {
+                    dark = saved === 'dark';
+                } else if (window.matchMedia) {
+                    dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                }
             } catch (error) {
-                document.documentElement.dataset.theme = 'light';
+                dark = false;
             }
+            var theme = dark ? 'dark' : 'light';
+            document.documentElement.dataset.theme = theme;
+            document.documentElement.style.colorScheme = theme;
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', dark ? '#030712' : '#eaf7ff');
         })();
     </script>
 
@@ -23,7 +36,7 @@
     <link rel="stylesheet" href="assets/css/app.css?v=<?= recruiter_h($appCssVersion) ?>">
     <link rel="stylesheet" href="assets/css/recruiter.css?v=<?= recruiter_h($recruiterCssVersion) ?>">
     <link rel="stylesheet" href="assets/css/liquid-glass.css?v=<?= recruiter_h($recruiterCssVersion) ?>">
-    <link rel="stylesheet" href="assets/css/logicbloom.css?v=<?= recruiter_h($appCssVersion) ?>">
+    <link rel="stylesheet" href="assets/css/aurora.css?v=<?= recruiter_h($appCssVersion) ?>">
 </head>
 <body class="recruiter-portal">
 <?php require dirname(__DIR__) . '/partials/glass-defs.php'; ?>
