@@ -1,0 +1,2592 @@
+/*
+ * ============================================================================
+ *  CAMPUS — AURORA LIQUID GLASS
+ * ============================================================================
+ *  One appearance layer for every portal: public site, student workspace,
+ *  career studio, recruiter workspace and TPO/admin workspace.
+ *
+ *  Identity
+ *    Light — "Arctic Aurora": icy white and pale blue canvas, translucent white
+ *            glass, electric-cyan accent, deep-navy ink.
+ *    Dark  — "Midnight Ocean": genuine near-black and midnight navy, smoky navy
+ *            glass, electric blue and cyan, soft blue-grey ink.
+ *
+ *  How this file works
+ *    1. It declares its own token set (--au-*), once per theme.
+ *    2. It re-points the tokens the project already used (--sv-*, the legacy
+ *       legacy --bg / --text / --mint set, and the recruiter and admin portal
+ *       sets; the dock's --lg-* glass set) at those same values. That is why every existing
+ *       component follows the theme without being rewritten.
+ *    3. It restyles only the components whose material the palette changes, and
+ *       every one of those rules is scoped with `html[data-theme]` so it ties
+ *       with the older `html[data-theme="light"]` / `[data-theme="dark"]` rules
+ *       in theme.css and app.css and wins on source order — no !important.
+ *
+ *  Load order — this file must stay last:
+ *    theme.css → app.css → homepage.css (landing) → water-dock.css (student)
+ *    → liquid-glass.css → aurora.css
+ *
+ *  Rules this file keeps
+ *    - Not one external request: Inter is self-hosted, icons are inline SVG.
+ *    - Motion is transform/opacity only, and honours prefers-reduced-motion.
+ *    - Blur is reserved for surfaces that actually float over content (top
+ *      chrome, the dock, sheets, modals). Cards use translucent fill, a hairline
+ *      and depth instead, because stacking backdrop-filter on a dozen cards is
+ *      the single easiest way to make a scrolling page stutter.
+ *    - Nothing wider than its container: no 100vw, no fixed dock width.
+ * ============================================================================
+ */
+
+/* --------------------------------------------------------------- Inter ---
+ * Self-hosted, SIL Open Font License 1.1 (public/assets/fonts/Inter-OFL.txt).
+ * Latin subset, 400–800, swap so text paints before the font arrives.
+ */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/inter-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/inter-latin-500-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/inter-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/inter-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("../fonts/inter-latin-800-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ------------------------------------------------------------- tokens ---
+ * Two complete palettes. `:root` carries the light values so the very first
+ * paint (before the inline bootstrap has decided anything) is Arctic Aurora;
+ * `html[data-theme="light"]` repeats them at equal specificity to the older
+ * light blocks in theme.css and app.css, which this file loads after.
+ */
+:root,
+html[data-theme="light"] {
+  color-scheme: light;
+
+  /* Canvas — icy white at the top, pale blue as it falls away */
+  --au-bg-1: #eaf7ff;
+  --au-bg-2: #ddf2ff;
+  --au-bg-3: #f7fbff;
+  --au-bg-deep: #cfeafc;
+
+  /* Ink — deep navy, never black */
+  --au-ink: #0a2540;
+  --au-ink-heading: #0a2540;
+  --au-ink-body: #1b3b57;
+  --au-ink-muted: #476583;
+  --au-ink-dim: #5f7b96;
+  --au-kicker: #0b6e93;
+
+  /* Accent — electric cyan carries the brand, a deeper cyan carries white text */
+  --au-accent: #0ea5e9;
+  --au-accent-2: #38bdf8;
+  --au-accent-fill: #0670a8;
+  --au-accent-fill-hover: #055c8c;
+  --au-accent-ink: #ffffff;
+  --au-accent-deep: #075985;
+  --au-accent-soft: #e0f2fe;
+  --au-accent-line: #bfe6fa;
+  --au-link: #0b6fa4;
+  --au-link-hover: #075985;
+  --au-focus: #0284c7;
+
+  /* Glass */
+  --au-glass: rgba(255, 255, 255, .62);
+  --au-glass-strong: rgba(255, 255, 255, .84);
+  --au-glass-hover: rgba(255, 255, 255, .78);
+  --au-glass-solid: #ffffff;
+  --au-glass-border: rgba(255, 255, 255, .82);
+  --au-glass-sheen: rgba(255, 255, 255, .96);
+  --au-hair: rgba(10, 37, 64, .10);
+  --au-hair-strong: rgba(10, 37, 64, .18);
+  --au-sunken: #e5f2fc;
+  --au-sunken-2: #eef8ff;
+  --au-row-hover: #f3faff;
+  --au-scrim: rgba(10, 37, 64, .20);
+  --au-blur: blur(22px) saturate(180%);
+
+  /* Depth — blue-tinted ambient shadows, never neutral grey */
+  --au-shadow-sm: 0 2px 6px rgba(10, 37, 64, .06), inset 0 1px 0 var(--au-glass-sheen);
+  --au-shadow-card: 0 16px 36px -20px rgba(10, 37, 64, .30), 0 2px 6px rgba(10, 37, 64, .04), inset 0 1px 0 var(--au-glass-sheen);
+  --au-shadow-lift: 0 26px 50px -22px rgba(10, 37, 64, .36), 0 4px 10px rgba(10, 37, 64, .06), inset 0 1px 0 #ffffff;
+  --au-shadow-float: 0 30px 64px -26px rgba(10, 37, 64, .44), 0 4px 14px rgba(10, 37, 64, .10), inset 0 1px 0 rgba(255, 255, 255, .96);
+  --au-shadow-button: 0 10px 24px -12px rgba(6, 112, 168, .62), inset 0 1px 0 rgba(255, 255, 255, .28);
+  --au-glow: 0 0 0 1px rgba(14, 165, 233, .22), 0 14px 34px -14px rgba(14, 165, 233, .46);
+
+  /* Aurora atmosphere */
+  --au-aurora-cyan: rgba(56, 189, 248, .34);
+  --au-aurora-sky: rgba(125, 211, 252, .30);
+  --au-aurora-violet: rgba(167, 139, 250, .20);
+  --au-aurora-mint: rgba(94, 234, 212, .16);
+  --au-canvas-wash: linear-gradient(180deg, #f7fbff 0%, #eaf7ff 44%, #ddf2ff 100%);
+
+  /* Geometry */
+  --au-r-xl: 26px;
+  --au-r-lg: 20px;
+  --au-r-md: 14px;
+  --au-r-sm: 10px;
+  --au-r-pill: 999px;
+
+  /* Motion — one easing family for the whole product */
+  --au-ease: cubic-bezier(.22, 1, .36, 1);
+  --au-ease-out: cubic-bezier(.16, .84, .3, 1);
+  --au-ease-spring: cubic-bezier(.34, 1.32, .64, 1);
+  --au-t-fast: .16s;
+  --au-t: .26s;
+  --au-t-slow: .42s;
+
+  /* Layout */
+  --au-max: 1380px;
+  --au-gutter: 80px;
+
+  /* Charts and meters */
+  --au-chart-track: rgba(10, 37, 64, .09);
+  --au-chart-1: linear-gradient(90deg, #38bdf8, #0ea5e9);
+  --au-chart-2: linear-gradient(90deg, #5eead4, #2dd4bf);
+
+  --au-skeleton: linear-gradient(100deg, rgba(255, 255, 255, .35) 20%, rgba(255, 255, 255, .85) 40%, rgba(255, 255, 255, .35) 60%);
+}
+
+/* Midnight Ocean — a real dark theme: near-black base, navy elevation, cyan
+ * light. Contrast is held well above AA on every surface it paints. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --au-bg-1: #030712;
+  --au-bg-2: #071426;
+  --au-bg-3: #0b1930;
+  --au-bg-deep: #02060f;
+
+  --au-ink: #eaf6ff;
+  --au-ink-heading: #f2f9ff;
+  --au-ink-body: #c3d6e9;
+  --au-ink-muted: #9fb4cc;
+  --au-ink-dim: #8299b3;
+  --au-kicker: #7dd3fc;
+
+  --au-accent: #38bdf8;
+  --au-accent-2: #3b82f6;
+  /* On a dark canvas the electric fill can stay bright, so the label goes dark
+     instead of white: 8.8:1 rather than the 3.7:1 white-on-blue would give. */
+  --au-accent-fill: #38bdf8;
+  --au-accent-fill-hover: #5ecbfb;
+  --au-accent-ink: #04121f;
+  --au-accent-deep: #bae6fd;
+  --au-accent-soft: rgba(56, 189, 248, .12);
+  --au-accent-line: rgba(56, 189, 248, .34);
+  --au-link: #7dd3fc;
+  --au-link-hover: #bae6fd;
+  --au-focus: #38bdf8;
+
+  --au-glass: rgba(13, 28, 50, .58);
+  --au-glass-strong: rgba(16, 35, 61, .82);
+  --au-glass-hover: rgba(19, 40, 68, .70);
+  --au-glass-solid: #0b1930;
+  --au-glass-border: rgba(148, 197, 255, .16);
+  --au-glass-sheen: rgba(255, 255, 255, .07);
+  --au-hair: rgba(148, 197, 255, .14);
+  --au-hair-strong: rgba(148, 197, 255, .26);
+  --au-sunken: #081627;
+  --au-sunken-2: #0a1a2e;
+  --au-row-hover: #0e2138;
+  --au-scrim: rgba(2, 6, 15, .66);
+  --au-blur: blur(24px) saturate(160%);
+
+  --au-shadow-sm: 0 2px 8px rgba(0, 0, 0, .55), inset 0 1px 0 var(--au-glass-sheen);
+  --au-shadow-card: 0 22px 44px -24px rgba(0, 0, 0, .9), 0 2px 8px rgba(0, 0, 0, .5), inset 0 1px 0 var(--au-glass-sheen);
+  --au-shadow-lift: 0 32px 60px -28px rgba(0, 0, 0, 1), 0 6px 16px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .12);
+  --au-shadow-float: 0 34px 70px -28px rgba(0, 0, 0, 1), 0 6px 18px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .14);
+  --au-shadow-button: 0 12px 28px -14px rgba(56, 189, 248, .70), inset 0 1px 0 rgba(255, 255, 255, .34);
+  --au-glow: 0 0 0 1px rgba(56, 189, 248, .30), 0 16px 38px -16px rgba(56, 189, 248, .40);
+
+  --au-aurora-cyan: rgba(56, 189, 248, .20);
+  --au-aurora-sky: rgba(59, 130, 246, .22);
+  --au-aurora-violet: rgba(129, 140, 248, .16);
+  --au-aurora-mint: rgba(45, 212, 191, .12);
+  --au-canvas-wash: linear-gradient(180deg, #030712 0%, #050e1c 46%, #071426 100%);
+
+  --au-chart-track: rgba(255, 255, 255, .10);
+  --au-chart-1: linear-gradient(90deg, #3b82f6, #38bdf8);
+  --au-chart-2: linear-gradient(90deg, #2dd4bf, #5eead4);
+
+  --au-skeleton: linear-gradient(100deg, rgba(255, 255, 255, .04) 20%, rgba(255, 255, 255, .12) 40%, rgba(255, 255, 255, .04) 60%);
+}
+
+/* ------------------------------------------- the project's own token sets ---
+ * These aliases are identical in both themes — only the --au-* values they point
+ * at change — so one block re-skins theme.css, app.css, recruiter.css,
+ * admin.css and the dock's glass layer at once.
+ */
+html[data-theme] {
+  /* theme.css */
+  --sv-bg: var(--au-bg-1);
+  --sv-bg-deep: var(--au-bg-2);
+  --sv-bg-glow: var(--au-bg-3);
+  --sv-surface: var(--au-glass-solid);
+  --sv-surface-2: var(--au-sunken-2);
+  --sv-glass: var(--au-glass);
+  --sv-glass-strong: var(--au-glass-strong);
+  --sv-ink: var(--au-ink);
+  --sv-ink-soft: var(--au-ink-body);
+  --sv-muted: var(--au-ink-muted);
+  --sv-dim: var(--au-ink-dim);
+  --sv-line: var(--au-hair);
+  --sv-line-strong: var(--au-hair-strong);
+  --sv-orange: var(--au-accent);
+  --sv-orange-deep: var(--au-accent-deep);
+  --sv-orange-soft: var(--au-accent-soft);
+  --sv-apricot: var(--au-accent-2);
+  --sv-honey: var(--au-accent-line);
+  --sv-ok: var(--au-ok, #0f766e);
+  --sv-ok-soft: var(--au-ok-soft, #e6fbf5);
+  --sv-warn: var(--au-warn, #8a5210);
+  --sv-warn-soft: var(--au-warn-soft, #fdf0dc);
+  --sv-bad: var(--au-bad, #b42318);
+  --sv-bad-soft: var(--au-bad-soft, #fee4e2);
+  --sv-shadow: var(--au-shadow-lift);
+  --sv-shadow-soft: var(--au-shadow-card);
+  --sv-water: linear-gradient(180deg, var(--au-glass-strong), var(--au-glass));
+  --sv-water-strong: linear-gradient(160deg, var(--au-glass-solid), var(--au-glass));
+  --sv-water-ink: var(--au-accent-deep);
+  --sv-drop: linear-gradient(180deg, var(--au-glass-strong), var(--au-glass) 52%, var(--au-glass));
+  --sv-drop-rim: var(--au-glass-border);
+  --sv-drop-shadow: rgba(10, 37, 64, .22);
+  --sv-dock-shell: linear-gradient(180deg, var(--au-glass-strong), var(--au-glass));
+  --sv-dock-line: var(--au-hair-strong);
+  --sv-dock-badge: linear-gradient(150deg, var(--au-accent-2), var(--au-accent));
+  --sv-radius: var(--au-r-lg);
+  --sv-ease: var(--au-ease);
+  --sv-ease-out: var(--au-ease-out);
+  --sv-dur-fast: var(--au-t-fast);
+  --sv-dur: var(--au-t);
+  --sv-dur-slow: var(--au-t-slow);
+  --sv-font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* app.css legacy set */
+  --bg: var(--au-bg-1);
+  --bg-deep: var(--au-bg-2);
+  --surface: var(--au-glass-solid);
+  --surface-raised: var(--au-sunken-2);
+  --surface-glass: var(--au-glass);
+  --line: var(--au-hair);
+  --line-strong: var(--au-hair-strong);
+  --text: var(--au-ink);
+  --muted: var(--au-ink-muted);
+  --dim: var(--au-ink-dim);
+  --mint: var(--au-accent);
+  --mint-strong: var(--au-accent-fill);
+  --lavender: var(--au-accent-2);
+  --gold: var(--au-accent-deep);
+  --danger: var(--au-bad, #b42318);
+  --radius: var(--au-r-lg);
+  --shadow: var(--au-shadow-lift);
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Status colours, per theme */
+  --au-ok: #0f766e;
+  --au-ok-soft: #e6fbf5;
+  --au-ok-line: #b8ece2;
+  --au-warn: #9a5b06;
+  --au-warn-soft: #fdf3e0;
+  --au-warn-line: #f3dfbb;
+  --au-bad: #b42318;
+  --au-bad-soft: #fee4e2;
+  --au-bad-line: #f9d2ce;
+
+  /* The dock's glass, re-tinted for Aurora. Geometry stays in liquid-glass.css. */
+  --lg-fill-top: rgba(255, 255, 255, .58);
+  --lg-fill-bottom: rgba(238, 249, 255, .26);
+  --lg-fill-edge: rgba(255, 255, 255, .92);
+  --lg-rim: rgba(255, 255, 255, 1);
+  --lg-rim-mid: rgba(186, 230, 253, .28);
+  --lg-rim-soft: rgba(255, 255, 255, .72);
+  --lg-edge: rgba(10, 37, 64, .13);
+  --lg-cast: rgba(10, 37, 64, .30);
+  --lg-caustic: rgba(224, 242, 254, .88);
+  --lg-sheen: rgba(255, 255, 255, .98);
+  --lg-shell-top: rgba(255, 255, 255, .34);
+  --lg-shell-bottom: rgba(234, 247, 255, .18);
+  --lg-shell-line: rgba(255, 255, 255, .58);
+  --lg-shell-ring-top: rgba(255, 255, 255, 1);
+  --lg-shell-ring-mid: rgba(255, 255, 255, .24);
+  --lg-shell-ring-bottom: rgba(186, 230, 253, .70);
+  --lg-shell-inner: rgba(255, 255, 255, .94);
+  --lg-shell-outline: rgba(10, 37, 64, .12);
+  --lg-shell-bright: 1.06;
+  --lg-shell-shadow: rgba(10, 37, 64, .26);
+  --lg-track: rgba(10, 37, 64, .055);
+  --lg-ink: var(--au-ink);
+  --lg-ink-soft: var(--au-ink-body);
+  --lg-ink-mute: var(--au-ink-muted);
+}
+
+html[data-theme="dark"] {
+  --au-ok: #5eead4;
+  --au-ok-soft: rgba(45, 212, 191, .14);
+  --au-ok-line: rgba(45, 212, 191, .34);
+  --au-warn: #fbbf24;
+  --au-warn-soft: rgba(251, 191, 36, .14);
+  --au-warn-line: rgba(251, 191, 36, .32);
+  --au-bad: #fda4a2;
+  --au-bad-soft: rgba(248, 113, 113, .16);
+  --au-bad-line: rgba(248, 113, 113, .34);
+  --sv-drop-shadow: rgba(0, 0, 0, .72);
+
+  /* Smoky navy glass with cyan light along the rim — not a grey slab. */
+  --lg-fill-top: rgba(120, 170, 220, .22);
+  --lg-fill-bottom: rgba(20, 44, 74, .30);
+  --lg-fill-edge: rgba(186, 230, 253, .26);
+  --lg-rim: rgba(255, 255, 255, .70);
+  --lg-rim-mid: rgba(56, 189, 248, .14);
+  --lg-rim-soft: rgba(255, 255, 255, .26);
+  --lg-edge: rgba(148, 197, 255, .18);
+  --lg-cast: rgba(0, 0, 0, .78);
+  --lg-caustic: rgba(56, 189, 248, .22);
+  --lg-sheen: rgba(255, 255, 255, .40);
+  --lg-shell-top: rgba(56, 189, 248, .12);
+  --lg-shell-bottom: rgba(3, 7, 18, .58);
+  --lg-shell-line: rgba(148, 197, 255, .18);
+  --lg-shell-ring-top: rgba(186, 230, 253, .58);
+  --lg-shell-ring-mid: rgba(148, 197, 255, .10);
+  --lg-shell-ring-bottom: rgba(56, 189, 248, .28);
+  --lg-shell-inner: rgba(255, 255, 255, .16);
+  --lg-shell-outline: rgba(148, 197, 255, .14);
+  --lg-shell-bright: .94;
+  --lg-shell-shadow: rgba(0, 0, 0, .82);
+  --lg-track: rgba(255, 255, 255, .055);
+  --lg-ink: var(--au-ink);
+  --lg-ink-soft: var(--au-ink-body);
+  --lg-ink-mute: var(--au-ink-muted);
+}
+
+/* ------------------------------------------------------------- the canvas ---
+ * Light: three aurora washes — cyan at the top-left, violet at the top-right,
+ * pale sky rising from the bottom — over an icy vertical gradient. Dark: the
+ * same three washes at low opacity over genuine near-black, so the depth reads
+ * as night sky rather than grey.
+ */
+html {
+  background: var(--au-bg-1);
+  scroll-behavior: smooth;
+  scroll-padding-top: 96px;
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body,
+html[data-theme] body {
+  min-width: 320px;
+  color: var(--au-ink);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.65;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background-color: var(--au-bg-1);
+  background-image:
+    radial-gradient(1100px 620px at 6% -10%, var(--au-aurora-cyan), transparent 62%),
+    radial-gradient(820px 520px at 96% 2%, var(--au-aurora-violet), transparent 66%),
+    radial-gradient(900px 640px at 42% 112%, var(--au-aurora-mint), transparent 70%),
+    var(--au-canvas-wash);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  transition: background-color var(--au-t-slow) var(--au-ease), color var(--au-t-slow) var(--au-ease);
+}
+
+/* The three portals paint their own canvas; they inherit the same four layers
+   so a page never jumps colour when the dock swaps a section in. */
+html[data-theme] body.recruiter-portal,
+html[data-theme] body.admin-portal,
+html[data-theme] body.studio-portal,
+body.recruiter-portal,
+body.admin-portal,
+body.studio-portal {
+  background-color: var(--au-bg-1);
+  background-image:
+    radial-gradient(1100px 620px at 6% -10%, var(--au-aurora-cyan), transparent 62%),
+    radial-gradient(820px 520px at 96% 2%, var(--au-aurora-violet), transparent 66%),
+    radial-gradient(900px 640px at 42% 112%, var(--au-aurora-mint), transparent 70%),
+    var(--au-canvas-wash);
+  background-attachment: fixed;
+}
+
+html[data-theme] .studio-portal {
+  background-image:
+    radial-gradient(1000px 560px at 4% -6%, var(--au-aurora-cyan), transparent 62%),
+    radial-gradient(760px 460px at 98% 4%, var(--au-aurora-sky), transparent 66%),
+    var(--au-canvas-wash);
+}
+
+html[data-theme] body.recruiter-portal {
+  --rec-bg: var(--au-bg-1);
+  --rec-ink: var(--au-ink);
+  --rec-ink-soft: var(--au-ink-body);
+  --rec-muted: var(--au-ink-muted);
+  --rec-dim: var(--au-ink-dim);
+  --rec-line: var(--au-hair);
+  --rec-line-strong: var(--au-hair-strong);
+  --rec-glass: var(--au-glass);
+  --rec-glass-strong: var(--au-glass-strong);
+  --rec-mint: var(--au-accent);
+  --rec-mint-ink: var(--au-accent-ink);
+  --rec-violet: var(--au-accent-2);
+  --rec-amber: var(--au-warn);
+  --rec-red: var(--au-bad);
+}
+
+html[data-theme] body.admin-portal {
+  --adm-bg: var(--au-bg-1);
+  --adm-ink: var(--au-ink);
+  --adm-ink-soft: var(--au-ink-body);
+  --adm-muted: var(--au-ink-muted);
+  --adm-dim: var(--au-ink-dim);
+  --adm-line: var(--au-hair);
+  --adm-line-strong: var(--au-hair-strong);
+  --adm-mint: var(--au-accent);
+  --adm-amber: var(--au-warn);
+  --adm-red: var(--au-bad);
+}
+
+html[data-theme] ::selection {
+  color: var(--au-ink-heading);
+  background: rgba(14, 165, 233, .22);
+}
+
+html[data-theme="dark"] ::selection {
+  color: #ffffff;
+  background: rgba(56, 189, 248, .34);
+}
+
+html[data-theme] * {
+  scrollbar-color: var(--au-accent-line) transparent;
+  scrollbar-width: thin;
+}
+
+html[data-theme] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html[data-theme] ::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--au-accent-line);
+  background-clip: content-box;
+}
+
+html[data-theme] *:focus-visible {
+  outline: 3px solid var(--au-focus);
+  outline-offset: 3px;
+}
+
+/* ---------------------------------------------------------------- type --- */
+
+html[data-theme] h1,
+html[data-theme] h2,
+html[data-theme] h3,
+html[data-theme] h4 {
+  color: var(--au-ink-heading);
+  font-family: inherit;
+  text-wrap: balance;
+}
+
+html[data-theme] h1,
+html[data-theme] .dashboard h1,
+html[data-theme] .dash-top h1,
+html[data-theme] .auth-intro h1 {
+  font-size: clamp(28px, 3.2vw, 42px);
+  font-weight: 760;
+  letter-spacing: -.058em;
+  line-height: 1.06;
+}
+
+html[data-theme] h2,
+html[data-theme] .panel h2,
+html[data-theme] .career-panel h2,
+html[data-theme] .p3panel h2,
+html[data-theme] .admin-panel h2 {
+  font-size: 18px;
+  font-weight: 740;
+  letter-spacing: -.042em;
+}
+
+html[data-theme] h3,
+html[data-theme] .feature-card h3,
+html[data-theme] .step-card h3,
+html[data-theme] .metric-card h3 {
+  color: var(--au-ink-heading);
+  font-size: 14px;
+  font-weight: 720;
+  letter-spacing: -.022em;
+}
+
+html[data-theme] p,
+html[data-theme] .muted,
+html[data-theme] .career-muted,
+html[data-theme] .admin-muted,
+html[data-theme] .rec-muted,
+html[data-theme] .section-heading > p,
+html[data-theme] .feature-card p {
+  color: var(--au-ink-body);
+}
+
+html[data-theme] small,
+html[data-theme] .auth-hint,
+html[data-theme] .form-hint,
+html[data-theme] .rec-form-note,
+html[data-theme] .admin-form-note {
+  color: var(--au-ink-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+/* Numbers that sit in columns line up: scores, counts, dates, percentages. */
+html[data-theme] .stat-value,
+html[data-theme] .admin-stat strong,
+html[data-theme] .rec-stat-value,
+html[data-theme] .intel-score strong,
+html[data-theme] .metric-card strong,
+html[data-theme] table {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Eyebrows are the only uppercase text in the product. */
+html[data-theme] .eyebrow,
+html[data-theme] .panel .eyebrow,
+html[data-theme] .section-heading .eyebrow,
+html[data-theme] .hero-card-head span,
+html[data-theme] .admin-kicker {
+  color: var(--au-kicker);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+html[data-theme] .eyebrow-dot {
+  background: var(--au-accent-fill);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, .16);
+}
+
+html[data-theme] a {
+  color: var(--au-link);
+  text-underline-offset: 2px;
+  transition: color var(--au-t-fast) var(--au-ease);
+}
+
+html[data-theme] a:hover {
+  color: var(--au-link-hover);
+}
+
+html[data-theme] code,
+html[data-theme] kbd,
+html[data-theme] pre,
+html[data-theme] samp {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: .92em;
+}
+
+html[data-theme] kbd {
+  padding: 1px 5px;
+  color: var(--au-ink-body);
+  border: 1px solid var(--au-hair-strong);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--au-glass-strong);
+}
+
+/* ------------------------------------------------------------ top chrome ---
+ * The bubble cluster floats above the page rather than sitting in a bar, so it
+ * is one of the few places that keeps a real backdrop blur: it passes over
+ * scrolling content, and blurring it is what makes it read as glass.
+ */
+html[data-theme] .bubble-top {
+  border-bottom: 1px solid var(--au-hair);
+  background: var(--au-glass-strong);
+  backdrop-filter: var(--au-blur);
+  -webkit-backdrop-filter: var(--au-blur);
+  box-shadow: 0 1px 0 var(--au-glass-sheen) inset;
+}
+
+html[data-theme] .bubble {
+  color: var(--au-ink);
+  border: 1px solid var(--au-glass-border);
+  background: linear-gradient(160deg, var(--au-glass-strong), var(--au-glass));
+  box-shadow: var(--au-shadow-sm);
+  transition:
+    transform var(--au-t-fast) var(--au-ease),
+    border-color var(--au-t-fast) var(--au-ease),
+    box-shadow var(--au-t-fast) var(--au-ease),
+    background-color var(--au-t-fast) var(--au-ease);
+}
+
+html[data-theme] .bubble:hover {
+  border-color: var(--au-accent-line);
+  box-shadow: var(--au-shadow-card);
+  transform: translateY(-1px);
+}
+
+html[data-theme] .bubble:active {
+  transform: translateY(0) scale(.98);
+}
+
+html[data-theme] .bubble:focus-visible {
+  outline: 3px solid var(--au-focus);
+  outline-offset: 3px;
+}
+
+html[data-theme] .bubble-brand-mark {
+  color: var(--au-accent-ink);
+  border: 1px solid rgba(255, 255, 255, .45);
+  border-radius: var(--au-r-md);
+  background: linear-gradient(150deg, var(--au-accent-fill), var(--au-accent-deep));
+  box-shadow: 0 8px 18px -8px rgba(14, 165, 233, .72), inset 0 1px 0 rgba(255, 255, 255, .45);
+}
+
+html[data-theme="dark"] .bubble-brand-mark {
+  border-color: rgba(255, 255, 255, .26);
+  background: linear-gradient(150deg, var(--au-accent), var(--au-accent-2) 60%, var(--au-accent-deep));
+}
+
+html[data-theme] .bubble-brand-copy strong {
+  color: var(--au-ink-heading);
+  letter-spacing: .12em;
+}
+
+html[data-theme] .bubble-brand-copy small {
+  color: var(--au-ink-muted);
+}
+
+html[data-theme] .bubble--account {
+  color: var(--au-accent-ink);
+  font-weight: 760;
+  border-color: transparent;
+  background: linear-gradient(150deg, var(--au-accent), var(--au-accent-fill));
+  box-shadow: var(--au-shadow-button);
+}
+
+html[data-theme] .bubble--cta {
+  color: var(--au-accent-ink);
+  border-color: transparent;
+  background: var(--au-accent-fill);
+  box-shadow: var(--au-shadow-button);
+}
+
+html[data-theme] .bubble--cta:hover {
+  color: var(--au-accent-ink);
+  background: var(--au-accent-fill-hover);
+  box-shadow: var(--au-shadow-button), var(--au-glow);
+}
+
+/* Appearance switch — visible again, and it belongs to the glass family. */
+html[data-theme] .theme-toggle,
+html[data-theme] .bubble.theme-toggle {
+  display: inline-flex;
+}
+
+html[data-theme] .theme-toggle__track {
+  border: 1px solid var(--au-glass-border);
+  border-radius: var(--au-r-pill);
+  background: linear-gradient(160deg, var(--au-accent-soft), var(--au-glass));
+  box-shadow: inset 0 1px 0 var(--au-glass-sheen);
+}
+
+html[data-theme="dark"] .theme-toggle__track {
+  background: linear-gradient(160deg, rgba(56, 189, 248, .18), var(--au-glass));
+}
+
+html[data-theme] .theme-toggle__icon--sun {
+  color: var(--au-accent-fill);
+}
+
+html[data-theme] .theme-toggle__icon--moon {
+  color: var(--au-ink);
+}
+
+html[data-theme="dark"] .theme-toggle__icon--sun {
+  color: #fbbf24;
+}
+
+html[data-theme="dark"] .theme-toggle__icon--moon {
+  color: var(--au-accent);
+}
+
+/* The bubble sheet is a sheet of glass, so it keeps its blur. */
+html[data-theme] .bubble-sheet {
+  background: var(--au-scrim);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+}
+
+html[data-theme] .bubble-sheet__panel {
+  border: 1px solid var(--au-glass-border);
+  border-radius: var(--au-r-xl);
+  background: var(--au-glass-strong);
+  box-shadow: var(--au-shadow-float);
+  backdrop-filter: var(--au-blur);
+  -webkit-backdrop-filter: var(--au-blur);
+}
+
+html[data-theme] .bubble-sheet__head strong {
+  color: var(--au-ink-heading);
+}
+
+html[data-theme] .bubble-sheet__links a {
+  color: var(--au-ink);
+  border-radius: var(--au-r-md);
+}
+
+html[data-theme] .bubble-sheet__links a:hover {
+  color: var(--au-accent-deep);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] .bubble-sheet__icon {
+  color: var(--au-accent-deep);
+  border: 1px solid var(--au-accent-line);
+  border-radius: var(--au-r-md);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] .bubble-sheet__foot {
+  border-top: 1px solid var(--au-hair);
+}
+
+/* ------------------------------------------------------------- surfaces ---
+ * Glass without the cost: a translucent fill, a white hairline, one inner
+ * top highlight and a wide blue-tinted shadow. No backdrop-filter — a dozen of
+ * them stacked in a scroll container is the classic way to lose 20 fps, and the
+ * canvas behind is a smooth gradient, so the blur would be invisible anyway.
+ */
+html[data-theme] .feature-card,
+html[data-theme] .step-card,
+html[data-theme] .metric-card,
+html[data-theme] .panel,
+html[data-theme] .career-panel,
+html[data-theme] .p3panel,
+html[data-theme] .admin-panel,
+html[data-theme] .admin-stat,
+html[data-theme] .resume-card,
+html[data-theme] .strength-card,
+html[data-theme] .alerts-card,
+html[data-theme] .notice-item,
+html[data-theme] .sv-next-item,
+html[data-theme] .rec-card,
+html[data-theme] .rec-panel,
+html[data-theme] .rec-stat,
+html[data-theme] .admin-card,
+html[data-theme] .admin-filter-bar,
+html[data-theme] .rec-filter-bar,
+html[data-theme] .intel-card,
+html[data-theme] .intel-panel,
+html[data-theme] .intel-stat,
+html[data-theme] .intel-tile,
+html[data-theme] .studio-panel,
+html[data-theme] .studio-card {
+  color: var(--au-ink);
+  border: 1px solid var(--au-glass-border);
+  border-radius: var(--au-r-lg);
+  background: var(--au-glass);
+  box-shadow: var(--au-shadow-card);
+}
+
+/* A single specular edge along the top of every card, drawn with a gradient
+   instead of a pseudo-element so it cannot collide with a component's own
+   ::before / ::after. */
+html[data-theme] .panel,
+html[data-theme] .career-panel,
+html[data-theme] .admin-panel,
+html[data-theme] .rec-card,
+html[data-theme] .rec-panel,
+html[data-theme] .admin-card,
+html[data-theme] .intel-card,
+html[data-theme] .feature-card,
+html[data-theme] .metric-card {
+  background-image: linear-gradient(180deg, var(--au-glass-sheen) 0, transparent 42px);
+}
+
+html[data-theme] .panel:hover,
+html[data-theme] .feature-card:hover,
+html[data-theme] .metric-card:hover,
+html[data-theme] .admin-stat:hover,
+html[data-theme] .rec-stat:hover,
+html[data-theme] .intel-card:hover {
+  border-color: var(--au-accent-line);
+  box-shadow: var(--au-shadow-lift);
+}
+
+html[data-theme] .dash-top {
+  border-bottom: 1px solid var(--au-hair);
+}
+
+html[data-theme] .section-heading h2,
+html[data-theme] .panel-head h2,
+html[data-theme] .career-panel-head h2,
+html[data-theme] .admin-panel-head h2 {
+  color: var(--au-ink-heading);
+}
+
+html[data-theme] hr,
+html[data-theme] .rule {
+  border: 0;
+  border-top: 1px solid var(--au-hair);
+}
+
+/* --------------------------------------------------------------- buttons ---
+ * One primary treatment for the whole product: a filled cyan that carries white
+ * text at 5.4:1 in light, and the bright electric cyan carrying near-black text
+ * at 8.8:1 in dark. Every target is at least 44 px tall.
+ */
+html[data-theme] .primary-btn,
+html[data-theme] .secondary-btn,
+html[data-theme] .rec-button,
+html[data-theme] .admin-btn {
+  min-height: 44px;
+  padding: 0 18px;
+  font-size: 12px;
+  font-weight: 740;
+  letter-spacing: -.005em;
+  border-radius: var(--au-r-md);
+  cursor: pointer;
+  transition:
+    background-color var(--au-t-fast) var(--au-ease),
+    border-color var(--au-t-fast) var(--au-ease),
+    box-shadow var(--au-t-fast) var(--au-ease),
+    transform var(--au-t-fast) var(--au-ease),
+    color var(--au-t-fast) var(--au-ease);
+}
+
+html[data-theme] .primary-btn,
+html[data-theme] .bubble--cta,
+html[data-theme] .rec-button--primary,
+html[data-theme] .admin-btn--primary {
+  color: var(--au-accent-ink);
+  border: 1px solid transparent;
+  background: var(--au-accent-fill);
+  box-shadow: var(--au-shadow-button);
+}
+
+html[data-theme] .primary-btn:hover,
+html[data-theme] .rec-button--primary:hover,
+html[data-theme] .admin-btn--primary:hover {
+  color: var(--au-accent-ink);
+  background: var(--au-accent-fill-hover);
+  box-shadow: var(--au-shadow-button), var(--au-glow);
+  transform: translateY(-1px);
+}
+
+html[data-theme] .primary-btn:active,
+html[data-theme] .secondary-btn:active,
+html[data-theme] .rec-button:active,
+html[data-theme] .admin-btn:active {
+  transform: translateY(0) scale(.985);
+}
+
+html[data-theme] .secondary-btn,
+html[data-theme] .rec-button--secondary,
+html[data-theme] .admin-btn--secondary {
+  color: var(--au-accent-deep);
+  border: 1px solid var(--au-accent-line);
+  background: var(--au-glass-strong);
+  box-shadow: var(--au-shadow-sm);
+}
+
+html[data-theme] .secondary-btn:hover,
+html[data-theme] .rec-button--secondary:hover,
+html[data-theme] .admin-btn--secondary:hover {
+  color: var(--au-accent-deep);
+  border-color: var(--au-accent);
+  background: var(--au-glass-hover);
+  transform: translateY(-1px);
+}
+
+html[data-theme] .bubble--cta:hover {
+  color: var(--au-accent-ink);
+  background: var(--au-accent-fill-hover);
+}
+
+html[data-theme] .inline-form button,
+html[data-theme] .auth-submit,
+html[data-theme] .bubble-sheet__foot button {
+  border-radius: var(--au-r-md);
+}
+
+html[data-theme] button[type="submit"]:not([class]) {
+  min-height: 44px;
+  padding: 0 18px;
+  color: var(--au-accent-ink);
+  font-size: 12px;
+  font-weight: 740;
+  border: 1px solid transparent;
+  border-radius: var(--au-r-md);
+  background: var(--au-accent-fill);
+  box-shadow: var(--au-shadow-button);
+  cursor: pointer;
+  transition: background-color var(--au-t-fast) var(--au-ease), transform var(--au-t-fast) var(--au-ease);
+}
+
+html[data-theme] button[type="submit"]:not([class]):hover {
+  background: var(--au-accent-fill-hover);
+  transform: translateY(-1px);
+}
+
+html[data-theme] button[disabled],
+html[data-theme] .is-disabled,
+html[data-theme] .primary-btn[aria-disabled="true"],
+html[data-theme] .secondary-btn[aria-disabled="true"] {
+  opacity: .55;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Plain text links that act as buttons keep a real target. */
+html[data-theme] .rec-icon-action,
+html[data-theme] .admin-icon-action,
+html[data-theme] .text-action {
+  min-height: 44px;
+  border-radius: var(--au-r-sm);
+  transition: background-color var(--au-t-fast) var(--au-ease), color var(--au-t-fast) var(--au-ease);
+}
+
+html[data-theme] .rec-icon-action:hover,
+html[data-theme] .admin-icon-action:hover,
+html[data-theme] .text-action:hover {
+  color: var(--au-accent-deep);
+  background: var(--au-accent-soft);
+}
+
+/* --------------------------------------------------------------- inputs ---
+ * Fields stay the most opaque thing on the page: readability first, glass
+ * second. They take a solid-ish fill, a hairline, and one cyan focus ring.
+ */
+html[data-theme] .form-control,
+html[data-theme] .form-select,
+html[data-theme] .auth-form input,
+html[data-theme] .auth-form select,
+html[data-theme] .auth-form textarea,
+html[data-theme] .career-form input,
+html[data-theme] .p3form input,
+html[data-theme] .p3form textarea,
+html[data-theme] .p3form select,
+html[data-theme] .admin-panel input,
+html[data-theme] .admin-panel textarea,
+html[data-theme] .admin-panel select,
+html[data-theme] .admin-form input,
+html[data-theme] .admin-form select,
+html[data-theme] .rec-form input,
+html[data-theme] .rec-form select,
+html[data-theme] .rec-form textarea,
+html[data-theme] .intel-field input,
+html[data-theme] .intel-field select,
+html[data-theme] .intel-field textarea,
+html[data-theme] .rec-search-field input {
+  min-height: 46px;
+  padding: 12px 14px;
+  color: var(--au-ink);
+  font-family: inherit;
+  font-size: 13px;
+  border: 1px solid var(--au-hair-strong);
+  border-radius: var(--au-r-md);
+  background: var(--au-glass-strong);
+  box-shadow: inset 0 1px 2px rgba(10, 37, 64, .05);
+  transition:
+    border-color var(--au-t-fast) var(--au-ease),
+    box-shadow var(--au-t-fast) var(--au-ease),
+    background-color var(--au-t-fast) var(--au-ease);
+}
+
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] .auth-form input,
+html[data-theme="dark"] .auth-form select,
+html[data-theme="dark"] .auth-form textarea,
+html[data-theme="dark"] .admin-panel input,
+html[data-theme="dark"] .admin-panel select,
+html[data-theme="dark"] .admin-panel textarea,
+html[data-theme="dark"] .rec-form input,
+html[data-theme="dark"] .rec-form select,
+html[data-theme="dark"] .rec-form textarea {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .45);
+}
+
+html[data-theme] textarea {
+  line-height: 1.6;
+}
+
+html[data-theme] .form-control:hover,
+html[data-theme] .form-select:hover,
+html[data-theme] input:hover,
+html[data-theme] select:hover,
+html[data-theme] textarea:hover {
+  border-color: var(--au-accent-line);
+}
+
+html[data-theme] input:focus,
+html[data-theme] select:focus,
+html[data-theme] textarea:focus,
+html[data-theme] .form-control:focus,
+html[data-theme] .form-select:focus,
+html[data-theme] .auth-form input:focus,
+html[data-theme] .auth-form select:focus {
+  outline: none;
+  border-color: var(--au-accent);
+  background: var(--au-glass-solid);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, .22);
+}
+
+html[data-theme] input::placeholder,
+html[data-theme] textarea::placeholder,
+html[data-theme] .auth-form input::placeholder {
+  color: var(--au-ink-dim);
+}
+
+/* A search field is a little piece of glass with a magnifier in it. */
+html[data-theme] .rec-search-field,
+html[data-theme] .admin-search,
+html[data-theme] .intel-search,
+html[data-theme] .search-field {
+  border: 1px solid var(--au-hair-strong);
+  border-radius: var(--au-r-pill);
+  background: var(--au-glass-strong);
+  transition: border-color var(--au-t-fast) var(--au-ease), box-shadow var(--au-t-fast) var(--au-ease);
+}
+
+html[data-theme] .rec-search-field:focus-within,
+html[data-theme] .admin-search:focus-within,
+html[data-theme] .intel-search:focus-within,
+html[data-theme] .search-field:focus-within {
+  border-color: var(--au-accent);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, .18);
+}
+
+html[data-theme] .rec-search-field input,
+html[data-theme] .admin-search input,
+html[data-theme] .search-field input {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme] .rec-search-field svg,
+html[data-theme] .admin-search svg,
+html[data-theme] .search-field svg {
+  color: var(--au-ink-muted);
+}
+
+/* Local chevron: two gradients, no image request. */
+html[data-theme] .form-select,
+html[data-theme] select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 38px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--au-ink-muted) 50%),
+    linear-gradient(135deg, var(--au-ink-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 19px) calc(50% + 1px),
+    calc(100% - 14px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+html[data-theme] input[type="radio"],
+html[data-theme] input[type="checkbox"] {
+  min-height: 0;
+  accent-color: var(--au-accent);
+  box-shadow: none;
+}
+
+html[data-theme] fieldset {
+  border: 1px solid var(--au-hair);
+  border-radius: var(--au-r-md);
+}
+
+html[data-theme] label {
+  color: var(--au-ink-body);
+}
+
+/* --------------------------------------------------------------- tables ---
+ * Deliberately the least glassy surface in the product: a sunken header, solid
+ * row fill, hairline separators, and enough row height to scan a column.
+ */
+html[data-theme] .table-responsive,
+html[data-theme] .admin-table-wrap,
+html[data-theme] .intel-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--au-hair);
+  border-radius: var(--au-r-md);
+  background: var(--au-glass-strong);
+}
+
+html[data-theme] .table,
+html[data-theme] .p3table,
+html[data-theme] .rec-table,
+html[data-theme] .admin-table,
+html[data-theme] .intel-table {
+  width: 100%;
+  color: var(--au-ink);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+html[data-theme] .table th,
+html[data-theme] .p3table th,
+html[data-theme] .rec-table th,
+html[data-theme] .admin-table th,
+html[data-theme] .intel-table th {
+  padding: 12px;
+  color: var(--au-ink-muted);
+  font-size: 10.5px;
+  font-weight: 760;
+  letter-spacing: .08em;
+  text-align: left;
+  text-transform: uppercase;
+  background: var(--au-sunken);
+  border-bottom: 1px solid var(--au-hair);
+  white-space: nowrap;
+}
+
+html[data-theme] .table td,
+html[data-theme] .p3table td,
+html[data-theme] .rec-table td,
+html[data-theme] .admin-table td,
+html[data-theme] .intel-table td {
+  padding: 14px;
+  color: var(--au-ink);
+  background: var(--au-glass-solid);
+  border-top: 1px solid var(--au-hair);
+  vertical-align: middle;
+}
+
+html[data-theme] .table tbody tr:hover td,
+html[data-theme] .p3table tbody tr:hover td,
+html[data-theme] .rec-table tbody tr:hover td,
+html[data-theme] .admin-table tbody tr:hover td,
+html[data-theme] .intel-table tbody tr:hover td,
+html[data-theme] .table-hover tbody tr:hover {
+  background: var(--au-row-hover);
+}
+
+html[data-theme] .table td a,
+html[data-theme] .admin-table td a,
+html[data-theme] .rec-table td a {
+  font-weight: 600;
+}
+
+/* The legacy dark table variant is folded into the theme. */
+html[data-theme] .table-dark {
+  color: var(--au-ink);
+  background: var(--au-glass-solid);
+}
+
+html[data-theme] .table-dark th {
+  color: var(--au-ink-muted);
+  background: var(--au-sunken);
+}
+
+html[data-theme] .table-dark td {
+  background: var(--au-glass-solid);
+  border-top: 1px solid var(--au-hair);
+}
+
+/* ----------------------------------------------- badges, pills and alerts --- */
+
+html[data-theme] .status-pill,
+html[data-theme] .career-pill,
+html[data-theme] .rec-status-pill,
+html[data-theme] .rec-company-state,
+html[data-theme] .admin-status,
+html[data-theme] .intel-chip {
+  color: var(--au-accent-deep);
+  font-weight: 700;
+  border: 1px solid var(--au-accent-line);
+  border-radius: var(--au-r-pill);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] .sv-skill-chip,
+html[data-theme] .rec-skill-chip {
+  color: var(--au-accent-deep);
+  border: 1px solid var(--au-accent-line);
+  border-radius: var(--au-r-pill);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] .sv-skill-chip--soft,
+html[data-theme] .rec-skill-chip--preferred {
+  color: var(--au-ink-muted);
+  border-color: var(--au-hair-strong);
+  background: var(--au-glass-strong);
+}
+
+html[data-theme] .intel-chip--ok,
+html[data-theme] .admin-pill--ok,
+html[data-theme] .status-pill--ok,
+html[data-theme] .status-pill--accepted,
+html[data-theme] .rec-status-pill--shortlisted {
+  color: var(--au-ok);
+  border-color: var(--au-ok-line);
+  background: var(--au-ok-soft);
+}
+
+html[data-theme] .intel-chip--missing,
+html[data-theme] .admin-pill--warn,
+html[data-theme] .status-pill--pending,
+html[data-theme] .status-pill--review {
+  color: var(--au-warn);
+  border-color: var(--au-warn-line);
+  background: var(--au-warn-soft);
+}
+
+html[data-theme] .admin-pill--bad,
+html[data-theme] .status-pill--rejected,
+html[data-theme] .rec-status-pill--rejected {
+  color: var(--au-bad);
+  border-color: var(--au-bad-line);
+  background: var(--au-bad-soft);
+}
+
+html[data-theme] .alert,
+html[data-theme] .auth-alert,
+html[data-theme] .career-alert,
+html[data-theme] .p3msg,
+html[data-theme] .rec-alert,
+html[data-theme] .admin-alert {
+  padding: 12px 14px;
+  color: var(--au-accent-deep);
+  border: 1px solid var(--au-accent-line);
+  border-radius: var(--au-r-md);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] .alert-danger,
+html[data-theme] .rec-alert--error,
+html[data-theme] .admin-alert--error {
+  color: var(--au-bad);
+  border-color: var(--au-bad-line);
+  background: var(--au-bad-soft);
+}
+
+html[data-theme] .alert-success,
+html[data-theme] .rec-alert--success,
+html[data-theme] .admin-alert--success {
+  color: var(--au-ok);
+  border-color: var(--au-ok-line);
+  background: var(--au-ok-soft);
+}
+
+html[data-theme] .rec-company-state--approved {
+  color: var(--au-ok);
+  border-color: var(--au-ok-line);
+  background: var(--au-ok-soft);
+}
+
+html[data-theme] .rec-company-state--rejected {
+  color: var(--au-bad);
+  border-color: var(--au-bad-line);
+  background: var(--au-bad-soft);
+}
+
+html[data-theme] .empty-state,
+html[data-theme] .admin-empty,
+html[data-theme] .intel-empty,
+html[data-theme] .rec-empty-state,
+html[data-theme] .rec-empty-inline {
+  color: var(--au-ink-muted);
+  border: 1px dashed var(--au-hair-strong);
+  border-radius: var(--au-r-lg);
+  background: var(--au-glass);
+}
+
+html[data-theme] .empty-state h2,
+html[data-theme] .admin-empty strong,
+html[data-theme] .intel-empty strong {
+  color: var(--au-ink-heading);
+}
+
+html[data-theme] .rec-empty-orb {
+  background: radial-gradient(circle at 34% 30%, var(--au-accent-soft), transparent 62%);
+  box-shadow: inset 0 0 0 1px var(--au-accent-line);
+}
+
+/* ------------------------------------------------------------ tabs/filters --- */
+
+html[data-theme] .rec-tab,
+html[data-theme] .admin-tab,
+html[data-theme] .intel-segmented a,
+html[data-theme] .intel-segmented button,
+html[data-theme] .admin-chip {
+  min-height: 36px;
+  border-radius: var(--au-r-pill);
+  transition:
+    color var(--au-t-fast) var(--au-ease),
+    background-color var(--au-t-fast) var(--au-ease),
+    border-color var(--au-t-fast) var(--au-ease),
+    box-shadow var(--au-t-fast) var(--au-ease);
+}
+
+html[data-theme] .rec-tab[aria-current="page"],
+html[data-theme] .admin-tab[aria-current="page"],
+html[data-theme] .intel-segmented a[aria-current="page"],
+html[data-theme] .intel-segmented button[aria-current="page"] {
+  color: var(--au-accent-ink);
+  border-color: transparent;
+  background: var(--au-accent-fill);
+  box-shadow: var(--au-shadow-button);
+}
+
+html[data-theme] .admin-chip.is-active {
+  color: var(--au-accent-deep);
+  border-color: var(--au-accent-line);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] .intel-segmented {
+  border: 1px solid var(--au-hair-strong);
+  border-radius: var(--au-r-pill);
+  background: var(--au-glass-strong);
+}
+
+/* ------------------------------------------------------------ auth pages --- */
+
+html[data-theme] .auth-wrap {
+  background: transparent;
+}
+
+html[data-theme] .auth-card {
+  border: 1px solid var(--au-glass-border);
+  border-radius: var(--au-r-xl);
+  background: var(--au-glass-strong);
+  box-shadow: var(--au-shadow-float);
+  backdrop-filter: var(--au-blur);
+  -webkit-backdrop-filter: var(--au-blur);
+}
+
+html[data-theme] .auth-intro h1 span {
+  background: linear-gradient(100deg, var(--au-accent-deep), var(--au-accent-fill) 92%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+html[data-theme] .auth-role-item,
+html[data-theme] .auth-choice__body {
+  border: 1px solid var(--au-hair-strong);
+  border-radius: var(--au-r-md);
+  background: var(--au-glass-strong);
+  box-shadow: inset 0 1px 0 var(--au-glass-sheen);
+  transition: border-color var(--au-t-fast) var(--au-ease), box-shadow var(--au-t-fast) var(--au-ease);
+}
+
+html[data-theme] .auth-role-icon,
+html[data-theme] .auth-choice__icon {
+  color: var(--au-accent-deep);
+  border: 1px solid var(--au-accent-line);
+  border-radius: var(--au-r-sm);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] .auth-choice input:checked + .auth-choice__body {
+  border-color: var(--au-accent);
+  background: var(--au-accent-soft);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, .18);
+}
+
+html[data-theme] .auth-choice input:checked + .auth-choice__body .auth-choice__icon {
+  color: var(--au-accent-deep);
+  background: var(--au-glass-solid);
+}
+
+html[data-theme] .auth-reveal {
+  color: var(--au-ink-muted);
+}
+
+html[data-theme] .auth-reveal:hover {
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] .auth-back-link {
+  color: var(--au-link);
+}
+
+html[data-theme] .auth-intro > .eyebrow,
+html[data-theme] .auth-card__head .eyebrow {
+  color: var(--au-kicker);
+}
+
+html[data-theme] .auth-intro__lede,
+html[data-theme] .auth-role-copy small,
+html[data-theme] .auth-card__head .muted {
+  color: var(--au-ink-body);
+}
+
+/* ------------------------------------------- student workspace components --- */
+
+html[data-theme] .strength-bar,
+html[data-theme] .admin-bar,
+html[data-theme] .intel-meter {
+  background: var(--au-chart-track);
+  border-radius: var(--au-r-pill);
+  overflow: hidden;
+}
+
+html[data-theme] .strength-bar > span,
+html[data-theme] .strength-bar__fill,
+html[data-theme] .admin-bar > span,
+html[data-theme] .intel-meter > span {
+  background: var(--au-chart-1);
+  border-radius: inherit;
+  transition: width var(--au-t-slow) var(--au-ease);
+}
+
+html[data-theme] .sv-next-item strong {
+  color: var(--au-ink-heading);
+}
+
+html[data-theme] .sv-timeline-dot {
+  border-color: var(--au-glass-solid);
+  background: var(--au-accent-line);
+}
+
+html[data-theme] .sv-timeline-move {
+  background: var(--au-accent-fill);
+}
+
+html[data-theme] .notice-item.is-unread {
+  border-left: 3px solid var(--au-accent-fill);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] .notice-item-head time {
+  color: var(--au-ink-muted);
+}
+
+html[data-theme] .intel-score strong {
+  color: var(--au-ink-heading);
+}
+
+html[data-theme] .intel-score span,
+html[data-theme] .intel-muted,
+html[data-theme] .intel-note {
+  color: var(--au-ink-muted);
+}
+
+/* --------------------------------------------------------------- the dock ---
+ * Material only. Every dimension still comes from liquid-glass.css
+ * (`--dock-*`) and water-dock.css / recruiter.css / admin.css, so the tested
+ * responsive geometry — 6 / 6 / 9 tabs, 1536 → 360 px — is untouched.
+ *
+ * The engine (assets/js/liquid-glass.js) owns the physics: a critically damped
+ * spring at 300/27 moves the pill, it stretches with velocity, squashes a
+ * little at speed, and settles. Nothing here changes that; this only decides
+ * how the glass looks while it moves.
+ */
+
+html[data-theme] .sv-dock,
+html[data-theme] .rec-bottom-nav,
+html[data-theme] .admin-dock,
+html[data-theme] [data-glass-dock] {
+  border: 1px solid var(--au-glass-border);
+  background: var(--au-glass-strong);
+  box-shadow: var(--au-shadow-float);
+  backdrop-filter: var(--au-blur);
+  -webkit-backdrop-filter: var(--au-blur);
+}
+
+html[data-theme] .sv-dock::after,
+html[data-theme] .rec-bottom-nav::after,
+html[data-theme] .admin-dock::after {
+  border-color: var(--au-glass-border);
+}
+
+html[data-theme] .lg-indicator {
+  border: 1px solid var(--au-glass-border);
+  background:
+    linear-gradient(180deg,
+      rgba(255, 255, 255, .72) 0%,
+      rgba(224, 242, 254, .46) 58%,
+      rgba(224, 242, 254, .46) 100%);
+  box-shadow:
+    0 8px 20px -10px var(--lg-cast),
+    0 1px 3px -2px var(--lg-cast),
+    0 0 0 .75px var(--lg-edge),
+    inset 0 1.5px 1px var(--lg-rim),
+    inset 0 -1.5px 2px var(--lg-rim-soft);
+}
+
+html[data-theme="dark"] .lg-indicator {
+  background:
+    linear-gradient(180deg,
+      rgba(56, 189, 248, .26) 0%,
+      rgba(20, 44, 74, .52) 58%,
+      rgba(12, 27, 46, .56) 100%);
+}
+
+html[data-theme] .lg-glint {
+  background: linear-gradient(96deg, transparent, rgba(255, 255, 255, .72), transparent);
+}
+
+html[data-theme="dark"] .lg-glint {
+  background: linear-gradient(96deg, transparent, rgba(186, 230, 253, .34), transparent);
+}
+
+html[data-theme] .sv-dock-link,
+html[data-theme] .rec-dock-link,
+html[data-theme] .admin-dock-link,
+html[data-theme] .rec-nav-link {
+  color: var(--au-ink-muted);
+  transition:
+    color var(--au-t-fast) var(--au-ease),
+    transform var(--au-t-fast) var(--au-ease),
+    opacity var(--au-t-fast) var(--au-ease);
+}
+
+html[data-theme] .sv-dock-link:hover,
+html[data-theme] .rec-dock-link:hover,
+html[data-theme] .admin-dock-link:hover,
+html[data-theme] .rec-nav-link:hover {
+  color: var(--au-ink);
+}
+
+html[data-theme] .sv-dock-link[aria-current="page"],
+html[data-theme] .rec-dock-link[aria-current="page"],
+html[data-theme] .admin-dock-link[aria-current="page"],
+html[data-theme] .rec-nav-link[aria-current="page"] {
+  color: var(--au-accent-deep);
+}
+
+html[data-theme="dark"] .sv-dock-link[aria-current="page"],
+html[data-theme="dark"] .rec-dock-link[aria-current="page"],
+html[data-theme="dark"] .admin-dock-link[aria-current="page"],
+html[data-theme="dark"] .rec-nav-link[aria-current="page"] {
+  color: var(--au-accent);
+}
+
+/* The icon of the active destination lifts a hair and the label firms up: two
+   cheap properties, no layout, no filter. */
+html[data-theme] .sv-dock-link.is-active .sv-dock-icon,
+html[data-theme] .admin-dock-link.is-active .admin-dock-icon,
+html[data-theme] .rec-nav-link.is-active .rec-nav-icon {
+  transform: translateY(-1px) scale(1.06);
+}
+
+html[data-theme] .sv-dock-link.is-active .sv-dock-label,
+html[data-theme] .admin-dock-link.is-active .admin-dock-label,
+html[data-theme] .rec-nav-link.is-active .rec-nav-label {
+  font-weight: 700;
+}
+
+html[data-theme] .sv-dock-badge,
+html[data-theme] .admin-dock-badge,
+html[data-theme] .rec-nav-badge {
+  color: var(--au-accent-ink);
+  background: var(--au-accent-fill);
+  box-shadow: 0 3px 8px -3px rgba(14, 165, 233, .8);
+}
+
+/* ------------------------------------------------ recruiter + admin chrome --- */
+
+html[data-theme] .rec-header,
+html[data-theme] .admin-header,
+html[data-theme] .rec-topbar,
+html[data-theme] .admin-topbar {
+  border-bottom: 1px solid var(--au-hair);
+  background: var(--au-glass-strong);
+  backdrop-filter: var(--au-blur);
+  -webkit-backdrop-filter: var(--au-blur);
+}
+
+html[data-theme] .rec-head h1,
+html[data-theme] .rec-page-head h1,
+html[data-theme] .rec-page-heading h1,
+html[data-theme] .admin-head h1,
+html[data-theme] .admin-page-head h1,
+html[data-theme] .admin-page-heading h1 {
+  color: var(--au-ink-heading);
+  font-weight: 760;
+  letter-spacing: -.052em;
+}
+
+html[data-theme] .rec-eyebrow,
+html[data-theme] .admin-eyebrow {
+  color: var(--au-kicker);
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+html[data-theme] .rec-brand-mark,
+html[data-theme] .admin-brand-mark {
+  color: var(--au-accent-ink);
+  border: 1px solid rgba(255, 255, 255, .45);
+  border-radius: var(--au-r-md);
+  background: linear-gradient(150deg, var(--au-accent-fill), var(--au-accent-deep));
+  box-shadow: 0 8px 18px -8px rgba(14, 165, 233, .66), inset 0 1px 0 rgba(255, 255, 255, .45);
+}
+
+html[data-theme="dark"] .rec-brand-mark,
+html[data-theme="dark"] .admin-brand-mark {
+  border-color: rgba(255, 255, 255, .26);
+  background: linear-gradient(150deg, var(--au-accent), var(--au-accent-2) 60%, var(--au-accent-deep));
+}
+
+html[data-theme] .rec-steps li.is-current > span {
+  color: var(--au-accent-ink);
+  border-color: transparent;
+  background: var(--au-accent-fill);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, .16);
+}
+
+html[data-theme] .rec-steps li > span {
+  color: var(--au-ink-muted);
+  border-color: var(--au-hair-strong);
+  background: var(--au-glass-strong);
+}
+
+html[data-theme] .rec-history-dot,
+html[data-theme] .admin-timeline-dot {
+  background: var(--au-accent-line);
+  box-shadow: none;
+}
+
+html[data-theme] .admin-counter {
+  color: var(--au-accent-deep);
+  border-color: var(--au-accent-line);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] .rec-key-values dt {
+  color: var(--au-ink-muted);
+}
+
+html[data-theme] .rec-activity-item,
+html[data-theme] .admin-list > li,
+html[data-theme] .rec-list > li {
+  border-color: var(--au-hair);
+}
+
+html[data-theme] .rec-orb,
+html[data-theme] .admin-orb {
+  opacity: .5;
+  filter: blur(38px);
+}
+
+html[data-theme] .rec-orb--one,
+html[data-theme] .admin-orb--one {
+  background: var(--au-aurora-cyan);
+}
+
+html[data-theme] .rec-orb--two,
+html[data-theme] .admin-orb--two {
+  background: var(--au-aurora-sky);
+}
+
+html[data-theme] .rec-orb--three,
+html[data-theme] .admin-orb--three {
+  background: var(--au-aurora-violet);
+}
+
+/* -------------------------------------------------------------- footer etc --- */
+
+html[data-theme] .site-footer {
+  color: var(--au-ink-muted);
+  border-color: var(--au-hair);
+}
+
+html[data-theme] .site-footer a {
+  color: var(--au-link);
+}
+
+html[data-theme] .skip-link {
+  color: var(--au-accent-ink);
+  background: var(--au-accent-fill);
+  border-radius: 0 0 var(--au-r-md) 0;
+}
+
+html[data-theme] .sr-only {
+  color: inherit;
+}
+
+/* --------------------------------------------------------- loading states ---
+ * Nothing here is a spinner that blocks: a pending section keeps its layout and
+ * gets a soft pulse, and any element marked aria-busy gets a travelling sheen.
+ */
+
+html[data-theme] [aria-busy="true"],
+html[data-theme] .is-loading {
+  position: relative;
+  cursor: progress;
+}
+
+html[data-theme] .skeleton,
+html[data-theme] .au-skeleton {
+  color: transparent;
+  border-radius: var(--au-r-sm);
+  background: var(--au-skeleton);
+  background-size: 240% 100%;
+  animation: au-sheen 1.5s linear infinite;
+}
+
+@keyframes au-sheen {
+  from { background-position: 130% 0; }
+  to { background-position: -30% 0; }
+}
+
+html[data-theme] #main-content.is-pending,
+html[data-theme] #recruiter-section-content.is-pending,
+html[data-theme] #admin-section-content.is-pending {
+  opacity: .72;
+}
+
+/* ------------------------------------------------------------- page motion ---
+ * Three layers, all transform/opacity, all short:
+ *   1. cross-document navigations (a real page load) — a root cross-fade, with
+ *      the dock and top chrome given their own names so they do not fade: the
+ *      navigation stays visually still while the canvas changes under it;
+ *   2. in-workspace section swaps — handled by the three nav scripts, which set
+ *      .is-entering / .is-entering-forward / .is-entering-backward on the
+ *      content region. theme.css owns those keyframes; this file only tunes the
+ *      duration so all three portals share one timing;
+ *   3. ordinary page arrival — one short rise from the top.
+ *
+ * The browser drives every frame. Nothing polls a timer, so on a 120 Hz or
+ * 240 Hz display the animation runs at that display's own cadence.
+ */
+
+html[data-theme] {
+  --au-page-in-duration: 320ms;
+  --au-page-out-duration: 180ms;
+}
+
+/* Name the two things that must not move during a real page load. The root —
+   the canvas and the content — cross-fades underneath them. */
+html[data-theme] .bubble-top {
+  view-transition-name: campus-chrome;
+}
+
+html[data-theme] .sv-dock,
+html[data-theme] .rec-bottom-nav,
+html[data-theme] .admin-dock {
+  view-transition-name: campus-dock;
+}
+
+::view-transition-group(campus-dock),
+::view-transition-group(campus-chrome) {
+  animation: none;
+}
+
+/* One timing for every route change in the product. */
+::view-transition-old(root) {
+  animation-duration: var(--au-page-out-duration, 180ms);
+  animation-timing-function: var(--au-ease);
+}
+
+::view-transition-new(root) {
+  animation-duration: var(--au-page-in-duration, 320ms);
+  animation-timing-function: var(--au-ease-out);
+}
+
+::view-transition-old(campus-dock),
+::view-transition-new(campus-dock),
+::view-transition-old(campus-chrome),
+::view-transition-new(campus-chrome) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+img,
+video,
+svg {
+  max-width: 100%;
+}
+
+html[data-theme] img,
+html[data-theme] video {
+  border-radius: var(--au-r-sm);
+}
+
+/* The content canvas fades, the chrome does not. */
+html[data-theme] #main-content.is-entering,
+html[data-theme] #recruiter-section-content.is-entering,
+html[data-theme] #admin-section-content.is-entering {
+  animation-duration: var(--au-page-in-duration);
+  animation-timing-function: var(--au-ease-out);
+}
+
+/* Cards arrive in a short stagger on the landing page only, where the count is
+   known and small. Everything else uses one rise for the whole page. */
+html[data-theme] .au-rise {
+  animation: au-rise var(--au-page-in-duration) var(--au-ease-out) both;
+}
+
+@keyframes au-rise {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Press feedback that never waits for the network. */
+html[data-theme] a,
+html[data-theme] button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-theme] button,
+html[data-theme] a {
+  touch-action: manipulation;
+}
+
+/* ------------------------------------------------------------ responsive --- */
+
+@media (max-width: 1280px) {
+  :root {
+    --au-gutter: 56px;
+  }
+}
+
+@media (max-width: 1050px) {
+  :root {
+    --au-gutter: 40px;
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --au-gutter: 28px;
+  }
+
+  html[data-theme] h1,
+  html[data-theme] .dashboard h1,
+  html[data-theme] .dash-top h1,
+  html[data-theme] .auth-intro h1 {
+    font-size: clamp(25px, 7vw, 34px);
+  }
+
+  /* Small screens: the few real glass surfaces keep their blur, the rest lean
+     on fill and hairline so scrolling stays smooth. */
+  html[data-theme] .panel,
+  html[data-theme] .career-panel,
+  html[data-theme] .admin-panel,
+  html[data-theme] .rec-card,
+  html[data-theme] .rec-panel,
+  html[data-theme] .admin-card,
+  html[data-theme] .intel-card,
+  html[data-theme] .feature-card,
+  html[data-theme] .metric-card,
+  html[data-theme] .admin-stat {
+    border-radius: var(--au-r-md);
+  }
+
+  html[data-theme] .table th,
+  html[data-theme] .admin-table th,
+  html[data-theme] .rec-table th {
+    padding: 10px;
+  }
+
+  html[data-theme] .table td,
+  html[data-theme] .admin-table td,
+  html[data-theme] .rec-table td {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --au-gutter: 20px;
+  }
+
+  html[data-theme] .primary-btn,
+  html[data-theme] .secondary-btn,
+  html[data-theme] .rec-button,
+  html[data-theme] .admin-btn {
+    min-height: 46px;
+  }
+
+  html[data-theme] .bubble-top {
+    border-bottom-color: transparent;
+  }
+}
+
+/* Split-screen and very narrow windows: nothing may scroll sideways. */
+@media (max-width: 400px) {
+  html[data-theme] table {
+    font-size: 12px;
+  }
+}
+
+/* --------------------------------------------------------- motion / print --- */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  html[data-theme] *,
+  html[data-theme] *::before,
+  html[data-theme] *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  html[data-theme] .primary-btn:hover,
+  html[data-theme] .secondary-btn:hover,
+  html[data-theme] .panel:hover,
+  html[data-theme] .feature-card:hover,
+  html[data-theme] .metric-card:hover,
+  html[data-theme] .bubble:hover,
+  html[data-theme] .rec-button:hover,
+  html[data-theme] .admin-btn:hover {
+    transform: none;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  html[data-theme] {
+    --au-glass: var(--au-glass-solid);
+    --au-glass-strong: var(--au-glass-solid);
+    --au-hair: var(--au-hair-strong);
+  }
+}
+
+@media print {
+  html[data-theme] body {
+    background: #ffffff;
+    background-image: none;
+    color: #0a2540;
+  }
+
+  .bubble-top,
+  .sv-dock,
+  .rec-dock,
+  .rec-bottom-nav,
+  .admin-dock,
+  [data-glass-dock] {
+    display: none;
+  }
+
+  html[data-theme] .panel,
+  html[data-theme] .feature-card,
+  html[data-theme] .metric-card,
+  html[data-theme] .rec-card,
+  html[data-theme] .admin-card {
+    border: 1px solid #d7e7f3;
+    background: #ffffff;
+    box-shadow: none;
+  }
+}
+
+/* ======================================================================
+ * Portal-scoped material — recruiter and TPO/admin
+ *
+ * theme.css and app.css each carry a light-theme rebuild written for the old
+ * ivory palette. Those rules are scoped `html[data-theme="light"] body.<portal>
+ * .thing` — three class-level steps — so a plain `html[data-theme] .thing` here
+ * would lose to them and the workspace would keep an apricot brand mark, an
+ * orange current step and ivory table headers.
+ *
+ * These rules match that structure step for step and load after it, so they win
+ * on source order without an !important. Everything is expressed in --au-*
+ * tokens, so one block serves both themes.
+ * ==================================================================== */
+
+html[data-theme] body.recruiter-portal,
+html[data-theme] body.admin-portal {
+  color: var(--au-ink);
+  background-color: var(--au-bg-1);
+}
+
+html[data-theme] body.recruiter-portal :focus-visible,
+html[data-theme] body.admin-portal :focus-visible,
+html[data-theme] body.recruiter-portal .rec-form input:focus,
+html[data-theme] body.admin-portal .admin-form input:focus {
+  outline-color: var(--au-focus);
+}
+
+html[data-theme] body.recruiter-portal ::selection,
+html[data-theme] body.admin-portal ::selection {
+  color: var(--au-ink-heading);
+  background: rgba(14, 165, 233, .24);
+}
+
+html[data-theme="dark"] body.recruiter-portal ::selection,
+html[data-theme="dark"] body.admin-portal ::selection {
+  color: #ffffff;
+  background: rgba(56, 189, 248, .32);
+}
+
+html[data-theme] body.recruiter-portal .rec-brand-mark,
+html[data-theme] body.admin-portal .admin-brand-mark {
+  color: var(--au-accent-ink);
+  border-color: rgba(255, 255, 255, .45);
+  background: linear-gradient(150deg, var(--au-accent-fill), var(--au-accent-deep));
+  box-shadow: 0 8px 18px -8px rgba(14, 165, 233, .62), inset 0 1px 0 rgba(255, 255, 255, .45);
+}
+
+html[data-theme="dark"] body.recruiter-portal .rec-brand-mark,
+html[data-theme="dark"] body.admin-portal .admin-brand-mark {
+  border-color: rgba(255, 255, 255, .24);
+  background: linear-gradient(150deg, var(--au-accent), var(--au-accent-2) 60%, var(--au-accent-deep));
+}
+
+html[data-theme] body.recruiter-portal .rec-brand-copy strong,
+html[data-theme] body.admin-portal .admin-brand-copy strong {
+  color: var(--au-ink-heading);
+}
+
+html[data-theme] body.recruiter-portal .rec-brand-copy small,
+html[data-theme] body.admin-portal .admin-brand-copy small {
+  color: var(--au-ink-muted);
+}
+
+html[data-theme] body.recruiter-portal .rec-topbar,
+html[data-theme] body.admin-portal .admin-topbar {
+  border-color: var(--au-hair);
+  background: var(--au-glass-strong);
+  box-shadow: 0 1px 0 var(--au-glass-sheen) inset;
+  backdrop-filter: var(--au-blur);
+  -webkit-backdrop-filter: var(--au-blur);
+}
+
+/* Ambient orbs: same three washes as the public canvas, blurred well back. */
+html[data-theme] body.recruiter-portal .rec-orb,
+html[data-theme] body.admin-portal .admin-orb {
+  border-color: transparent;
+  background: radial-gradient(circle at 32% 26%, var(--au-glass-sheen), var(--au-aurora-cyan) 44%, transparent 74%);
+  box-shadow: none;
+  opacity: .6;
+  filter: blur(30px);
+}
+
+html[data-theme] body.recruiter-portal .rec-orb--two,
+html[data-theme] body.admin-portal .admin-orb--two {
+  background: radial-gradient(circle at 32% 26%, var(--au-glass-sheen), var(--au-aurora-violet) 44%, transparent 74%);
+}
+
+html[data-theme] body.recruiter-portal .rec-orb--three,
+html[data-theme] body.admin-portal .admin-orb--three {
+  background: radial-gradient(circle at 32% 26%, var(--au-glass-sheen), var(--au-aurora-mint) 44%, transparent 74%);
+}
+
+/* Avatars read as initials on glass, not as apricot badges. */
+html[data-theme] body.recruiter-portal .rec-applicant-avatar,
+html[data-theme] body.recruiter-portal .rec-activity-avatar {
+  color: var(--au-accent-deep);
+  border-color: var(--au-accent-line);
+  background: var(--au-accent-soft);
+}
+
+/* The current step in the recruiter flow. */
+html[data-theme] body.recruiter-portal .rec-steps li > span {
+  color: var(--au-ink-muted);
+  border-color: var(--au-hair-strong);
+  background: var(--au-glass-strong);
+}
+
+html[data-theme] body.recruiter-portal .rec-steps li.is-current > span {
+  color: var(--au-accent-ink);
+  border-color: transparent;
+  background: var(--au-accent-fill);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, .16);
+}
+
+html[data-theme] body.recruiter-portal .rec-steps li:not(:last-child)::after {
+  background: var(--au-hair-strong);
+}
+
+/* Status pills: the five states, in Aurora's status colours. */
+html[data-theme] body.recruiter-portal .rec-status-pill {
+  color: var(--au-accent-deep);
+  border-color: var(--au-accent-line);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] body.recruiter-portal .rec-status-pill--interview,
+html[data-theme] body.recruiter-portal .rec-status-pill--rescheduled {
+  color: var(--au-warn);
+  border-color: var(--au-warn-line);
+  background: var(--au-warn-soft);
+}
+
+html[data-theme] body.recruiter-portal .rec-status-pill--selected,
+html[data-theme] body.recruiter-portal .rec-status-pill--completed {
+  color: var(--au-ok);
+  border-color: var(--au-ok-line);
+  background: var(--au-ok-soft);
+}
+
+html[data-theme] body.recruiter-portal .rec-status-pill--under_review,
+html[data-theme] body.recruiter-portal .rec-status-pill--scheduled,
+html[data-theme] body.recruiter-portal .rec-status-pill--paused,
+html[data-theme] body.recruiter-portal .rec-status-pill--closed {
+  color: var(--au-ink-muted);
+  border-color: var(--au-hair-strong);
+  background: var(--au-glass-strong);
+}
+
+html[data-theme] body.recruiter-portal .rec-status-pill--withdrawn,
+html[data-theme] body.recruiter-portal .rec-status-pill--cancelled {
+  color: var(--au-bad);
+  border-color: var(--au-bad-line);
+  background: var(--au-bad-soft);
+}
+
+html[data-theme] body.recruiter-portal .rec-company-state--approved {
+  color: var(--au-ok);
+  border-color: var(--au-ok-line);
+  background: var(--au-ok-soft);
+}
+
+html[data-theme] body.recruiter-portal .rec-company-state--pending {
+  color: var(--au-warn);
+  border-color: var(--au-warn-line);
+  background: var(--au-warn-soft);
+}
+
+html[data-theme] body.recruiter-portal .rec-company-state--rejected {
+  color: var(--au-bad);
+  border-color: var(--au-bad-line);
+  background: var(--au-bad-soft);
+}
+
+/* Surfaces that the old light rebuild painted with an ivory gradient. */
+html[data-theme] body.recruiter-portal .rec-stat-card,
+html[data-theme] body.recruiter-portal .rec-attention-card,
+html[data-theme] body.recruiter-portal .rec-recent-card,
+html[data-theme] body.recruiter-portal .rec-privacy-note,
+html[data-theme] body.recruiter-portal .rec-job-card,
+html[data-theme] body.recruiter-portal .rec-interview-card,
+html[data-theme] body.recruiter-portal .rec-applicant-card,
+html[data-theme] body.recruiter-portal .rec-card,
+html[data-theme] body.admin-portal .admin-stat,
+html[data-theme] body.admin-portal .admin-metrics > div,
+html[data-theme] body.admin-portal .admin-queue li,
+html[data-theme] body.admin-portal .admin-card,
+html[data-theme] body.admin-portal .admin-panel {
+  color: var(--au-ink);
+  border-color: var(--au-glass-border);
+  background: var(--au-glass);
+  box-shadow: var(--au-shadow-card);
+}
+
+html[data-theme] body.recruiter-portal .rec-stat-card:hover,
+html[data-theme] body.admin-portal .admin-stat:hover {
+  border-color: var(--au-accent-line);
+  box-shadow: var(--au-shadow-lift);
+}
+
+html[data-theme] body.admin-portal .admin-pre,
+html[data-theme] body.admin-portal .admin-import-form {
+  color: var(--au-ink-body);
+  border-color: var(--au-hair);
+  background: var(--au-sunken);
+}
+
+html[data-theme] body.recruiter-portal select,
+html[data-theme] body.recruiter-portal textarea,
+html[data-theme] body.admin-portal select,
+html[data-theme] body.admin-portal textarea {
+  color: var(--au-ink);
+  border-color: var(--au-hair-strong);
+  background: var(--au-glass-strong);
+}
+
+html[data-theme] body.recruiter-portal textarea::placeholder,
+html[data-theme] body.admin-portal textarea::placeholder {
+  color: var(--au-ink-dim);
+}
+
+/* Tables. theme.css paints an ivory header and a warm row hover at portal scope. */
+html[data-theme] body.recruiter-portal th,
+html[data-theme] body.admin-portal th {
+  color: var(--au-ink-muted);
+  border-color: var(--au-hair);
+  background: var(--au-sunken);
+}
+
+html[data-theme] body.recruiter-portal td,
+html[data-theme] body.admin-portal td {
+  border-color: var(--au-hair);
+  background: var(--au-glass-solid);
+}
+
+html[data-theme] body.recruiter-portal tbody tr:hover,
+html[data-theme] body.admin-portal tbody tr:hover {
+  background: var(--au-row-hover);
+}
+
+html[data-theme] body.recruiter-portal tbody tr:hover td,
+html[data-theme] body.admin-portal tbody tr:hover td {
+  background: var(--au-row-hover);
+}
+
+html[data-theme] body.admin-portal tr.is-invalid td {
+  background: var(--au-bad-soft);
+}
+
+html[data-theme] body.recruiter-portal .rec-signout,
+html[data-theme] body.admin-portal .admin-signout,
+html[data-theme] body.admin-portal .admin-account {
+  color: var(--au-ink-body);
+  border-color: var(--au-hair-strong);
+  background: var(--au-glass-strong);
+}
+
+html[data-theme] body.recruiter-portal .rec-text-link {
+  color: var(--au-link);
+}
+
+/* Admin meters, chips and counters. */
+html[data-theme] body.admin-portal .admin-bar {
+  background: var(--au-chart-track);
+}
+
+html[data-theme] body.admin-portal .admin-bar > span {
+  background: var(--au-chart-1);
+}
+
+html[data-theme] body.admin-portal .admin-chip.is-active {
+  color: var(--au-accent-deep);
+  border-color: var(--au-accent-line);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] body.admin-portal .admin-pill--ok {
+  color: var(--au-ok);
+  border-color: var(--au-ok-line);
+  background: var(--au-ok-soft);
+}
+
+html[data-theme] body.admin-portal .admin-pill--warn {
+  color: var(--au-warn);
+  border-color: var(--au-warn-line);
+  background: var(--au-warn-soft);
+}
+
+html[data-theme] body.admin-portal .admin-pill--bad {
+  color: var(--au-bad);
+  border-color: var(--au-bad-line);
+  background: var(--au-bad-soft);
+}
+
+html[data-theme] body.admin-portal .admin-alert--success {
+  color: var(--au-ok);
+  border-color: var(--au-ok-line);
+  background: var(--au-ok-soft);
+}
+
+html[data-theme] body.admin-portal .admin-timeline-dot,
+html[data-theme] body.recruiter-portal .rec-history-dot {
+  background: var(--au-accent-line);
+  box-shadow: none;
+}
+
+html[data-theme] body.admin-portal .admin-avatar,
+html[data-theme] body.admin-portal .admin-account-icon {
+  color: var(--au-accent-deep);
+  border-color: var(--au-accent-line);
+  background: var(--au-accent-soft);
+}
+
+/* The dark stylesheets keep a near-black card fill behind a light-theme rule
+   with the same weight; make sure the theme decides, not the sheet. */
+html[data-theme] body.admin-portal .admin-card {
+  background: var(--au-glass);
+}
+
+html[data-theme="dark"] body.recruiter-portal .rec-card,
+html[data-theme="dark"] body.recruiter-portal .rec-stat-card,
+html[data-theme="dark"] body.admin-portal .admin-card,
+html[data-theme="dark"] body.admin-portal .admin-stat,
+html[data-theme="dark"] body.admin-portal .admin-panel {
+  background-image: linear-gradient(180deg, var(--au-glass-sheen) 0, transparent 44px);
+}
+
+/* ------------------------------------------------------- studio buttons ---
+ * intelligence.css paints its submit buttons with the old apricot gradient and
+ * a fixed near-black label. The gradient tokens are now cyan, so the label has
+ * to come from the theme instead of that literal.
+ */
+html[data-theme] .intel-form button,
+html[data-theme] .intel-btn,
+html[data-theme] .intel-form input[type="submit"],
+html[data-theme] .p3form button {
+  min-height: 44px;
+  color: var(--au-accent-ink);
+  border: 1px solid transparent;
+  border-radius: var(--au-r-md);
+  background: var(--au-accent-fill);
+  box-shadow: var(--au-shadow-button);
+  font-weight: 720;
+  cursor: pointer;
+  transition: background-color var(--au-t-fast) var(--au-ease), transform var(--au-t-fast) var(--au-ease), box-shadow var(--au-t-fast) var(--au-ease);
+}
+
+html[data-theme] .intel-form button:hover,
+html[data-theme] .intel-btn:hover,
+html[data-theme] .p3form button:hover {
+  background: var(--au-accent-fill-hover);
+  box-shadow: var(--au-shadow-button), var(--au-glow);
+  transform: translateY(-1px);
+}
+
+html[data-theme] .intel-form button:active,
+html[data-theme] .intel-btn:active,
+html[data-theme] .p3form button:active {
+  transform: translateY(0) scale(.985);
+}
+
+html[data-theme] .intel-form input:focus-visible,
+html[data-theme] .intel-form select:focus-visible,
+html[data-theme] .intel-form textarea:focus-visible {
+  outline: 3px solid var(--au-focus);
+  outline-offset: 2px;
+}
+
+html[data-theme] .intel-form input,
+html[data-theme] .intel-form select,
+html[data-theme] .intel-form textarea {
+  color: var(--au-ink);
+  border: 1px solid var(--au-hair-strong);
+  border-radius: var(--au-r-md);
+  background: var(--au-glass-strong);
+}
+
+html[data-theme] .intel-list,
+html[data-theme] .intel-table-wrap,
+html[data-theme] .studio-panel,
+html[data-theme] .studio-card {
+  border-color: var(--au-glass-border);
+}
+
+html[data-theme] .career-wrap,
+html[data-theme] .studio-wrap {
+  color: var(--au-ink);
+}
+
+/* ------------------------------------ portal buttons, chips and messages ---
+ * The remaining literals from the old light-theme rebuild: recruiter and admin
+ * buttons, chips, avatars, alerts and table states. Same portal-scoped shape as
+ * the block above, so they tie with the legacy rule and win on source order.
+ */
+html[data-theme] body.recruiter-portal .rec-button,
+html[data-theme] body.admin-portal .admin-button {
+  color: var(--au-ink-body);
+  border-color: var(--au-hair-strong);
+  background: var(--au-glass-strong);
+  box-shadow: var(--au-shadow-sm);
+}
+
+html[data-theme] body.recruiter-portal .rec-button:hover,
+html[data-theme] body.admin-portal .admin-button:hover {
+  color: var(--au-ink);
+  border-color: var(--au-accent-line);
+  background: var(--au-glass-hover);
+}
+
+html[data-theme] body.recruiter-portal .rec-button--primary,
+html[data-theme] body.admin-portal .admin-button--primary {
+  color: var(--au-accent-ink);
+  border-color: transparent;
+  background: var(--au-accent-fill);
+  box-shadow: var(--au-shadow-button);
+}
+
+html[data-theme] body.recruiter-portal .rec-button--primary:hover,
+html[data-theme] body.admin-portal .admin-button--primary:hover {
+  color: var(--au-accent-ink);
+  background: var(--au-accent-fill-hover);
+  box-shadow: var(--au-shadow-button), var(--au-glow);
+  transform: translateY(-1px);
+}
+
+html[data-theme] body.recruiter-portal .rec-button--secondary,
+html[data-theme] body.admin-portal .admin-button--secondary {
+  color: var(--au-accent-deep);
+  border-color: var(--au-accent-line);
+  background: var(--au-glass-strong);
+}
+
+html[data-theme] body.recruiter-portal .rec-button--quiet-danger {
+  color: var(--au-bad);
+  border-color: var(--au-bad-line);
+  background: var(--au-bad-soft);
+}
+
+html[data-theme] body.recruiter-portal .rec-chip,
+html[data-theme] body.admin-portal .admin-chip,
+html[data-theme] body.admin-portal .admin-pill,
+html[data-theme] body.admin-portal .admin-role-pill {
+  color: var(--au-ink-body);
+  border-color: var(--au-hair-strong);
+  background: var(--au-glass-strong);
+}
+
+html[data-theme] body.recruiter-portal .rec-chip.is-active,
+html[data-theme] body.admin-portal .admin-chip.is-active {
+  color: var(--au-accent-ink);
+  border-color: transparent;
+  background: var(--au-accent-fill);
+  box-shadow: var(--au-shadow-button);
+}
+
+html[data-theme] body.recruiter-portal .rec-skill-chip {
+  color: var(--au-accent-deep);
+  border-color: var(--au-accent-line);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] body.recruiter-portal .rec-skill-chip--preferred {
+  color: var(--au-ink-muted);
+  border-color: var(--au-hair-strong);
+  background: var(--au-glass-strong);
+}
+
+html[data-theme] body.recruiter-portal .rec-avatar,
+html[data-theme] body.recruiter-portal .rec-applicant-avatar,
+html[data-theme] body.recruiter-portal .rec-activity-avatar,
+html[data-theme] body.admin-portal .admin-avatar {
+  color: var(--au-accent-deep);
+  border-color: var(--au-accent-line);
+  background: var(--au-accent-soft);
+}
+
+/* The warm sheen on the corner of a stat card. */
+html[data-theme] body.recruiter-portal .rec-stat-card::after {
+  background: radial-gradient(circle at 30% 20%, var(--au-glass-sheen), var(--au-aurora-cyan) 46%, transparent 72%);
+}
+
+html[data-theme] body.recruiter-portal .rec-text-link {
+  color: var(--au-link);
+}
+
+html[data-theme] body.recruiter-portal .rec-alert--info {
+  color: var(--au-accent-deep);
+  border-color: var(--au-accent-line);
+  background: var(--au-accent-soft);
+}
+
+html[data-theme] body.recruiter-portal .rec-alert--error,
+html[data-theme] body.admin-portal .admin-alert--error {
+  color: var(--au-bad);
+  border-color: var(--au-bad-line);
+  background: var(--au-bad-soft);
+}
+
+html[data-theme] body.recruiter-portal .rec-alert--success,
+html[data-theme] body.admin-portal .admin-alert--success {
+  color: var(--au-ok);
+  border-color: var(--au-ok-line);
+  background: var(--au-ok-soft);
+}
+
+html[data-theme] body.admin-portal .admin-alert--warn {
+  color: var(--au-warn);
+  border-color: var(--au-warn-line);
+  background: var(--au-warn-soft);
+}
+
+html[data-theme] body.recruiter-portal input,
+html[data-theme] body.recruiter-portal select,
+html[data-theme] body.recruiter-portal textarea,
+html[data-theme] body.admin-portal input,
+html[data-theme] body.admin-portal select,
+html[data-theme] body.admin-portal textarea {
+  color: var(--au-ink);
+  border-color: var(--au-hair-strong);
+  background: var(--au-glass-strong);
+  box-shadow: inset 0 1px 2px rgba(10, 37, 64, .05);
+}
+
+html[data-theme="dark"] body.recruiter-portal input,
+html[data-theme="dark"] body.recruiter-portal select,
+html[data-theme="dark"] body.recruiter-portal textarea,
+html[data-theme="dark"] body.admin-portal input,
+html[data-theme="dark"] body.admin-portal select,
+html[data-theme="dark"] body.admin-portal textarea {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .45);
+}
+
+html[data-theme] body.recruiter-portal .rec-table th,
+html[data-theme] body.admin-portal .admin-table th {
+  color: var(--au-ink-muted);
+  border-color: var(--au-hair);
+  background: var(--au-sunken);
+}
+
+html[data-theme] body.recruiter-portal .rec-table tbody tr:hover,
+html[data-theme] body.admin-portal .admin-table tbody tr:hover,
+html[data-theme] body.admin-portal .admin-table tr.is-invalid {
+  background: var(--au-row-hover);
+}
+
+html[data-theme] body.admin-portal .admin-table tr.is-invalid td {
+  background: var(--au-bad-soft);
+}
+
+html[data-theme] body.admin-portal .admin-details {
+  background: var(--au-sunken);
+  border-color: var(--au-hair);
+}
+
+html[data-theme] body.admin-portal .admin-bar {
+  background: var(--au-chart-track);
+}
+
+/* Published / shortlisted and friends: the same three families, one place. */
+html[data-theme] body.recruiter-portal .rec-status-pill--published,
+html[data-theme] body.recruiter-portal .rec-status-pill--shortlisted {
+  color: var(--au-ok);
+  border-color: var(--au-ok-line);
+  background: var(--au-ok-soft);
+}
+
+html[data-theme] body.recruiter-portal .rec-status-pill--draft {
+  color: var(--au-ink-muted);
+  border-color: var(--au-hair-strong);
+  background: var(--au-glass-strong);
+}

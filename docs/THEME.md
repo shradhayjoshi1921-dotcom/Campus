@@ -1,131 +1,172 @@
-# LogicBloom — the "Light Ice Blue" theme
+# Campus — Aurora Liquid Glass
 
-The portal's appearance is one stylesheet: `public/assets/css/logicbloom.css`.
-It loads last on every page (public site, student workspace, career studio,
-recruiter workspace, TPO/admin workspace) and re-points the design tokens the
-project already used, so nothing has to be rebuilt to follow it.
+The portal's appearance is one stylesheet: `public/assets/css/aurora.css`, loaded
+last on every page (public site, student workspace, career studio, recruiter
+workspace, TPO/admin workspace). It declares two complete themes and re-points
+the design tokens the project already used, so nothing had to be rebuilt to
+follow it.
 
 ## Principles
 
-1. **Soft ice blue and white.** A pale cyan canvas, frosted white surfaces, wide low-opacity
-   shadows, generous radii (12–26 px). No pure black, no saturated blue, no neon.
-2. **One accent.** Slate teal `#2F7291` (deep `#075985`) for actions, links and active states.
-   `#0284C7` appears only in focus rings.
-3. **Two type treatments.** Headings carry negative tracking; only the 10 px eyebrows are
-   uppercase, with positive tracking. Weight never exceeds 800.
-4. **Light only.** Both `html[data-theme]` values resolve to the same tokens, so a stored
-   preference cannot paint a half-dark page. The appearance switch is hidden.
-5. **No second styling system.** No framework, no CSS-in-JS, no rebuild. Tokens plus
-   component rules, loaded last.
+1. **Two themes, both real.** Arctic Aurora (light) and Midnight Ocean (dark) are
+   complete palettes, not a tinted variant. Midnight Ocean is genuine near-black
+   and navy, never grey.
+2. **Glass where it floats.** Blur belongs to the top chrome, the dock, sheets and
+   the auth card. Cards get translucent fill, a white hairline and a blue-tinted
+   shadow — cheap to paint, and the canvas behind them is a smooth gradient, so a
+   blur would be invisible anyway.
+3. **One accent family.** Electric cyan carries the brand; a deeper cyan carries
+   white text in light, and the bright cyan carries a near-black label in dark.
+4. **Two type treatments.** Headings carry negative tracking; only the 10 px
+   eyebrows are uppercase with positive tracking. Weight stops at 800.
+5. **One motion family.** One easing curve, three durations, transform and opacity
+   only, always browser-driven.
+6. **No second styling system.** No framework, no CSS-in-JS, no markup rewrite in
+   the workspaces.
 
-## Tokens
+## Palette
+
+### Arctic Aurora (light)
 
 | Group | Token | Value |
 |---|---|---|
-| Canvas | `--lb-bg-1` / `--lb-bg-2` / `--lb-bg-3` | `#EDF8FC` / `#E4F2F8` / `#F2F9FC` |
-| Tint | `--lb-tint` | `rgba(189,225,241,.58)` |
-| Ink | `--lb-ink` / `--lb-ink-body` / `--lb-ink-muted` | `#19394C` / `#405F70` / `#446575` |
-| Headings | `--lb-ink-strong` / `--lb-ink-heading` | `#17384B` / `#1A3B4D` |
-| Kicker | `--lb-ink-kicker` | `#2F6680` |
-| Accent | `--lb-accent` / `--lb-accent-hover` / `--lb-accent-deep` | `#2F7291` / `#286C8D` / `#075985` |
-| Links | `--lb-link` / `--lb-link-hover` | `#23647F` / `#144C68` |
-| Glass | `--lb-surface` / `--lb-surface-strong` / `--lb-blur` | `rgba(255,255,255,.77)` / `.92` / `blur(24px) saturate(145%)` |
-| Shadows | `--lb-shadow-card` / `-hover` / `-hero` / `-button` / `-float` | see the file |
-| Radii | `--lb-r-hero` / `-card` / `-tile` / `-control` / `-pill` | 24 / 18 / 13 / 12 / 999 px |
-| Motion | `--lb-ease` / `--lb-t-fast` / `--lb-t-slow` | `cubic-bezier(.22,1,.36,1)` / `.18s` / `.38s` |
+| Canvas | `--au-bg-1` / `--au-bg-2` / `--au-bg-3` | `#EAF7FF` / `#DDF2FF` / `#F7FBFF` |
+| Ink | `--au-ink` / `--au-ink-body` / `--au-ink-muted` | `#0A2540` / `#1B3B57` / `#476583` |
+| Heading | `--au-ink-heading` | `#0A2540` |
+| Eyebrow | `--au-kicker` | `#0B6E93` |
+| Accent | `--au-accent` / `--au-accent-2` | `#0EA5E9` / `#38BDF8` |
+| Filled action | `--au-accent-fill` / `-hover` / `--au-accent-ink` | `#0670A8` / `#055C8C` / `#FFFFFF` |
+| Accent text | `--au-accent-deep` / `--au-accent-soft` | `#075985` / `#E0F2FE` |
+| Link | `--au-link` / `--au-link-hover` | `#0B6FA4` / `#075985` |
+| Focus | `--au-focus` | `#0284C7` |
+| Glass | `--au-glass` / `--au-glass-strong` / `--au-glass-solid` | `rgba(255,255,255,.62)` / `.84` / `#FFFFFF` |
+| Hairline | `--au-hair` / `--au-hair-strong` | `rgba(10,37,64,.10)` / `.18` |
+| Sunken | `--au-sunken` | `#E5F2FC` |
 
-The project's own tokens are re-pointed at these values, which is why every
-existing component follows without being rewritten:
+### Midnight Ocean (dark)
 
-| Token set | Declared in | Used by |
+| Group | Token | Value |
 |---|---|---|
-| `--sv-*` | `theme.css` | bubble chrome, dock materials, auth screens, sheets |
-| `--bg` / `--text` / `--line` / `--mint` … | `app.css` | panels, buttons, forms, tables, dashboard |
+| Canvas | `--au-bg-1` / `--au-bg-2` / `--au-bg-3` | `#030712` / `#071426` / `#0B1930` |
+| Ink | `--au-ink` / `--au-ink-body` / `--au-ink-muted` | `#EAF6FF` / `#C3D6E9` / `#9FB4CC` |
+| Eyebrow | `--au-kicker` | `#7DD3FC` |
+| Accent | `--au-accent` / `--au-accent-2` | `#38BDF8` / `#3B82F6` |
+| Filled action | `--au-accent-fill` / `-hover` / `--au-accent-ink` | `#38BDF8` / `#5ECBFB` / `#04121F` |
+| Glass | `--au-glass` / `--au-glass-strong` / `--au-glass-solid` | `rgba(13,28,50,.58)` / `.82` / `#0B1930` |
+| Hairline | `--au-hair` / `--au-hair-strong` | `rgba(148,197,255,.14)` / `.26` |
+| Sunken | `--au-sunken` | `#081627` |
+
+Shared: radii 26 / 20 / 14 / 10 / 999 px, easing
+`cubic-bezier(.22,1,.36,1)` with 160 / 260 / 420 ms, max width 1380 px, gutters
+80 → 20 px.
+
+## The project's own tokens
+
+One alias block re-points everything the codebase already used. This is why no
+search-and-replace was needed in 5 000 lines of component CSS:
+
+| Token set | Declared in | Drives |
+|---|---|---|
+| `--sv-*` | `theme.css` | bubble chrome, sheets, auth, dock shell |
+| `--bg` / `--text` / `--line` / `--mint` | `app.css` | panels, buttons, forms, tables, dashboard |
 | `--rec-*` | `recruiter.css` | recruiter workspace |
 | `--adm-*` | `admin.css` | TPO / admin workspace |
+| `--lg-*` | `liquid-glass.css` | the dock's glass layers |
+
+## How the cascade works
+
+The older stylesheets carry 250+ rules scoped
+`html[data-theme="light"] .thing` and `html[data-theme="dark"] body.portal .thing`.
+Component rules here are scoped `html[data-theme] …`, which has **equal**
+specificity, so the later file wins on source order. Where the legacy rule added a
+second class step (`body.recruiter-portal .thing`), the Aurora rule repeats that
+step exactly.
+
+There is no `!important` anywhere except the `prefers-reduced-motion` block, where
+overriding transitions is the whole point. `tests/js/aurora-cascade.test.js`
+parses all six stylesheets in load order, resolves the winner for 29 real
+elements × 2 themes, and fails if a legacy sheet wins any material declaration.
+
+## Motion
+
+- **Real page loads** use a cross-document view transition. The dock and the top
+  chrome carry `view-transition-name`, so they hold still while the canvas
+  cross-fades: 180 ms out, 320 ms in.
+- **In-workspace navigation** never reloads. The three nav scripts fetch the
+  destination, swap the content region and animate it in (340 ms) with a direction
+  from the address bar; browser back and forward run the same path.
+- **Micro-interactions**: cards lift 3 px, buttons settle 1.5 % on press, the pill
+  in the dock stretches with velocity, inputs glow with a 3 px cyan ring on
+  `:focus-visible` only.
+- `prefers-reduced-motion: reduce` collapses all of it; `prefers-contrast: more`
+  swaps the glass fills for solid surfaces.
+
+Nothing polls a timer — every frame comes from the compositor, so a 120 Hz or
+240 Hz display runs the animation at its own cadence.
+
+## Dock
+
+Material only. Geometry (6 / 6 / 9 tabs, `--dock-*` from `liquid-glass.css`, the
+1536 → 360 px sweep) is untouched; `aurora.css` re-points the `--lg-*` glass and
+the link colours for both themes. The engine (`assets/js/liquid-glass.js`) owns the
+spring: a critically damped 300/27 move, stretch with velocity, a little squash at
+speed, and the pill never leaves its own tab.
 
 ## Type
 
 Inter, self-hosted in `public/assets/fonts/` (SIL OFL 1.1, weights 400–800,
-`font-display: swap`, licence in `Inter-OFL.txt`). No font CDN: the portal renders
-identically offline.
+`font-display: swap`, licence alongside).
 
 | Role | Size | Weight | Tracking |
 |---|---|---|---|
-| Page hero `h1` | `clamp(27px, 3.1vw, 40px)` | 740 | `-.06em` |
-| Section `h2` | 18px | 750 | `-.045em` |
-| Card `h3` | 14px | 750 | `-.025em` |
-| Eyebrow | 10px, uppercase | 800 | `.13em` |
+| Page hero `h1` | `clamp(28px, 3.2vw, 42px)` | 760 | `-.058em` |
+| Section `h2` | 18px | 740 | `-.042em` |
+| Card `h3` | 14px | 720 | `-.022em` |
+| Eyebrow | 10px uppercase | 800 | `.14em` |
 | Body | 13px / 1.65 | 400–500 | normal |
-| Note | 11–12px | 500 | normal |
+
+Numbers in tables, stat cards and meters use tabular figures so columns line up.
 
 ## How to change the palette
 
-Everything derives from the token block at the top of `logicbloom.css`. Change
-`--lb-accent` and `--lb-accent-hover` together, then re-run `php tests/run.php`:
-it recomputes WCAG contrast for the pairs that matter and fails if any drops
-below 4.5:1. The foreground/background pairs are listed in the
-`Text meets WCAG AA contrast on the ice palette` test.
-
-## Load order
-
-```text
-theme.css → app.css → homepage.css (landing only) → water-dock.css (student)
-→ liquid-glass.css → logicbloom.css
-```
-
-Component rules in `logicbloom.css` carry an `html[data-theme]` prefix so they tie
-with, and therefore beat, `app.css`'s `html[data-theme="light"] …` overrides by
-coming later in the cascade. There is no `!important` anywhere in the theme, except
-inside the `prefers-reduced-motion` block, where overriding the transitions is the
-whole point.
-
-The landing page has its own stylesheet, `homepage.css`, scoped to
-`body.homepage`. It reads the same tokens and carries a fallback for each one, so
-it still lays out correctly if `logicbloom.css` is blocked.
-
-## Safety net — `theme-guard.js`
-
-If the theme stylesheet or the dock's stylesheet never arrives (blocked proxy,
-stale cache, a wrong path), the guard:
-
-1. probes `--lb-accent` on `:root` to learn whether the theme applied;
-2. probes the dock with a live element to learn whether its stylesheet applied;
-3. hides the dock, removes its bottom clearance, and marks the element with
-   `data-theme-guard` — the bubble menu is plain markup, so navigation survives.
-
-Every inline `<svg>` also carries intrinsic `width`, `height` and `viewBox`
-attributes, so a missing stylesheet degrades to a small outline instead of a
-300 × 150 solid block.
+Everything derives from the token blocks at the top of `aurora.css`. Change the
+`--au-*` values in both themes, then run `php tests/run.php`: it recomputes WCAG
+contrast for 39 pairs (both themes, text and graphics) and fails if any drops
+below its threshold.
 
 ## What was verified here, and what was not
 
 **Verified**
 
-- `php tests/run.php` — **80 tests, 0 failed**, including new ones for the palette,
-  the load order, the guard, the self-hosted fonts, undeclared tokens and stray
-  `!important`/`100vw`/external URLs, and computed WCAG contrast for 20 text pairs
-  and 4 graphic pairs, each against every canvas layer *and* the darkest stop of
-  the landing hero gradient (text all ≥ 4.5:1, lowest 4.74:1; graphics all ≥ 3:1).
-- Every stylesheet parses with `css-tree`; `logicbloom.css` is 138 rules and
-  `homepage.css` 83 rules, both with 0 parse errors.
-- `tests/js/` (dock geometry across 15 viewport/portal combinations, liquid-glass
-  in 17 scenarios, student navigation in 7) still passes — the dock's geometry was
-  not touched.
-- Every themeable page renders server-side with no PHP warnings: home, login,
-  dashboard, profile, jobs, applications (student), recruiter overview.
+- `php tests/run.php` — **81 tests, 0 failed**, including both palettes, the
+  pre-paint appearance bootstrap, the load order, the guard, undeclared tokens,
+  stray `!important` / `100vw` / external URLs / emoji, blur discipline, motion
+  invariants, the self-hosted fonts, and 39 computed WCAG pairs (17 light text,
+  15 dark text, 7 graphics — lowest 4.51:1 for text, all graphics ≥ 3:1).
+- `node tests/js/aurora-cascade.test.js` — 130 cascade resolutions across both
+  themes; no legacy stylesheet wins a material declaration.
+- `node tests/js/dock-geometry.test.js` / `liquid-glass.test.js` /
+  `student-nav.test.js` — the dock still fits and still works in 15 viewport and
+  portal combinations.
+- Every stylesheet parses with `css-tree` (`aurora.css` 289 rules,
+  `homepage.css` 95 rules, 0 errors).
+- Server-side renders with no PHP warnings: home, login, register, dashboard,
+  profile, jobs, applications, notifications, recruiter overview, and the studio
+  shell.
 - Class audit: every class used in the rendered home, login and dashboard markup
-  is defined in a stylesheet (no orphan classes).
+  is defined in a stylesheet.
 
 **Not verified**
 
-- **No browser in this environment.** Palette, rhythm and contrast were checked by
-  computation and by reading the cascade, not by looking at pixels. Load the site
-  and walk the pages before shipping.
-- `admin.php` could not be rendered here: it type-hints `PDO` and this sandbox has
-  no MySQL, so only the CSS rules that drive it were checked.
-- The dock's five-tab LogicBloom variant from the design brief was **not** built.
-  See the pull request for why: the product already ships portal-specific docks
-  (6 / 6 / 9 tabs) with a tested responsive geometry, and replacing them would
-  have been a navigation change, not a re-skin. The dock keeps its behaviour and
-  takes the new material.
+- **No browser in this environment.** Colours, contrast and the cascade were
+  checked by computation, not by looking at pixels. Walk the pages in both themes
+  before shipping.
+- `admin.php` type-hints `PDO` and this sandbox has no MySQL, so it could not be
+  rendered; its rules were checked statically.
+- The dock's labels keep their existing wording (Home / Jobs / Career /
+  Applications / Alerts / Profile). They describe real routes; renaming them to a
+  design-brief vocabulary would have been a navigation change, not a re-skin.
+- No asset prefetching was added: the in-workspace fetch already warms the next
+  section, and pre-loading pages a visitor may never open would cost more than it
+  saves.
+- 360 px `scrollWidth` and axe-core were not run (no browser or assistive tech).

@@ -774,20 +774,33 @@ $pageTitle = match ($page) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#edf8fc">
+    <meta name="theme-color" content="#eaf7ff">
     <meta name="description" content="A placement portal for Swami Vivekanand Institute of Engineering and Technology. Explore opportunities, manage applications, and connect students, recruiters, and the Training &amp; Placement Cell.">
     <title><?= e($pageTitle) ?></title>
     <script>
         /* Apply the stored appearance before first paint so neither theme flashes. */
+        /* Aurora bootstrap: decide the appearance before the first paint, so
+           neither theme flashes. An explicit choice wins; otherwise the
+           operating system's preference decides, and only then does it fall
+           back to Arctic Aurora. The meta theme colour follows, so the browser
+           chrome matches the page on mobile. */
         (function () {
+            var dark = false;
             try {
                 var saved = localStorage.getItem('sviet-theme');
-                var theme = saved === 'dark' || saved === 'light' ? saved : 'light';
-                document.documentElement.dataset.theme = theme;
-                document.documentElement.style.colorScheme = theme;
+                if (saved === 'dark' || saved === 'light') {
+                    dark = saved === 'dark';
+                } else if (window.matchMedia) {
+                    dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                }
             } catch (error) {
-                document.documentElement.dataset.theme = 'light';
+                dark = false;
             }
+            var theme = dark ? 'dark' : 'light';
+            document.documentElement.dataset.theme = theme;
+            document.documentElement.style.colorScheme = theme;
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', dark ? '#030712' : '#eaf7ff');
         })();
     </script>
     <link rel="stylesheet" href="assets/css/theme.css?v=<?= e($appCssVersion) ?>">
@@ -799,7 +812,7 @@ $pageTitle = match ($page) {
         <link rel="stylesheet" href="assets/css/water-dock.css?v=<?= e($appCssVersion) ?>">
     <?php endif; ?>
     <link rel="stylesheet" href="assets/css/liquid-glass.css?v=<?= e($appCssVersion) ?>">
-    <link rel="stylesheet" href="assets/css/logicbloom.css?v=<?= e($appCssVersion) ?>">
+    <link rel="stylesheet" href="assets/css/aurora.css?v=<?= e($appCssVersion) ?>">
 </head>
 <body class="<?= $page === 'home' ? 'homepage' : '' ?>">
 <?php require __DIR__ . '/views/partials/glass-defs.php'; ?>
@@ -888,83 +901,83 @@ $pageTitle = match ($page) {
     </div>
 <?php endif; ?>
 <?php if ($page === 'home'): ?>
-<main id="main-content" class="lb-home">
-    <section class="lb-hero" id="home" aria-labelledby="home-title">
-        <div class="lb-main lb-hero__grid">
-            <div class="lb-hero__copy" data-reveal>
-                <p class="lb-eyebrow">
-                    <span class="lb-eyebrow__dot" aria-hidden="true"></span>
+<main id="main-content" class="au-home">
+    <section class="au-hero" id="home" aria-labelledby="home-title">
+        <div class="au-main au-hero__grid">
+            <div class="au-hero__copy" data-reveal>
+                <p class="au-eyebrow">
+                    <span class="au-eyebrow__dot" aria-hidden="true"></span>
                     SVIET Training &amp; Placement Portal
                 </p>
                 <h1 id="home-title">SVIET placements<br><span>in one place.</span></h1>
-                <p class="lb-lede">
+                <p class="au-lede">
                     Student profiles, approved opportunities, and application updates—supported by the SVIET Training &amp; Placement Cell.
                 </p>
 
-                <div class="lb-actions">
+                <div class="au-actions">
                     <?php if (!$user): ?>
-                        <a class="lb-btn lb-btn--primary" href="index.php?page=login">
+                        <a class="au-btn au-btn--primary" href="index.php?page=login">
                             Sign in to the portal
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
                         </a>
-                        <a class="lb-btn lb-btn--ghost" href="index.php?page=register">Create an account</a>
+                        <a class="au-btn au-btn--ghost" href="index.php?page=register">Create an account</a>
                     <?php elseif ($user['role'] === 'student'): ?>
-                        <a class="lb-btn lb-btn--primary" href="index.php?page=dashboard">
+                        <a class="au-btn au-btn--primary" href="index.php?page=dashboard">
                             Open your dashboard
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
                         </a>
-                        <a class="lb-btn lb-btn--ghost" href="index.php?page=jobs">Browse opportunities</a>
+                        <a class="au-btn au-btn--ghost" href="index.php?page=jobs">Browse opportunities</a>
                     <?php elseif ($user['role'] === 'recruiter'): ?>
-                        <a class="lb-btn lb-btn--primary" href="recruiter.php">
+                        <a class="au-btn au-btn--primary" href="recruiter.php">
                             Open recruiter workspace
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
                         </a>
                     <?php else: ?>
-                        <a class="lb-btn lb-btn--primary" href="admin.php">
+                        <a class="au-btn au-btn--primary" href="admin.php">
                             Open TPO / Admin workspace
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
                         </a>
                     <?php endif; ?>
                 </div>
 
-                <div class="lb-audience" role="group" aria-label="Portal access for students, recruiters, and the Training and Placement Cell">
-                    <span class="lb-audience__label">Serving the SVIET community</span>
-                    <span class="lb-pill"><i aria-hidden="true"></i>Students</span>
-                    <span class="lb-pill"><i aria-hidden="true"></i>Recruiters</span>
-                    <span class="lb-pill"><i aria-hidden="true"></i>Placement Cell</span>
+                <div class="au-audience" role="group" aria-label="Portal access for students, recruiters, and the Training and Placement Cell">
+                    <span class="au-audience__label">Serving the SVIET community</span>
+                    <span class="au-pill"><i aria-hidden="true"></i>Students</span>
+                    <span class="au-pill"><i aria-hidden="true"></i>Recruiters</span>
+                    <span class="au-pill"><i aria-hidden="true"></i>Placement Cell</span>
                 </div>
             </div>
 
-            <aside class="lb-hero__card" id="how-it-works" data-reveal aria-label="Student placement workflow">
-                <div class="lb-card__head">
+            <aside class="au-hero__card" id="how-it-works" data-reveal aria-label="Student placement workflow">
+                <div class="au-card__head">
                     <span>Student workflow</span>
-                    <span class="lb-card__status">SVIET placement portal</span>
+                    <span class="au-card__status">SVIET placement portal</span>
                 </div>
                 <h2>From profile to<br>opportunity.</h2>
-                <ol class="lb-steps">
+                <ol class="au-steps">
                     <li>
-                        <span class="lb-steps__index" aria-hidden="true">01</span>
-                        <span class="lb-steps__copy">
+                        <span class="au-steps__index" aria-hidden="true">01</span>
+                        <span class="au-steps__copy">
                             <strong>Build your profile</strong>
                             <small>Add your academic details and skills.</small>
                         </span>
                     </li>
                     <li>
-                        <span class="lb-steps__index" aria-hidden="true">02</span>
-                        <span class="lb-steps__copy">
+                        <span class="au-steps__index" aria-hidden="true">02</span>
+                        <span class="au-steps__copy">
                             <strong>Explore approved opportunities</strong>
                             <small>Review roles and their eligibility criteria.</small>
                         </span>
                     </li>
                     <li>
-                        <span class="lb-steps__index" aria-hidden="true">03</span>
-                        <span class="lb-steps__copy">
+                        <span class="au-steps__index" aria-hidden="true">03</span>
+                        <span class="au-steps__copy">
                             <strong>Track your applications</strong>
                             <small>Follow updates in your workspace.</small>
                         </span>
                     </li>
                 </ol>
-                <div class="lb-card__foot">
+                <div class="au-card__foot">
                     <span aria-hidden="true"></span>
                     <span>A dedicated placement portal for the SVIET community.</span>
                 </div>
@@ -972,45 +985,45 @@ $pageTitle = match ($page) {
         </div>
     </section>
 
-    <section class="lb-section" id="portal-workspaces" aria-labelledby="portal-workspaces-title">
-        <div class="lb-main">
-            <div class="lb-section__head" data-reveal>
+    <section class="au-section" id="portal-workspaces" aria-labelledby="portal-workspaces-title">
+        <div class="au-main">
+            <div class="au-section__head" data-reveal>
                 <div>
-                    <p class="lb-section__eyebrow">One institute. Connected journeys.</p>
+                    <p class="au-section__eyebrow">One institute. Connected journeys.</p>
                     <h2 id="portal-workspaces-title">A dedicated portal for <span>every role.</span></h2>
                 </div>
                 <p>One SVIET-supported workspace for students, recruiting organizations, and authorized Training &amp; Placement staff.</p>
             </div>
 
-            <div class="lb-grid">
-                <article class="lb-card" data-reveal>
-                    <span class="lb-icon" aria-hidden="true">
+            <div class="au-grid">
+                <article class="au-card" data-reveal>
+                    <span class="au-icon" aria-hidden="true">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-5 9 5-9 5-9-5Z"/><path d="M7 11.2v5.1c3.2 2.2 6.8 2.2 10 0v-5.1M21 9v5"/></svg>
                     </span>
                     <h3>Student placement portal</h3>
                     <p>Maintain your profile, review approved opportunities, apply for eligible roles, and follow application progress.</p>
                     <?php if ($user && $user['role'] === 'student'): ?>
-                        <a class="lb-card__link" href="index.php?page=jobs">Browse opportunities <span aria-hidden="true">&#8599;</span></a>
+                        <a class="au-card__link" href="index.php?page=jobs">Browse opportunities <span aria-hidden="true">&#8599;</span></a>
                     <?php else: ?>
-                        <a class="lb-card__link" href="index.php?page=login">Student sign in <span aria-hidden="true">&#8599;</span></a>
+                        <a class="au-card__link" href="index.php?page=login">Student sign in <span aria-hidden="true">&#8599;</span></a>
                     <?php endif; ?>
                 </article>
 
-                <article class="lb-card" id="for-recruiters" data-reveal>
-                    <span class="lb-icon" aria-hidden="true">
+                <article class="au-card" id="for-recruiters" data-reveal>
+                    <span class="au-icon" aria-hidden="true">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18m-11 0v2h4v-2"/></svg>
                     </span>
                     <h3>Recruiter access</h3>
                     <p>Request recruiter access, then submit a company profile for Training &amp; Placement review before managing opportunities and applicants.</p>
                     <?php if ($user && $user['role'] === 'recruiter'): ?>
-                        <a class="lb-card__link" href="recruiter.php">Open recruiter workspace <span aria-hidden="true">&#8599;</span></a>
+                        <a class="au-card__link" href="recruiter.php">Open recruiter workspace <span aria-hidden="true">&#8599;</span></a>
                     <?php else: ?>
-                        <a class="lb-card__link" href="index.php?page=register&amp;role=recruiter">Request recruiter access <span aria-hidden="true">&#8599;</span></a>
+                        <a class="au-card__link" href="index.php?page=register&amp;role=recruiter">Request recruiter access <span aria-hidden="true">&#8599;</span></a>
                     <?php endif; ?>
                 </article>
 
-                <article class="lb-card" data-reveal>
-                    <span class="lb-icon" aria-hidden="true">
+                <article class="au-card" data-reveal>
+                    <span class="au-icon" aria-hidden="true">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h7l4 4v14H5V6a3 3 0 0 1 3-3Z"/><path d="M15 3v5h5M8 13h8M8 17h5"/></svg>
                     </span>
                     <h3>Training &amp; Placement Cell</h3>
@@ -1019,60 +1032,60 @@ $pageTitle = match ($page) {
                         $user &&
                         in_array($user['role'], ['admin', 'tpo'], true)
                     ): ?>
-                        <a class="lb-card__link" href="admin.php">Open TPO workspace <span aria-hidden="true">&#8599;</span></a>
+                        <a class="au-card__link" href="admin.php">Open TPO workspace <span aria-hidden="true">&#8599;</span></a>
                     <?php else: ?>
-                        <a class="lb-card__link" href="index.php?page=login">Authorized staff sign in <span aria-hidden="true">&#8599;</span></a>
+                        <a class="au-card__link" href="index.php?page=login">Authorized staff sign in <span aria-hidden="true">&#8599;</span></a>
                     <?php endif; ?>
                 </article>
             </div>
         </div>
     </section>
 
-    <section class="lb-section" aria-labelledby="placement-cell-title">
-        <div class="lb-main">
-            <div class="lb-band" data-reveal>
+    <section class="au-section" aria-labelledby="placement-cell-title">
+        <div class="au-main">
+            <div class="au-band" data-reveal>
                 <div>
-                    <p class="lb-section__eyebrow">Training &amp; Placement Cell</p>
+                    <p class="au-section__eyebrow">Training &amp; Placement Cell</p>
                     <h2 id="placement-cell-title">Built for the people who run placements.</h2>
                     <p>Every opportunity reaches students through the same review chain, so what a student sees has already been checked by the placement cell.</p>
-                    <ul class="lb-list">
+                    <ul class="au-list">
                         <li>
-                            <span class="lb-list__tick" aria-hidden="true">
+                            <span class="au-list__tick" aria-hidden="true">
                                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>
                             </span>
                             <span>Only published opportunities from approved companies appear to students.</span>
                         </li>
                         <li>
-                            <span class="lb-list__tick" aria-hidden="true">
+                            <span class="au-list__tick" aria-hidden="true">
                                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>
                             </span>
                             <span>Your role is read from your account, never chosen at sign-in.</span>
                         </li>
                         <li>
-                            <span class="lb-list__tick" aria-hidden="true">
+                            <span class="au-list__tick" aria-hidden="true">
                                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>
                             </span>
                             <span>Recruiter decisions, job moderation and student records are recorded in the audit log.</span>
                         </li>
                     </ul>
                 </div>
-                <div class="lb-band__rules" aria-label="How an opportunity reaches students">
-                    <div class="lb-rule">
+                <div class="au-band__rules" aria-label="How an opportunity reaches students">
+                    <div class="au-rule">
                         <strong>1. Recruiter account reviewed</strong>
                         <small>A new recruiter account stays pending until the placement cell approves it.</small>
                     </div>
-                    <div class="lb-rule">
+                    <div class="au-rule">
                         <strong>2. Company profile checked</strong>
                         <small>Company details are verified before any role can be published.</small>
                     </div>
-                    <div class="lb-rule">
+                    <div class="au-rule">
                         <strong>3. Role published or moderated</strong>
                         <small>Approved companies publish directly; the placement cell can still moderate a listing.</small>
                     </div>
                 </div>
             </div>
 
-            <footer class="lb-footer">
+            <footer class="au-footer">
                 <strong>Swami Vivekanand Institute of Engineering and Technology</strong>
                 <span>SVIET Training &amp; Placement Portal &middot; <?= date('Y') ?></span>
             </footer>

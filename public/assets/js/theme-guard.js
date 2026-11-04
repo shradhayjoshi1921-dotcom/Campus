@@ -8,8 +8,8 @@
  * solid block.
  *
  * So before anything is trusted:
- *   1. probe whether the LogicBloom stylesheet actually applied (it publishes
- *      --lb-accent on :root; a stylesheet that never loaded cannot);
+ *   1. probe whether the Aurora stylesheet actually applied (it publishes
+ *      --au-accent on :root; a stylesheet that never loaded cannot);
  *   2. probe the dock's own stylesheet with a live element;
  *   3. if either is missing, hide the dock and let the bubble menu — which is
  *      always plain markup — carry the navigation.
@@ -23,7 +23,7 @@
   var DOCK_SELECTOR = '[data-glass-dock], .lg-dock, .sv-dock, .rec-dock, .admin-dock';
 
   function tokenApplied() {
-    var value = getComputedStyle(document.documentElement).getPropertyValue('--lb-accent');
+    var value = getComputedStyle(document.documentElement).getPropertyValue('--au-accent');
     return value.trim() !== '';
   }
 
